@@ -12,7 +12,7 @@ Drone4Dengue is a hybrid system comprising a mobile app (DroneEye) and an admin 
 - UC2: Register Account
 - UC3: Reset Password
 - UC4: Edit Profile
-- UC11: Manage Settings
+- UC12: Manage Settings
 
 ### ✅ Drone & Surveillance Management
 - UC5: Manage Drone and Location
@@ -24,15 +24,15 @@ Drone4Dengue is a hybrid system comprising a mobile app (DroneEye) and an admin 
 ### ✅ Dengue Data Analytics
 - UC8: Manage Dengue Data
 - UC9: Generate Report
-- UC14: Manage Weather Data
+- UC10: Manage Weather Data
 
 ### ✅ Prediction & Alert Management
-- UC10: Manage Prediction and Alert
-- UC12: Get Potential Dengue Notification
+- UC11: Manage Prediction and Alert
+- UC13: Get Potential Dengue Notification
 
 ### ✅ Public Awareness & Prevention
-- UC12: Get Potential Dengue Notification
-- UC13: Get Recommendations
+- UC13: Get Potential Dengue Notification
+- UC14: Get Recommendations
 
 ---
 
@@ -61,12 +61,12 @@ Drone4Dengue is a hybrid system comprising a mobile app (DroneEye) and an admin 
 ---
 
 ## 📁 Project Structure
-/drone4dengue
-├── client-mobile/ # React Native Expo App
-├── client-admin/ # React Web Dashboard
-├── server-api/ # Node.js REST API
-├── server-ml/ # Python ML model
-└── docs/ # Design, diagrams, documentation
+/drone4dengue<br>
+├── client-mobile/ # React Native Expo App<br>
+├── client-admin/ # React Web Dashboard<br>
+├── server-api/ # Node.js REST API<br>
+├── server-ml/ # Python ML model<br>
+└── docs/ # Design, diagrams, documentation<br>
 
 
 ---
@@ -83,23 +83,25 @@ Drone4Dengue is a hybrid system comprising a mobile app (DroneEye) and an admin 
 # Mobile App
 cd client-mobile
 npm install
-npx expo start
+npx expo start # Run on Android/iOS
 
 # Admin Web
 cd client-admin
 npm install
-npm start
+npm start # Run on browser
 
 # Backend API
 cd server-api
 npm install
+npx prisma init # Initialize Prisma
+npx prisma migrate dev # Run migrations
 npm run dev
 
 # ML Model
 cd server-ml
 python -m venv venv
 .\venv\Scripts\activate  # Windows
-pip install -r requirements.txt
+pip install
 python app.py
 
 
