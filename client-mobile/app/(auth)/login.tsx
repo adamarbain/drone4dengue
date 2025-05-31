@@ -1,15 +1,105 @@
-import { View, Text, TextInput, TouchableOpacity, Pressable, ScrollView } from 'react-native';
+import React from 'react';
+import { View, Text, TextInput, TouchableOpacity, Pressable, ScrollView, Modal, ActivityIndicator } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+const API_URL = 'http://localhost:4000/auth'; // Change to your backend URL
+
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [resetVisible, setResetVisible] = useState(false);
+  const [resetStep, setResetStep] = useState(1); // 1=email, 2=code, 3=new password
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
   const router = useRouter();
+
+  // Password reset handlers
+  const handleResetRequest = async () => {
+    setResetLoading(true);
+    setResetError('');
+    setResetSuccess('');
+    try {
+      const res = await fetch(`${API_URL}/reset-request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send reset code');
+      setResetSuccess('Reset code sent to your email.');
+      setResetStep(2);
+    } catch (err) {
+      setResetError((err as Error).message);
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleResetVerify = async () => {
+    setResetLoading(true);
+    setResetError('');
+    setResetSuccess('');
+    try {
+      const res = await fetch(`${API_URL}/reset-verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail, code: resetCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Invalid or expired code');
+      setResetSuccess('Code verified. Please enter your new password.');
+      setResetStep(3);
+    } catch (err) {
+      setResetError((err as Error).message);
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    setResetLoading(true);
+    setResetError('');
+    setResetSuccess('');
+    if (resetNewPassword !== resetConfirmPassword) {
+      setResetError('Passwords do not match.');
+      setResetLoading(false);
+      return;
+    }
+    try {
+      const res = await fetch(`${API_URL}/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail, code: resetCode, newPassword: resetNewPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to reset password');
+      setResetSuccess('Password reset successful! You can now log in.');
+      setTimeout(() => {
+        setResetVisible(false);
+        setResetStep(1);
+        setResetEmail('');
+        setResetCode('');
+        setResetNewPassword('');
+        setResetConfirmPassword('');
+        setResetError('');
+        setResetSuccess('');
+      }, 1500);
+    } catch (err) {
+      setResetError((err as Error).message);
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -52,7 +142,7 @@ export default function LoginScreen() {
         </View>
 
         {/* Forgot Password */}
-        <TouchableOpacity className="self-end mb-8">
+        <TouchableOpacity className="self-end mb-8" onPress={() => setResetVisible(true)}>
           <Text className="text-base font-bold text-gray-400">Forgot Password?</Text>
         </TouchableOpacity>
 
@@ -64,6 +154,87 @@ export default function LoginScreen() {
           <Text className="text-white text-center font-bold text-lg">LOG IN</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Password Reset Modal */}
+      <Modal visible={resetVisible} animationType="slide" transparent>
+        <View className="flex-1 bg-black/40 justify-center items-center px-6">
+          <View className="bg-white rounded-2xl p-6 w-full max-w-md">
+            <Text className="text-2xl font-bold mb-4 text-center">Reset Password</Text>
+            {resetStep === 1 && (
+              <>
+                <Text className="mb-2">Enter your registered email address:</Text>
+                <TextInput
+                  className="border border-black rounded-xl px-4 py-3 mb-4"
+                  placeholder="Email"
+                  placeholderTextColor="#A3A3A3"
+                  value={resetEmail}
+                  onChangeText={setResetEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity className="bg-[#C7362F] rounded-xl py-3 mb-2" onPress={handleResetRequest} disabled={resetLoading}>
+                  {resetLoading ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-center font-bold">Send Reset Code</Text>}
+                </TouchableOpacity>
+              </>
+            )}
+            {resetStep === 2 && (
+              <>
+                <Text className="mb-2">Enter the code sent to your email:</Text>
+                <TextInput
+                  className="border border-black rounded-xl px-4 py-3 mb-4"
+                  placeholder="Reset Code"
+                  placeholderTextColor="#A3A3A3"
+                  value={resetCode}
+                  onChangeText={setResetCode}
+                  keyboardType="number-pad"
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity className="bg-[#C7362F] rounded-xl py-3 mb-2" onPress={handleResetVerify} disabled={resetLoading}>
+                  {resetLoading ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-center font-bold">Verify Code</Text>}
+                </TouchableOpacity>
+              </>
+            )}
+            {resetStep === 3 && (
+              <>
+                <Text className="mb-2">Enter your new password:</Text>
+                <TextInput
+                  className="border border-black rounded-xl px-4 py-3 mb-2"
+                  placeholder="New Password"
+                  placeholderTextColor="#A3A3A3"
+                  value={resetNewPassword}
+                  onChangeText={setResetNewPassword}
+                  secureTextEntry
+                />
+                <TextInput
+                  className="border border-black rounded-xl px-4 py-3 mb-4"
+                  placeholder="Confirm New Password"
+                  placeholderTextColor="#A3A3A3"
+                  value={resetConfirmPassword}
+                  onChangeText={setResetConfirmPassword}
+                  secureTextEntry
+                />
+                <TouchableOpacity className="bg-[#C7362F] rounded-xl py-3 mb-2" onPress={handleResetPassword} disabled={resetLoading}>
+                  {resetLoading ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-center font-bold">Reset Password</Text>}
+                </TouchableOpacity>
+              </>
+            )}
+            {resetError ? <Text className="text-red-500 text-center mb-2">{resetError}</Text> : null}
+            {resetSuccess ? <Text className="text-green-600 text-center mb-2">{resetSuccess}</Text> : null}
+            <TouchableOpacity className="mt-2" onPress={() => {
+              setResetVisible(false);
+              setResetStep(1);
+              setResetEmail('');
+              setResetCode('');
+              setResetNewPassword('');
+              setResetConfirmPassword('');
+              setResetError('');
+              setResetSuccess('');
+            }}>
+              <Text className="text-center text-gray-500">Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 } 

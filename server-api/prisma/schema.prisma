@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -26,6 +25,8 @@ model User {
   reports     Report[]
   alerts      Alert[]
   username    String
+  resetCode         String?   // for password reset
+  resetCodeExpiry   DateTime? // for password reset
 }
 
 model Drone {
