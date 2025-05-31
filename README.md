@@ -94,6 +94,9 @@ npm start # Run on browser
 cd server-api
 npm install
 npx prisma init # Initialize Prisma
+npx prisma generate # Generate Prisma client
+# Before running the migrations, make sure to initialize DATABASE_URL in .env file
+# For example: DATABASE_URL="postgresql://<username>:<password>@<host>:<port>/drone4dengue"
 npx prisma migrate dev # Run migrations
 npm run dev
 

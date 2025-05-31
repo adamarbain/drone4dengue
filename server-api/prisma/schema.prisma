@@ -13,3 +13,66 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  password    String
+  name        String
+  role        String   // 'admin' or 'user'
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  drones      Drone[]
+  reports     Report[]
+  alerts      Alert[]
+  username    String
+}
+
+model Drone {
+  id          String   @id @default(uuid())
+  name        String
+  serial      String   @unique
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  images      Image[]
+  createdAt   DateTime @default(now())
+}
+
+model Image {
+  id          String   @id @default(uuid())
+  url         String
+  droneId     String
+  drone       Drone    @relation(fields: [droneId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Weather {
+  id          String   @id @default(uuid())
+  location    String
+  data        Json
+  createdAt   DateTime @default(now())
+}
+
+model DengueData {
+  id          String   @id @default(uuid())
+  location    String
+  cases       Int
+  date        DateTime
+  createdAt   DateTime @default(now())
+}
+
+model Alert {
+  id          String   @id @default(uuid())
+  message     String
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  description String
+  createdAt   DateTime @default(now())
+}
