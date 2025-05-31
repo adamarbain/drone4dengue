@@ -1,10 +1,10 @@
-import { Slot } from "expo-router";
+import { Slot, Stack } from "expo-router";
 import './globals.css';
 import { useEffect } from 'react';
 import { useRouter, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-export default function RootLayout() {
+export default function AppLayout() {
   const router = useRouter();
   const segments = useSegments();
 
@@ -21,7 +21,14 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <Slot />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          animation: 'fade',
+        }}
+      >
+        <Stack.Screen name="dashboard" />
+      </Stack>
     </SafeAreaProvider>
   );
 }
