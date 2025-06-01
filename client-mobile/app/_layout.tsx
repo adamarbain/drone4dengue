@@ -1,23 +1,30 @@
 import { Slot, Stack } from "expo-router";
 import './globals.css';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function AppLayout() {
   const router = useRouter();
   const segments = useSegments();
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
 
   useEffect(() => {
-    // Redirect to login if not authenticated
-    const inAuthGroup = segments[0] as string === '(auth)';
-    if (!inAuthGroup) {
-      // Use setTimeout to ensure navigation happens after initial render
-      setTimeout(() => {
-        router.replace('./login');
-      }, 0);
-    }
+    const checkAuth = async () => {
+      const token = await AsyncStorage.getItem('token');
+      const inAuthGroup = segments[0] as string === '(auth)';
+      if (!token && !inAuthGroup) {
+        setTimeout(() => {
+          router.replace('./login');
+        }, 0);
+      }
+      setIsAuthChecked(true);
+    };
+    checkAuth();
   }, [segments]);
+
+  if (!isAuthChecked) return null; // Optionally show a splash/loading screen
 
   return (
     <SafeAreaProvider>

@@ -19,12 +19,13 @@ model User {
   password    String
   name        String
   role        String   // 'admin' or 'user'
+  username    String?
+  phone       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   drones      Drone[]
   reports     Report[]
   alerts      Alert[]
-  username    String
   resetCode         String?   // for password reset
   resetCodeExpiry   DateTime? // for password reset
 }

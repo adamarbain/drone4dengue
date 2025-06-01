@@ -5,8 +5,9 @@ import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://localhost:4000/auth'; // Change to your backend URL
+const API_URL = 'http://172.20.10.2:4000/auth'; // Change to your backend URL
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -21,6 +22,8 @@ export default function LoginScreen() {
   const [resetLoading, setResetLoading] = useState(false);
   const [resetError, setResetError] = useState('');
   const [resetSuccess, setResetSuccess] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
   const router = useRouter();
 
   // Password reset handlers
@@ -101,6 +104,28 @@ export default function LoginScreen() {
     }
   };
 
+  // Login handler
+  const handleLogin = async () => {
+    setLoginLoading(true);
+    setLoginError('');
+    try {
+      const res = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Login failed');
+      // Store token in AsyncStorage
+      await AsyncStorage.setItem('token', data.token);
+      router.replace('/dashboard');
+    } catch (err) {
+      setLoginError((err as Error).message);
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       <StatusBar style="dark" />
@@ -116,7 +141,7 @@ export default function LoginScreen() {
         {/* Email Input */}
         <Text className="text-lg text-gray-500 mb-1">Email</Text>
         <TextInput
-          className="w-full border border-black rounded-xl px-4 py-4 text-lg mb-6"
+          className="w-full border border-black rounded-xl px-4 py-4 text-md mb-6"
           placeholder="Email"
           placeholderTextColor="#A3A3A3"
           value={email}
@@ -129,7 +154,7 @@ export default function LoginScreen() {
         <Text className="text-lg text-gray-500 mb-1">Password</Text>
         <View className="flex-row items-center border border-black rounded-xl px-4 mb-2">
           <TextInput
-            className="flex-1 py-4 text-lg"
+            className="flex-1 py-4 text-md"
             placeholder="Password"
             placeholderTextColor="#A3A3A3"
             value={password}
@@ -137,9 +162,14 @@ export default function LoginScreen() {
             secureTextEntry={!showPassword}
           />
           <Pressable onPress={() => setShowPassword(!showPassword)}>
-            <Feather name={showPassword ? 'eye-off' : 'eye'} size={24} color="#A3A3A3" />
+            <Feather name={showPassword ? 'eye' : 'eye-off'} size={24} color="#A3A3A3" />
           </Pressable>
         </View>
+
+        {/* Error Message */}
+        {loginError ? (
+          <Text className="text-red-600 mb-2 text-center">{loginError}</Text>
+        ) : null}
 
         {/* Forgot Password */}
         <TouchableOpacity className="self-end mb-8" onPress={() => setResetVisible(true)}>
@@ -149,9 +179,14 @@ export default function LoginScreen() {
         {/* Login Button */}
         <TouchableOpacity
           className="w-full bg-[#C7362F] rounded-xl py-4 shadow-lg shadow-red-200 mb-4"
-          onPress={() => { router.replace('../dashboard'); }}
+          onPress={handleLogin}
+          disabled={loginLoading}
         >
-          <Text className="text-white text-center font-bold text-lg">LOG IN</Text>
+          {loginLoading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text className="text-white text-center font-bold text-lg">LOG IN</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
 
