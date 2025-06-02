@@ -50,7 +50,7 @@ export default function RegisterScreen() {
         setError('');
         try {
             // Replace with your actual API endpoint
-            const response = await fetch('http://172.20.10.2:4000/auth/register', {
+            const response = await fetch('http://192.168.0.21:4000/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

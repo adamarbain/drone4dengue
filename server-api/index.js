@@ -8,14 +8,14 @@ app.use(cors());
 app.use(express.json());
 
 // Routers (to be implemented in separate files)
-app.use('/auth', require('./routes/auth'));
-app.use('/drones', require('./routes/drones'));
-app.use('/users', require('./routes/users'));
-app.use('/images', require('./routes/images'));
-app.use('/weather', require('./routes/weather'));
-app.use('/dengue-data', require('./routes/dengueData'));
-app.use('/alerts', require('./routes/alerts'));
-app.use('/reports', require('./routes/reports'));
+app.use('/auth', require('./routes/authRoutes'));
+// app.use('/drones', require('./routes/droneRoutes'));
+// app.use('/users', require('./routes/userRoutes'));
+// app.use('/images', require('./routes/images'));
+// app.use('/weather', require('./routes/admin/weatherRoutes'));
+// app.use('/dengue-data', require('./routes/admin/dengueDataRoutes'));
+// app.use('/alerts', require('./routes/alerts'));
+// app.use('/reports', require('./routes/admin/reportRoutes'));
 
 app.get('/', (req, res) => {
   res.json({ status: 'DengueEye API running' });

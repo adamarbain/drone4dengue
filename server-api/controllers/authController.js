@@ -1,22 +1,14 @@
-const express = require('express');
-const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
 const nodemailer = require('nodemailer');
-
-const dotenv = require('dotenv');
-dotenv.config();
-
-const email_sender_email = process.env.SENDER_EMAIL;
-const email_sender_password = process.env.SENDER_EMAIL_PW;
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
+const email_sender_email = process.env.SENDER_EMAIL;
+const email_sender_password = process.env.SENDER_EMAIL_PW;
 
-// POST /auth/register
-router.post('/register', async (req, res) => {
+exports.registerUser = async (req, res) => {
   const { email, password, name, phone } = req.body;
   if (!email || !password || !name || !phone) {
     console.log(`[REGISTER ERROR] Missing required fields for ${email}`);
@@ -39,10 +31,9 @@ router.post('/register', async (req, res) => {
     console.error('[REGISTER ERROR] Registration failed:', err);
     res.status(500).json({ error: 'Registration failed.' });
   }
-});
+};
 
-// POST /auth/login
-router.post('/login', async (req, res) => {
+exports.login = async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     console.log(`[LOGIN ERROR] Missing credentials for ${email}`);
@@ -66,10 +57,9 @@ router.post('/login', async (req, res) => {
     console.error('[LOGIN ERROR] Login failed:', err);
     res.status(500).json({ error: 'Login failed.' });
   }
-});
+};
 
-// POST /auth/reset-request (step 3-4)
-router.post('/reset-request', async (req, res) => {
+exports.resetRequest = async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email is required.' });
   const user = await prisma.user.findUnique({ where: { email } });
@@ -98,10 +88,9 @@ router.post('/reset-request', async (req, res) => {
 
   await transporter.sendMail(mailOptions);
   res.json({ message: 'Reset code sent to email.' });
-});
+};
 
-// POST /auth/reset-verify (step 5)
-router.post('/reset-verify', async (req, res) => {
+exports.resetVerify = async (req, res) => {
   const { email, code } = req.body;
   if (!email || !code) return res.status(400).json({ error: 'Email and code required.' });
   const user = await prisma.user.findUnique({ where: { email } });
@@ -109,10 +98,9 @@ router.post('/reset-verify', async (req, res) => {
     return res.status(400).json({ error: 'Invalid or expired code.' });
   }
   res.json({ message: 'Code verified.' });
-});
+};
 
-// POST /auth/reset (step 6-8)
-router.post('/reset', async (req, res) => {
+exports.reset = async (req, res) => {
   const { email, code, newPassword } = req.body;
   if (!email || !code || !newPassword) return res.status(400).json({ error: 'Email, code, and new password required.' });
   const user = await prisma.user.findUnique({ where: { email } });
@@ -122,6 +110,9 @@ router.post('/reset', async (req, res) => {
   const hash = await bcrypt.hash(newPassword, 10);
   await prisma.user.update({ where: { email }, data: { password: hash, resetCode: null, resetCodeExpiry: null } });
   res.json({ message: 'Password reset successful.' });
-});
+};
 
-module.exports = router; 
+exports.forgotPassword = (req, res) => {
+  // Not implemented in original auth.js, kept for compatibility
+  res.status(501).json({ error: 'Not implemented' });
+}; 
