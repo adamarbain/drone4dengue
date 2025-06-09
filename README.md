@@ -6,33 +6,8 @@ Drone4Dengue is a hybrid system comprising a mobile app (DroneEye) and an admin 
 ---
 
 ## 🧩 Modules & Use Cases
-
-### ✅ Authentication & User Account
-- UC1: Login Account
-- UC2: Register Account
-- UC3: Reset Password
-- UC4: Edit Profile
-- UC12: Manage Settings
-
-### ✅ Drone & Surveillance Management
-- UC5: Manage Drone and Location
-- UC6: Manage Images Captured by Drone
-
-### ✅ User Management & Access Control
-- UC7: Manage User
-
-### ✅ Dengue Data Analytics
-- UC8: Manage Dengue Data
-- UC9: Generate Report
-- UC10: Manage Weather Data
-
-### ✅ Prediction & Alert Management
-- UC11: Manage Prediction and Alert
-- UC13: Get Potential Dengue Notification
-
-### ✅ Public Awareness & Prevention
-- UC13: Get Potential Dengue Notification
-- UC14: Get Recommendations
+- [📄 Modules](./docs/modules.md)
+- [📄 Use Cases](./docs/use-cases.md)
 
 ---
 
@@ -71,6 +46,13 @@ Drone4Dengue is a hybrid system comprising a mobile app (DroneEye) and an admin 
 
 ---
 
+## 📚 Documentation
+
+- [📄 Use Case Descriptions](./docs/use-cases.md)
+- [📄 UI Navigation](./docs/ui-navigation.md)
+- [📄 API Specification](./docs/api-spec.md)
+- [📄 Prediction Model](./docs/prediction-model.md)
+
 ## ✅ Getting Started
 
 ### 🔧 Prerequisites
@@ -79,33 +61,7 @@ Drone4Dengue is a hybrid system comprising a mobile app (DroneEye) and an admin 
 - PostgreSQL (or use Supabase)
 
 ### 🔌 Setup Instructions
-```bash
-# Mobile App
-cd client-mobile
-npm install
-npx expo start # Run on Android/iOS
-
-# Admin Web
-cd client-admin
-npm install
-npm start # Run on browser
-
-# Backend API
-cd server-api
-npm install
-npx prisma init # Initialize Prisma
-npx prisma generate # Generate Prisma client
-# Before running the migrations, make sure to initialize DATABASE_URL in .env file
-# For example: DATABASE_URL="postgresql://<username>:<password>@<host>:<port>/drone4dengue"
-npx prisma migrate dev # Run migrations
-npm run dev
-
-# ML Model
-cd server-ml
-python -m venv venv
-.\venv\Scripts\activate  # Windows
-pip install
-python app.py
+- [📄 Setup Guide](./docs/setup-guide.md)
 
 
 
