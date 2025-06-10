@@ -4,12 +4,14 @@ import type React from "react"
 
 import Link from "next/link"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { User, Lock, Mail, Eye, EyeOff, AlertCircle } from "lucide-react"
+import { User, Lock, Mail, Eye, EyeOff, AlertCircle, Phone } from "lucide-react"
+import { api } from "@/lib/api"
 
 export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -18,10 +20,12 @@ export default function SignUpPage() {
   const [formData, setFormData] = useState({
     email: "",
     username: "",
+    phone: "",
     password: "",
     confirmPassword: "",
   })
   const [errors, setErrors] = useState<string[]>([])
+  const router = useRouter()
 
   const validateForm = () => {
     const newErrors: string[] = []
@@ -32,6 +36,10 @@ export default function SignUpPage() {
 
     if (formData.username.length < 3) {
       newErrors.push("Username must be at least 3 characters long")
+    }
+
+    if (!formData.phone || formData.phone.replace(/\D/g, '').length < 8) {
+      newErrors.push("Please enter a valid phone number (at least 8 digits)")
     }
 
     if (formData.password.length < 6) {
@@ -52,8 +60,22 @@ export default function SignUpPage() {
     if (!validateForm()) return
 
     setIsLoading(true)
-    // Simulate signup process
-    setTimeout(() => setIsLoading(false), 2000)
+    setErrors([])
+    try {
+      await api.post("/auth/register-admin", {
+        email: formData.email,
+        name: formData.username,
+        phone: formData.phone,
+        password: formData.password,
+      })
+      router.push("/")
+    } catch (err: any) {
+      setErrors([
+        err?.response?.data?.error || "Registration failed. Please try again."
+      ])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleInputChange = (field: string, value: string) => {
@@ -143,6 +165,24 @@ export default function SignUpPage() {
                     required
                     value={formData.username}
                     onChange={(e) => handleInputChange("username", e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 bg-transparent border-2 border-red-300 rounded-md text-white placeholder-red-300 focus:border-red-200 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="sr-only">
+                  Phone Number
+                </Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-300 w-5 h-5" />
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="PHONE NUMBER"
+                    required
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange("phone", e.target.value)}
                     className="w-full pl-12 pr-4 py-3 bg-transparent border-2 border-red-300 rounded-md text-white placeholder-red-300 focus:border-red-200 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </div>

@@ -9,22 +9,68 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Mail, ArrowLeft, CheckCircle } from "lucide-react"
+import { Mail, ArrowLeft, CheckCircle, Key, Lock } from "lucide-react"
+import { api } from "@/lib/api"
 
 export default function ForgotPasswordPage() {
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
   const [email, setEmail] = useState("")
+  const [code, setCode] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Step 1: Request reset code
+  const handleRequest = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-
-    // Simulate password reset request
-    setTimeout(() => {
+    setError("")
+    try {
+      await api.post("/auth/reset-request", { email })
+      setStep(2)
+    } catch (err: any) {
+      setError(err?.response?.data?.error || "Failed to send reset code. Please try again.")
+    } finally {
       setIsLoading(false)
-      setIsSubmitted(true)
-    }, 2000)
+    }
+  }
+
+  // Step 2: Verify code
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError("")
+    try {
+      await api.post("/auth/reset-verify", { email, code })
+      setStep(3)
+    } catch (err: any) {
+      setError(err?.response?.data?.error || "Invalid or expired code.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Step 3: Set new password
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError("")
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match.")
+      setIsLoading(false)
+      return
+    }
+    try {
+      await api.post("/auth/reset", { email, code, newPassword })
+      setSuccess("Password reset successful! You can now log in.")
+      setStep(4)
+    } catch (err: any) {
+      setError(err?.response?.data?.error || "Failed to reset password. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -61,49 +107,107 @@ export default function ForgotPasswordPage() {
             <CardTitle className="text-white text-xl">Reset Password</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {!isSubmitted ? (
-              <>
+            {step === 1 && (
+              <form onSubmit={handleRequest} className="space-y-4">
                 <p className="text-white/80 text-sm text-center">
-                  Enter your email address and we'll send you a link to reset your password.
+                  Enter your email address and we'll send you a code to reset your password.
                 </p>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="sr-only">
-                      Email Address
-                    </Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-300 w-5 h-5" />
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="EMAIL ADDRESS"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 bg-transparent border-2 border-red-300 rounded-md text-white placeholder-red-300 focus:border-red-200 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-                      />
-                    </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="sr-only">Email Address</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-300 w-5 h-5" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="EMAIL ADDRESS"
+                      required
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 bg-transparent border-2 border-red-300 rounded-md text-white placeholder-red-300 focus:border-red-200 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    />
                   </div>
-
-                  <Button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full py-3 bg-white text-red-800 font-semibold rounded-md hover:bg-gray-100 transition-colors disabled:opacity-50"
-                  >
-                    {isLoading ? "SENDING..." : "SEND RESET LINK"}
-                  </Button>
-                </form>
-              </>
-            ) : (
+                </div>
+                {error && <div className="text-center text-red-200 text-sm font-semibold">{error}</div>}
+                <Button type="submit" disabled={isLoading} className="w-full py-3 bg-white text-red-800 font-semibold rounded-md hover:bg-gray-100 transition-colors disabled:opacity-50">
+                  {isLoading ? "SENDING..." : "SEND CODE"}
+                </Button>
+              </form>
+            )}
+            {step === 2 && (
+              <form onSubmit={handleVerify} className="space-y-4">
+                <p className="text-white/80 text-sm text-center">
+                  Enter the code sent to your email.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="code" className="sr-only">Reset Code</Label>
+                  <div className="relative">
+                    <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-300 w-5 h-5" />
+                    <Input
+                      id="code"
+                      type="text"
+                      placeholder="RESET CODE"
+                      required
+                      value={code}
+                      onChange={e => setCode(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 bg-transparent border-2 border-red-300 rounded-md text-white placeholder-red-300 focus:border-red-200 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    />
+                  </div>
+                </div>
+                {error && <div className="text-center text-red-200 text-sm font-semibold">{error}</div>}
+                <Button type="submit" disabled={isLoading} className="w-full py-3 bg-white text-red-800 font-semibold rounded-md hover:bg-gray-100 transition-colors disabled:opacity-50">
+                  {isLoading ? "VERIFYING..." : "VERIFY CODE"}
+                </Button>
+              </form>
+            )}
+            {step === 3 && (
+              <form onSubmit={handleReset} className="space-y-4">
+                <p className="text-white/80 text-sm text-center">
+                  Enter your new password.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword" className="sr-only">New Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-300 w-5 h-5" />
+                    <Input
+                      id="newPassword"
+                      type="password"
+                      placeholder="NEW PASSWORD"
+                      required
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 bg-transparent border-2 border-red-300 rounded-md text-white placeholder-red-300 focus:border-red-200 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="sr-only">Confirm Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-300 w-5 h-5" />
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      placeholder="CONFIRM PASSWORD"
+                      required
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 bg-transparent border-2 border-red-300 rounded-md text-white placeholder-red-300 focus:border-red-200 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    />
+                  </div>
+                </div>
+                {error && <div className="text-center text-red-200 text-sm font-semibold">{error}</div>}
+                <Button type="submit" disabled={isLoading} className="w-full py-3 bg-white text-red-800 font-semibold rounded-md hover:bg-gray-100 transition-colors disabled:opacity-50">
+                  {isLoading ? "RESETTING..." : "RESET PASSWORD"}
+                </Button>
+              </form>
+            )}
+            {step === 4 && (
               <Alert className="bg-green-100 border-green-300 text-green-800">
                 <CheckCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Password reset link has been sent to {email}. Please check your email and follow the instructions.
+                  {success || "Password reset successful! You can now log in."}
                 </AlertDescription>
               </Alert>
             )}
-
             <div className="text-center">
               <Link href="/" className="text-white hover:text-red-200 transition-colors text-sm">
                 Remember your password? Sign in

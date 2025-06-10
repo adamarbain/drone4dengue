@@ -33,6 +33,31 @@ exports.registerUser = async (req, res) => {
   }
 };
 
+exports.registerAdmin = async (req, res) => {
+  const { email, password, name, phone } = req.body;
+  if (!email || !password || !name || !phone) {
+    console.log(`[REGISTER ADMIN ERROR] Missing required fields for ${email}`);
+    return res.status(400).json({ error: 'Email, password, name, and phone are required.' });
+  }
+  try {
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      console.log(`[REGISTER ADMIN ERROR] Email already exists: ${email}`);
+      return res.status(409).json({ error: 'Email already registered.' });
+    }
+    const hash = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: { email, password: hash, name, phone, role: 'admin' },
+    });
+    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    console.log(`[REGISTER ADMIN SUCCESS] New admin registered: ${email}`);
+    res.json({ token, user: { id: user.id, email: user.email, name: user.name, phone: user.phone, role: user.role } });
+  } catch (err) {
+    console.error('[REGISTER ADMIN ERROR] Registration failed:', err);
+    res.status(500).json({ error: 'Registration failed.' });
+  }
+};
+
 exports.login = async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {

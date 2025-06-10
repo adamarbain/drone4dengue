@@ -4,21 +4,31 @@ import type React from "react"
 
 import Link from "next/link"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { User, Lock, Eye, EyeOff } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
+  const router = useRouter()
+  const { login, isLoading } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
-    // Simulate login process
-    setTimeout(() => setIsLoading(false), 2000)
+    setError("")
+    try {
+      await login(email, password)
+      router.push("/dashboard")
+    } catch (err: any) {
+      setError(err?.response?.data?.error || "Login failed. Please try again.")
+    }
   }
 
   return (
@@ -54,16 +64,18 @@ export default function LoginPage() {
             {/* Login form */}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username" className="sr-only">
-                  Username
+                <Label htmlFor="email" className="sr-only">
+                  Email
                 </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-300 w-5 h-5" />
                   <Input
-                    id="username"
-                    type="text"
-                    placeholder="USERNAME"
+                    id="email"
+                    type="email"
+                    placeholder="EMAIL"
                     required
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
                     className="w-full pl-12 pr-4 py-3 bg-transparent border-2 border-red-300 rounded-md text-white placeholder-red-300 focus:border-red-200 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </div>
@@ -80,6 +92,8 @@ export default function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     placeholder="PASSWORD"
                     required
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
                     className="w-full pl-12 pr-12 py-3 bg-transparent border-2 border-red-300 rounded-md text-white placeholder-red-300 focus:border-red-200 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                   <Button
@@ -93,6 +107,10 @@ export default function LoginPage() {
                   </Button>
                 </div>
               </div>
+
+              {error && (
+                <div className="text-center text-red-200 text-sm font-semibold">{error}</div>
+              )}
 
               <Button
                 type="submit"

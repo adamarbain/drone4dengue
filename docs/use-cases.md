@@ -66,8 +66,8 @@
 
 1. User clicks “Forgot Password?”
 2. System prompts email input → user submits
-3. System sends reset link or code
-4. User accesses link or inputs code
+3. System sends code
+4. User inputs code inside the app
 5. User sets and confirms new password
 6. System confirms success
 
