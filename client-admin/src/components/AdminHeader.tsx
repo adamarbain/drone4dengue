@@ -1,33 +1,107 @@
-"use client";
+"use client"
 
-import Image from "next/image";
-import { FiSearch } from "react-icons/fi";
+import { useState } from "react"
+import Image from "next/image"
+import { FiSearch, FiLogOut, FiBell, FiMail, FiChevronDown, FiAlertCircle } from "react-icons/fi"
 
 export default function AdminHeader() {
+  const [showNotifications, setShowNotifications] = useState(false)
+
   return (
-    <header className="flex items-center justify-between px-10 py-6 bg-white border-b border-[#E2C275]">
-      <div />
-      <div className="flex items-center gap-4">
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Search"
-            className="rounded-lg bg-[#7C1D1D] text-white placeholder-white px-4 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-[#E2C275]"
-          />
-          <FiSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-white text-lg" />
+    <header className="sticky top-0 z-10 flex items-center justify-between px-8 py-4 bg-white border-b border-[#E2C275]/50 shadow-sm">
+      <div className="flex items-center">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FFF7E3] rounded-lg">
+          <span className="text-[#A21C1C] font-medium text-sm">Admin Portal</span>
+          <div className="w-2 h-2 rounded-full bg-[#A21C1C] animate-pulse"></div>
         </div>
-        <button className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D]">LOGOUT</button>
-        <button className="bg-white border-2 border-[#A21C1C] rounded-full p-2 text-[#A21C1C] hover:bg-[#F3EAD8]">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-        </button>
-        <Image
-          src="/images/profile.jpg"
-          alt="Profile"
-          width={40}
-          height={40}
-          className="rounded-full border-2 border-[#E2C275] object-cover"
-        />
+      </div>
+
+      <div className="flex items-center gap-5">
+        <div className="relative">
+          <div className="flex items-center bg-[#F9F6F2] rounded-lg focus-within:ring-2 focus-within:ring-[#E2C275] transition-all">
+            <FiSearch className="ml-3 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search..."
+              className="bg-transparent border-none text-sm py-2 px-3 w-56 focus:outline-none text-gray-700 placeholder-gray-400"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button className="relative p-2 rounded-full hover:bg-[#FFF7E3] transition-colors">
+            <FiMail className="text-[#A21C1C] w-5 h-5" />
+            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#E2C275] rounded-full text-[10px] flex items-center justify-center font-bold">
+              3
+            </span>
+          </button>
+
+          <div className="relative">
+            <button
+              className="relative p-2 rounded-full hover:bg-[#FFF7E3] transition-colors"
+              onClick={() => setShowNotifications(!showNotifications)}
+            >
+              <FiBell className="text-[#A21C1C] w-5 h-5" />
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#E2C275] rounded-full text-[10px] flex items-center justify-center font-bold">
+                5
+              </span>
+            </button>
+
+            {showNotifications && (
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                <div className="px-4 py-2 border-b border-gray-100">
+                  <h3 className="font-semibold text-sm">Notifications</h3>
+                </div>
+                <div className="max-h-72 overflow-y-auto">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="px-4 py-3 hover:bg-[#FFF7E3] border-b border-gray-100 last:border-0">
+                      <div className="flex gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[#A21C1C]/10 flex items-center justify-center flex-shrink-0">
+                          <FiAlertCircle className="text-[#A21C1C]" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">New dengue case reported</p>
+                          <p className="text-xs text-gray-500">Petaling Jaya area - 10 min ago</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="px-4 py-2 border-t border-gray-100">
+                  <button className="text-[#A21C1C] text-xs font-medium hover:underline w-full text-center">
+                    View all notifications
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="h-6 w-px bg-gray-300 mx-1"></div>
+
+          <button className="flex items-center gap-2 bg-[#A21C1C] text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-[#7C1D1D] transition-colors">
+            <FiLogOut className="w-4 h-4" />
+            <span>Logout</span>
+          </button>
+
+          <div className="flex items-center gap-3 pl-3">
+            <div className="flex flex-col items-end">
+              <span className="font-medium text-sm">Alex Johnson</span>
+              <span className="text-xs text-gray-500">Administrator</span>
+            </div>
+            <div className="relative">
+              <Image
+                src="/images/profile.jpg"
+                alt="Profile"
+                width={40}
+                height={40}
+                className="rounded-full border-2 border-[#E2C275] object-cover"
+              />
+              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+            </div>
+            <FiChevronDown className="text-gray-400 w-4 h-4" />
+          </div>
+        </div>
       </div>
     </header>
-  );
-} 
+  )
+}
