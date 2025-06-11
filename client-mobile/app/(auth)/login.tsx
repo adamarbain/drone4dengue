@@ -7,7 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://192.168.0.21:4000/auth'; // Change to your backend URL
+const API_URL = 'http://192.168.0.9:4000/auth'; // Change to your backend URL
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -118,6 +118,20 @@ export default function LoginScreen() {
       if (!res.ok) throw new Error(data.error || 'Login failed');
       // Store token in AsyncStorage
       await AsyncStorage.setItem('token', data.token);
+      // Decode JWT to get expiration (exp)
+      const base64Url = data.token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join('')
+      );
+      const { exp } = JSON.parse(jsonPayload);
+      // Store expiration in ms
+      await AsyncStorage.setItem('token_exp', (exp * 1000).toString());
       router.replace('/dashboard');
     } catch (err) {
       setLoginError((err as Error).message);

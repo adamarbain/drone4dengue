@@ -13,8 +13,20 @@ export default function AppLayout() {
   useEffect(() => {
     const checkAuth = async () => {
       const token = await AsyncStorage.getItem('token');
+      const tokenExp = await AsyncStorage.getItem('token_exp');
       const inAuthGroup = segments[0] as string === '(auth)';
-      if (!token && !inAuthGroup) {
+      let isValid = false;
+      if (token && tokenExp) {
+        const now = Date.now();
+        if (now < parseInt(tokenExp, 10)) {
+          isValid = true;
+        } else {
+          // Token expired, remove it
+          await AsyncStorage.removeItem('token');
+          await AsyncStorage.removeItem('token_exp');
+        }
+      }
+      if (!isValid && !inAuthGroup) {
         setTimeout(() => {
           router.replace('./login');
         }, 0);

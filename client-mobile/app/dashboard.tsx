@@ -50,7 +50,7 @@ export default function Dashboard() {
           </View>
         </View>
       </ScrollView>
-      <BottomNav active="dashboard" onTabPress={() => {}} />
+      <BottomNav />
     </SafeAreaView>
   );
 } 
