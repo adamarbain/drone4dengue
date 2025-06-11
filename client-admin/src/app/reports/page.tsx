@@ -38,9 +38,52 @@ export default function ReportsPage() {
   const [endDate, setEndDate] = useState("")
   const [selectedLocation, setSelectedLocation] = useState("")
   const [selectedDataType, setSelectedDataType] = useState("")
+  const [reportGenerated, setReportGenerated] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  // Helper to check if all filters are filled
+  const filtersComplete = startDate && endDate && selectedLocation && selectedDataType
+
+  // Reset report state on filter change
+  const handleFilterChange = (setter: (value: string) => void) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setter(e.target.value)
+    setReportGenerated(false)
+    setError("")
+  }
+
+  const handleGenerateReport = () => {
+    if (!filtersComplete) {
+      setError("Please complete all filters before generating the report.")
+      return
+    }
+    setLoading(true)
+    setError("")
+    // Simulate async report generation
+    setTimeout(() => {
+      // Simulate error randomly (for demo)
+      // if (Math.random() < 0.1) {
+      //   setError("Report generation failed. Please try again.")
+      //   setLoading(false)
+      //   setReportGenerated(false)
+      //   return
+      // }
+      setReportGenerated(true)
+      setLoading(false)
+    }, 1200)
+  }
+
+  const handleClearFilters = () => {
+    setStartDate("")
+    setEndDate("")
+    setSelectedLocation("")
+    setSelectedDataType("")
+    setReportGenerated(false)
+    setError("")
+  }
 
   return (
-    <div className="min-h-screen bg-[#FFF7E3] flex flex-row rounded-[24px] border-[8px] border-[#E2C275] overflow-hidden">
+    <div className="min-h-screen bg-[#FFF7E3] flex flex-row  border-[8px] border-[#E2C275] overflow-hidden">
       <AdminSidebar current="Reports" />
       <main className="flex-1 flex flex-col">
         <AdminHeader />
@@ -96,7 +139,7 @@ export default function ReportsPage() {
                   <input
                     type="date"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    onChange={handleFilterChange(setStartDate)}
                     className="rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent"
                   />
                 </div>
@@ -108,7 +151,7 @@ export default function ReportsPage() {
                   <input
                     type="date"
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    onChange={handleFilterChange(setEndDate)}
                     className="rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent"
                   />
                 </div>
@@ -119,7 +162,7 @@ export default function ReportsPage() {
                   </label>
                   <select
                     value={selectedLocation}
-                    onChange={(e) => setSelectedLocation(e.target.value)}
+                    onChange={handleFilterChange(setSelectedLocation)}
                     className="rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#E2C275]"
                   >
                     <option value="">Select Area</option>
@@ -137,7 +180,7 @@ export default function ReportsPage() {
                   </label>
                   <select
                     value={selectedDataType}
-                    onChange={(e) => setSelectedDataType(e.target.value)}
+                    onChange={handleFilterChange(setSelectedDataType)}
                     className="rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#E2C275]"
                   >
                     <option value="">Select Type</option>
@@ -149,12 +192,29 @@ export default function ReportsPage() {
                   </select>
                 </div>
               </div>
+              {error && (
+                <div className="mb-4 text-red-600 font-semibold bg-red-100 rounded-lg px-4 py-2 border border-red-200">
+                  {error}
+                </div>
+              )}
               <div className="flex gap-4">
-                <button className="bg-[#A21C1C] text-white px-8 py-3 rounded-lg font-bold text-base hover:bg-[#7C1D1D] transition-all flex items-center gap-2 shadow-md">
-                  <FiBarChart2 />
-                  Generate Report
+                <button
+                  className={`bg-[#A21C1C] text-white px-8 py-3 rounded-lg font-bold text-base flex items-center gap-2 shadow-md transition-all ${!filtersComplete || loading ? "opacity-60 cursor-not-allowed" : "hover:bg-[#7C1D1D]"}`}
+                  onClick={handleGenerateReport}
+                  disabled={!filtersComplete || loading}
+                >
+                  {loading ? (
+                    <svg className="animate-spin h-5 w-5 mr-2 text-white" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>
+                  ) : (
+                    <FiBarChart2 />
+                  )}
+                  {loading ? "Generating..." : "Generate Report"}
                 </button>
-                <button className="bg-white text-[#A21C1C] border border-[#A21C1C] px-8 py-3 rounded-lg font-bold text-base hover:bg-[#FFF7E3] transition-all">
+                <button
+                  className="bg-white text-[#A21C1C] border border-[#A21C1C] px-8 py-3 rounded-lg font-bold text-base hover:bg-[#FFF7E3] transition-all"
+                  onClick={handleClearFilters}
+                  disabled={loading}
+                >
                   Clear Filters
                 </button>
               </div>
@@ -167,7 +227,7 @@ export default function ReportsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Weekly Overview Card */}
               <motion.div
-                className="bg-white rounded-xl p-6 shadow-md border border-[#E2C275]/30"
+                className={`bg-white rounded-xl p-6 shadow-md border border-[#E2C275]/30 ${!reportGenerated ? "opacity-60" : ""}`}
                 whileHover={{ y: -5 }}
                 transition={{ type: "spring", stiffness: 300 }}
               >
@@ -190,18 +250,18 @@ export default function ReportsPage() {
                   </svg>
                 </div>
                 <div className="text-center mb-4">
-                  <div className="text-2xl font-bold text-[#A21C1C]">20</div>
+                  <div className="text-2xl font-bold text-[#A21C1C]">{reportGenerated ? "20" : "-"}</div>
                   <div className="text-sm text-gray-500">Active Cases</div>
-                  <div className="text-xs text-gray-400">Monday, April 22nd</div>
+                  <div className="text-xs text-gray-400">{reportGenerated ? "Monday, April 22nd" : "No data"}</div>
                 </div>
-                <button className="w-full bg-[#A21C1C] text-white py-2 rounded-lg font-bold hover:bg-[#7C1D1D] transition-colors">
+                <button className="w-full bg-[#A21C1C] text-white py-2 rounded-lg font-bold hover:bg-[#7C1D1D] transition-colors" disabled={!reportGenerated}>
                   View Details
                 </button>
               </motion.div>
 
               {/* Total Dengue Cases Overview Card */}
               <motion.div
-                className="bg-white rounded-xl p-6 shadow-md border border-[#E2C275]/30"
+                className={`bg-white rounded-xl p-6 shadow-md border border-[#E2C275]/30 ${!reportGenerated ? "opacity-60" : ""}`}
                 whileHover={{ y: -5 }}
                 transition={{ type: "spring", stiffness: 300 }}
               >
@@ -246,7 +306,7 @@ export default function ReportsPage() {
                     Petaling Jaya
                   </span>
                 </div>
-                <button className="w-full bg-[#A21C1C] text-white py-2 rounded-lg font-bold hover:bg-[#7C1D1D] transition-colors">
+                <button className="w-full bg-[#A21C1C] text-white py-2 rounded-lg font-bold hover:bg-[#7C1D1D] transition-colors" disabled={!reportGenerated}>
                   View Details
                 </button>
               </motion.div>
@@ -254,32 +314,35 @@ export default function ReportsPage() {
           </motion.div>
 
           {/* Export Options */}
-          <motion.div variants={item} className="mb-8">
-            <div className="bg-white rounded-xl p-6 shadow-md border border-[#E2C275]/30">
-              <div className="font-bold text-xl mb-4 flex items-center gap-2">
-                <FiDownload className="text-[#A21C1C]" />
-                Export Options
+          {reportGenerated && !loading && (
+            <motion.div variants={item} className="mb-8">
+              <div className="bg-white rounded-xl p-6 shadow-md border border-[#E2C275]/30">
+                <div className="font-bold text-xl mb-4 flex items-center gap-2">
+                  <FiDownload className="text-[#A21C1C]" />
+                  Export Options
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { format: "PDF", icon: <FiFileText />, color: "bg-red-500" },
+                    { format: "CSV", icon: <FiBarChart2 />, color: "bg-green-500" },
+                    { format: "XLSX", icon: <FiFileText />, color: "bg-blue-500" },
+                    { format: "JSON", icon: <FiFileText />, color: "bg-purple-500" },
+                  ].map((option, idx) => (
+                    <motion.button
+                      key={option.format}
+                      className="flex flex-col items-center gap-3 p-6 border border-gray-200 rounded-lg hover:border-[#E2C275] hover:bg-[#FFF7E3]/50 transition-all"
+                      whileHover={{ y: -2 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setError("") /* TODO: implement export logic */}
+                    >
+                      <div className={`p-3 ${option.color} rounded-lg text-white`}>{option.icon}</div>
+                      <span className="font-medium">Export as {option.format}</span>
+                    </motion.button>
+                  ))}
+                </div>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  { format: "PDF", icon: <FiFileText />, color: "bg-red-500" },
-                  { format: "CSV", icon: <FiBarChart2 />, color: "bg-green-500" },
-                  { format: "XLSX", icon: <FiFileText />, color: "bg-blue-500" },
-                  { format: "JSON", icon: <FiFileText />, color: "bg-purple-500" },
-                ].map((option, idx) => (
-                  <motion.button
-                    key={option.format}
-                    className="flex flex-col items-center gap-3 p-6 border border-gray-200 rounded-lg hover:border-[#E2C275] hover:bg-[#FFF7E3]/50 transition-all"
-                    whileHover={{ y: -2 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <div className={`p-3 ${option.color} rounded-lg text-white`}>{option.icon}</div>
-                    <span className="font-medium">Export as {option.format}</span>
-                  </motion.button>
-                ))}
-              </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          )}
         </motion.section>
       </main>
     </div>

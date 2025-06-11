@@ -8,10 +8,12 @@
 
 ### Main Flow:
 
-1. User enters email and password.
-2. User clicks the 'Login' button.
-3. System validates credentials.
-4. If valid, display success message and redirect to dashboard.
+1. The user will fill in the email and password.
+2. The user clicks on the ‘Login’ button.
+3. The system will validate the user's credentials.
+4. The system will prompt the message “successfully logged in.
+5. The user is redirected to the Dashboard page
+
 
 ### Alternative Flow:
 
@@ -36,11 +38,16 @@
 
 ### Main Flow:
 
-1. User enters full name, email, password, confirm password, country code, phone number.
-2. User checks Terms and Conditions checkbox.
-3. User clicks 'REGISTER'.
-4. System validates inputs and checks email uniqueness.
-5. Account is created → confirmation shown → redirect to login.
+1. The user enters their Full Name.
+2. The user enters a valid Email address.
+3. The user creates a Password.
+4. The user re-enters the password in the Confirm Password field.
+5. The user selects their country code and enters a valid Phone Number.
+6. The user checks the box to agree on Terms and Conditions Policy.
+7. The user clicks on the ‘REGISTER’ button.
+8. The system validates the form input.
+9. The system creates the account if all fields are valid and the email is not already registered.
+10. The system displays a confirmation message and redirects the user to the Login page.
 
 ### Alternative Flow:
 
@@ -64,12 +71,15 @@
 
 ### Main Flow:
 
-1. User clicks “Forgot Password?”
-2. System prompts email input → user submits
-3. System sends code
-4. User inputs code inside the app
-5. User sets and confirms new password
-6. System confirms success
+1. User clicks on the “Forgot Password?” link on the login page.
+2. System prompts the user to enter their registered email address.
+3. User enters their email and submits the request.
+4. System validates the email and sends a code to the user’s email.
+5. User accesses the email enters the code in the app/web.
+6. System prompts the user to enter and confirm a new password.
+7. User submits the new password.
+8. System updates the password and confirms the reset was successful
+
 
 ### Alternative Flow:
 
@@ -92,12 +102,13 @@
 
 ### Main Flow:
 
-1. Navigate to Profile/Settings
-2. System shows current profile info
-3. User clicks “Edit” and modifies fields
-4. User submits changes
-5. System validates and updates data
-6. Show success message
+1. User navigates to the Profile (DroneEye app) or Settings > Profile Settings (Admin web).
+2. System displays the current profile information.
+3. User selects the "Edit" option
+4. User modifies desired fields (e.g., name, email, phone number, profile photo).
+5. User submits the changes.
+6. System validates the inputs and updates the user profile.
+7. A success message is displayed confirming the changes.
 
 ### Alternative Flow:
 
@@ -119,18 +130,19 @@
 
 ### Main Flow (Admin):
 
-1. Admin accesses Drone Management
-2. View list of drones and areas
-3. Add/edit/delete drones
-4. Assign drones via map interface
-5. Save changes
+1. Admin logs into the system and navigates to Drone Management.
+2. System displays a list of all registered drones and their assigned areas.
+3. Admin adds, edits, or deletes drone records.
+4. Admin assigns drones to specific locations via map interface.
+5. Admin saves updates; system reflects changes immediately.
 
 ### Main Flow (User):
 
-1. User accesses Drone section
-2. Registers drone with ID, model, location
-3. System validates and registers
-4. User can view assigned zones and nearby drones
+1. User navigates to the Drone section.
+2. User selects Register My Drone and fills in drone details (ID, model, location).
+3. System validates the input and registers the drone.
+4. User can view the status and assigned monitoring zones.
+User can also view other drone activities and monitoring areas nearby.
 
 ### Alternative Flows:
 
@@ -154,11 +166,15 @@
 
 ### Main Flow:
 
-1. Admin logs in and opens Drone Management
-2. Selects drone → views images
-3. Reviews each image (tags, metadata)
-4. Downloads, enlarges, edits notes, or deletes
-5. System confirms and updates gallery
+1. Admin logs in and navigates to the Drone Management module.
+2. Admin selects a drone entry to view its associated images.
+3. System displays all images captured by that drone, tagged by location or date.
+4. Admin reviews images for dengue breeding site indicators or anomalies.
+5. Admin may:
+- Download or enlarge images for closer inspection.
+- Edit metadata or notes linked to an image.
+- Delete any unwanted or redundant images.
+6. System confirms the update and refreshes the image gallery accordingly.
 
 ### Alternative Flows:
 
@@ -182,10 +198,17 @@
 
 ### Main Flow:
 
-1. Admin accesses User Management
-2. Views user list with filters
-3. Adds, edits, updates roles/status, or removes users
-4. System saves and refreshes list
+1. Admin logs into the Drone4Dengue Admin Web System.
+2. Admin selects User Management from the sidebar menu.
+3. System displays the user list with filters, search, and status indicators.
+4. Admin may perform one or more of the following actions:
+-  Add a new user by filling in registration details.
+-  Edit user information such as address or role.
+-  Manage user roles (e.g., change from Normal User to Admin).
+-  Update user status (e.g., Verified, Pending, In Progress).
+-  Remove users if no longer part of the system.
+5. Admin submits changes.
+6. System saves the updates and refreshes the user list.
 
 ### Alternative Flows:
 
@@ -209,10 +232,17 @@
 
 ### Main Flow:
 
-1. Admin uploads CSV or form data
-2. System validates and shows trend/heatmap
-3. Admin filters by date/location
-4. Views status and clicks details for analysis
+1. Admin logs into the system and selects the Data Management module.
+2. System displays a dashboard showing existing dengue records by date and location.
+3. Admin may:
+- Upload new data (CSV or form-based input).
+- Filter data by location or date.
+- View number of active and total cases, along with coverage area.
+- Track processing status (e.g., Completed, Processing).
+4. System updates the data table and visual elements:
+- Historical trend graph.
+- Map view by region (e.g., Kuala Lumpur).
+5. Admin clicks "Details" for more granular data visualization or forecasting.
 
 ### Alternative Flows:
 
@@ -235,11 +265,17 @@
 
 ### Main Flow:
 
-1. Admin selects filter criteria (date, location, type)
-2. System shows preview
-3. Admin clicks Generate
-4. System creates report
-5. Admin exports as PDF/CSV/XLSX
+1. Admin logs into the system and navigates to the Reports section.
+2. Admin selects filter criteria:
+- Start Date and End Date
+- Location
+- Data Type (e.g., active cases, drone images, predictions)
+3. System displays a Preview (e.g., Weekly Overview, Total Cases).
+4. Admin clicks Generate Report.
+5. System compiles and presents the full report preview.
+6. Admin chooses export format:
+- Export as PDF / CSV / XLSX / Other formats
+7. Report is downloaded and saved.
 
 ### Alternative Flows:
 
@@ -262,12 +298,22 @@
 
 ### Main Flow:
 
-1. System displays map and risk overview
-2. Admin filters by location/risk/date
-3. System updates risk area list
-4. Admin sets alert rules, thresholds, recipients, channels
-5. Configures schedules
-6. Views alert history and resends/export if needed
+1. Admin opens Prediction & Alert section.
+2. System displays dengue prediction map and risk-level overview.
+3. Admin applies filters (State, City, Risk Level, Date Range).
+4. System updates the Predicted Risk Areas list with:
+- Area name
+- Risk Level (Low, Medium, High)
+- Confidence Score
+- Prediction date
+5. Admin clicks View Details for granular insight or Download Prediction for export.
+6. Admin configures Alert Rules by:
+- Setting thresholds for risk levels (e.g., High ≥ 70%)
+- Setting user groups as recipients
+- Choosing channels: Emails, SMS, Push Notification
+7. Admin creates or modifies Notification Schedules (e.g., daily, weekly)
+8. System saves and applies the schedule
+9. Admin views Alert History and may resend or export notification
 
 ### Alternative Flows:
 
@@ -291,10 +337,30 @@
 
 ### Main Flow:
 
-1. Admin opens Profile, Password, Notifications, or Config sections
-2. Updates personal info or credentials
-3. Sets alert thresholds or model parameters
-4. System saves changes and confirms
+#### Profile Settings
+1. Admin accesses Profile Settings.
+2. System displays current profile info: Name, Email, Organization.
+3. Admin clicks Edit Profile, updates information, and clicks Save Changes.
+4. System validates and updates the profile.
+
+#### Password  Settings
+1. Admin opens Password Settings.
+2. Admin inputs current password, new password, and confirmation.
+3. Admin clicks Update Password.
+4. System validates and updates the password securely.
+
+#### Notification Preferences
+1. Admin toggles Email/SMS Notifications, selects Alert Frequency (Immediate, Daily, Weekly).
+2. Admin clicks Save Preferences.
+3. System stores the updated preferences.
+
+#### System Configuration
+1. Admin modifies values such as:
+- Dengue Alert Threshold levels
+- Prediction Model Parameters
+- Data Synchronization
+2. Admin clicks Apply Settings
+3. System applies changes and confirms success.
 
 ### Alternative Flows:
 
@@ -318,12 +384,18 @@
 
 ### Main Flow:
 
-1. User opens app, location determined
-2. System runs prediction
-3. If risk detected → sends push alert
-4. User views notification → opens risk page
-5. Shows map, risk level, indicators, tips
-6. User acts on suggestions or contacts authority
+1. User opens the DroneEye mobile app and lands on the Dashboard.
+2. System automatically determines the user’s current or selected location.
+3. Prediction engine checks for nearby dengue risks (based on UC12.1: Predict Potential Dengue Outbreak).
+4. If high or moderate risk is detected, user receives a push notification with the mentioned area affected and dengue risk level.
+5. User taps the notification or checks the Notification Tab in the app.
+6. App opens the Risk Analysis Page:
+- Level of Dengue risk
+- Risk overview (location, case count, temperature/humidity)
+- Visual indicators (map, color-coded threat levels)
+- Drone-captured images (if available)
+- Suggested actions (e.g., fogging, clearing stagnant water, wearing protective clothing)
+7. User can also click Take Required Actions to view an actionable checklist or call authorities directly.
 
 ### Alternative Flows:
 
@@ -342,11 +414,12 @@
 
 ### Main Flow:
 
-1. User taps “Recommendation”
-2. Sees 3 buttons: High, Medium, Low Risk
-3. Selects risk level
-4. System shows related tips
-5. User views detail or navigates back
+1. The user taps on the “Recommendation” icon from the navigation menu.
+2. The system displays three buttons: High Risk, Medium Risk, and Low Risk Recommendation.
+3. The user selects one of the risk levels.
+4. The system displays a list of general recommendations related to the selected risk level.
+5. The user may tap on each recommendation to view additional details
+6. The user can tap the Back button (top-left) to return to the category selection screen and choose a different risk level.
 
 ### Alternative Flow:
 
@@ -364,11 +437,14 @@
 
 ### Main Flow:
 
-1. Admin navigates to Weather module
-2. Uploads CSV or fills form
-3. System validates and saves
-4. Sends to prediction model
-5. Admin views and filters past weather
+1. Admin logs into the system and navigates to the Weather Data module.
+2. System displays current weather datasets, if any.
+3. Admin uploads new weather data using a CSV or form input.
+4. System validates the dataset format and values.
+5. Upon successful validation, data is stored in the system.
+6. The prediction engine accesses this data for integration with dengue risk calculations.
+7. Admin can view or update specific weather records (temperature, humidity, rainfall).
+8. System logs each data update with a timestamp for audit.
 
 ### Alternative Flow:
 

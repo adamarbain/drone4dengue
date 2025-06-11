@@ -74,7 +74,7 @@ const item = {
 
 export default function DashboardPage() {
   return (
-    <div className="min-h-screen bg-[#FFF7E3] flex flex-row rounded-[24px] border-[8px] border-[#E2C275] overflow-hidden">
+    <div className="min-h-screen bg-[#FFF7E3] flex flex-row border-[8px] border-[#E2C275] overflow-hidden">
       <AdminSidebar current="Dashboard" />
       <main className="flex-1 flex flex-col">
         <AdminHeader />

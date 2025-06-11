@@ -4,6 +4,8 @@ import AdminSidebar from "@/components/AdminSidebar"
 import AdminHeader from "@/components/AdminHeader"
 import { FiFilter, FiDownload, FiRefreshCw, FiEye, FiAlertTriangle, FiCheckCircle, FiClock } from "react-icons/fi"
 import Image from "next/image"
+import { useState } from "react"
+import { motion } from "framer-motion"
 
 const riskAreas = [
   { area: "Andher East, Mumbai", riskLevel: "High", confidence: 85, date: "April 20, 2025", color: "bg-red-500" },
@@ -53,39 +55,142 @@ const alertHistory = [
   },
 ]
 
+const allStates = ["All States", "Maharashtra", "Karnataka", "Tamil Nadu"]
+const allCities = ["All Cities", "Mumbai", "Bangalore", "Chennai"]
+const allRiskLevels = ["All Levels", "High", "Medium", "Low"]
+
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+}
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 },
+}
+
 export default function PredictionAlertPage() {
+  // Filter states
+  const [selectedState, setSelectedState] = useState("All States")
+  const [selectedCity, setSelectedCity] = useState("All Cities")
+  const [selectedRisk, setSelectedRisk] = useState("All Levels")
+  const [dateRange, setDateRange] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [modelAvailable, setModelAvailable] = useState(true) // Simulate model/data available
+  const [showDetails, setShowDetails] = useState<null | typeof riskAreas[0]>(null)
+  const [alertRecipient, setAlertRecipient] = useState("All Health Officials")
+  const [savingAlert, setSavingAlert] = useState(false)
+  const [alertSaveError, setAlertSaveError] = useState("")
+  const [alertSaveSuccess, setAlertSaveSuccess] = useState("")
+
+  // Filter risk areas
+  const filteredAreas = riskAreas.filter((area) => {
+    let match = true
+    if (selectedRisk !== "All Levels" && area.riskLevel !== selectedRisk) match = false
+    if (selectedCity !== "All Cities" && !area.area.includes(selectedCity)) match = false
+    if (selectedState !== "All States") {
+      // Simulate state filter by area name (for demo)
+      if (selectedState === "Maharashtra" && !area.area.includes("Mumbai")) match = false
+      if (selectedState === "Karnataka" && !area.area.includes("Bangalore")) match = false
+      if (selectedState === "Tamil Nadu" && !area.area.includes("Chennai")) match = false
+    }
+    // Date range filter not implemented (demo)
+    return match
+  })
+
+  // Handlers
+  const handleUpdatePrediction = () => {
+    setLoading(true)
+    setError("")
+    setTimeout(() => {
+      // Simulate model/data missing
+      if (!modelAvailable) {
+        setError("Prediction model unavailable. Please try again later.")
+        setLoading(false)
+        return
+      }
+      setLoading(false)
+    }, 1200)
+  }
+
+  const handleExport = () => {
+    setLoading(true)
+    setError("")
+    setTimeout(() => {
+      setLoading(false)
+      // Simulate export error
+      // setError("Export failed. Please try again.")
+    }, 1000)
+  }
+
+  const handleSaveAlertRules = () => {
+    setAlertSaveError("")
+    setAlertSaveSuccess("")
+    if (!alertRecipient) {
+      setAlertSaveError("Please select at least one recipient.")
+      return
+    }
+    setSavingAlert(true)
+    setTimeout(() => {
+      // Simulate save failure randomly
+      // if (Math.random() < 0.2) {
+      //   setAlertSaveError("Failed to save alert rules. Please retry.")
+      //   setSavingAlert(false)
+      //   return
+      // }
+      setAlertSaveSuccess("Alert rules saved successfully.")
+      setSavingAlert(false)
+    }, 1200)
+  }
+
   return (
-    <div className="min-h-screen bg-[#FFF7E3] flex flex-row rounded-[24px] border-[8px] border-[#E2C275] overflow-hidden">
+    <div className="min-h-screen bg-[#FFF7E3] flex flex-row  border-[8px] border-[#E2C275] overflow-hidden">
       <AdminSidebar current="Prediction & Alert" />
       <main className="flex-1 flex flex-col">
         <AdminHeader />
 
         {/* Content */}
-        <section className="px-10 py-6">
-          <h1 className="text-3xl font-bold text-black mb-1">Prediction & Alert</h1>
-          <div className="text-xl text-gray-400 mb-6">Dengue Prediction & Alert System</div>
+        <motion.section className="px-10 py-6" variants={container} initial="hidden" animate="show">
+          <motion.div variants={item} className="mb-8">
+            <h1 className="text-3xl font-bold text-black mb-1">Prediction & Alert</h1>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#A21C1C]"></div>
+              <div className="text-lg text-gray-600">Dengue Prediction & Alert System</div>
+            </div>
+          </motion.div>
 
           {/* Dengue Predictions Section */}
-          <div className="mb-8">
+          <motion.div variants={item} className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-xl">Dengue Predictions</h2>
               <div className="flex gap-3">
-                <button className="bg-[#E5E7EB] text-black px-6 py-2 rounded-lg font-bold text-base hover:bg-[#F3EAD8] flex items-center gap-2">
-                  <FiDownload /> Export
+                <button className="bg-[#E5E7EB] text-black px-6 py-2 rounded-lg font-bold text-base hover:bg-[#F3EAD8] flex items-center gap-2" onClick={handleExport} disabled={loading}>
+                  <FiDownload /> {loading ? "Exporting..." : "Export"}
                 </button>
-                <button className="bg-[#E5E7EB] text-black px-6 py-2 rounded-lg font-bold text-base hover:bg-[#F3EAD8] flex items-center gap-2">
+                <button className="bg-[#E5E7EB] text-black px-6 py-2 rounded-lg font-bold text-base hover:bg-[#F3EAD8] flex items-center gap-2" disabled>
                   <FiFilter /> Filter
                 </button>
-                <button className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2">
-                  <FiRefreshCw /> Update Prediction
+                <button className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2" onClick={handleUpdatePrediction} disabled={loading}>
+                  <FiRefreshCw /> {loading ? "Updating..." : "Update Prediction"}
                 </button>
               </div>
             </div>
-
+            {error && (
+              <div className="mb-4 text-red-600 font-semibold bg-red-100 rounded-lg px-4 py-2 border border-red-200">{error}</div>
+            )}
+            {!modelAvailable && (
+              <div className="mb-4 text-red-600 font-semibold bg-red-100 rounded-lg px-4 py-2 border border-red-200">Prediction model unavailable. Please try again later.</div>
+            )}
             {/* Map and Risk Cards */}
             <div className="flex gap-6 mb-8">
               {/* Map */}
-              <div className="flex-1 bg-white rounded-xl overflow-hidden shadow">
+              <motion.div variants={item} className="flex-1 bg-white rounded-xl overflow-hidden shadow">
                 <div className="p-4 bg-[#F3EAD8] border-b">
                   <h3 className="font-semibold text-black">Prediction Map</h3>
                   <div className="flex items-center gap-4 mt-2 text-sm">
@@ -106,10 +211,10 @@ export default function PredictionAlertPage() {
                 <div className="h-80 relative">
                   <Image src="/images/prediction-map.png" alt="Prediction Map" fill className="object-cover" />
                 </div>
-              </div>
+              </motion.div>
 
               {/* Risk Level Cards */}
-              <div className="w-80 space-y-4">
+              <motion.div variants={item} className="w-80 space-y-4">
                 <div className="bg-red-100 rounded-xl p-6 border-l-4 border-red-500">
                   <div className="flex items-center gap-3 mb-2">
                     <FiAlertTriangle className="text-red-500 text-xl" />
@@ -136,37 +241,28 @@ export default function PredictionAlertPage() {
                   <div className="text-3xl font-bold text-green-700">45</div>
                   <div className="text-sm text-green-600">+3 from last week</div>
                 </div>
-              </div>
+              </motion.div>
             </div>
 
             {/* Filters */}
-            <div className="mb-6">
+            <motion.div variants={item} className="mb-6">
               <div className="flex gap-4 items-end">
                 <div className="flex flex-col gap-2">
                   <label className="font-semibold text-black text-sm">State</label>
-                  <select className="rounded-lg border border-gray-400 px-4 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-[#E2C275]">
-                    <option>All States</option>
-                    <option>Maharashtra</option>
-                    <option>Karnataka</option>
-                    <option>Tamil Nadu</option>
+                  <select className="rounded-lg border border-gray-400 px-4 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-[#E2C275]" value={selectedState} onChange={e => setSelectedState(e.target.value)}>
+                    {allStates.map(state => <option key={state}>{state}</option>)}
                   </select>
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="font-semibold text-black text-sm">City</label>
-                  <select className="rounded-lg border border-gray-400 px-4 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-[#E2C275]">
-                    <option>All Cities</option>
-                    <option>Mumbai</option>
-                    <option>Bangalore</option>
-                    <option>Chennai</option>
+                  <select className="rounded-lg border border-gray-400 px-4 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-[#E2C275]" value={selectedCity} onChange={e => setSelectedCity(e.target.value)}>
+                    {allCities.map(city => <option key={city}>{city}</option>)}
                   </select>
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="font-semibold text-black text-sm">Risk Level</label>
-                  <select className="rounded-lg border border-gray-400 px-4 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-[#E2C275]">
-                    <option>All Levels</option>
-                    <option>High</option>
-                    <option>Medium</option>
-                    <option>Low</option>
+                  <select className="rounded-lg border border-gray-400 px-4 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-[#E2C275]" value={selectedRisk} onChange={e => setSelectedRisk(e.target.value)}>
+                    {allRiskLevels.map(risk => <option key={risk}>{risk}</option>)}
                   </select>
                 </div>
                 <div className="flex flex-col gap-2">
@@ -175,14 +271,16 @@ export default function PredictionAlertPage() {
                     type="text"
                     placeholder="dd/mm/yyyy"
                     className="rounded-lg border border-gray-400 px-4 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-[#E2C275]"
+                    value={dateRange}
+                    onChange={e => setDateRange(e.target.value)}
                   />
                 </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           {/* Predicted Risk Areas Table */}
-          <div className="mb-10">
+          <motion.div variants={item} className="mb-10">
             <div className="font-bold text-xl mb-3">Predicted Risk Areas</div>
             <div className="overflow-x-auto rounded-xl">
               <table className="min-w-full bg-white rounded-xl">
@@ -196,49 +294,72 @@ export default function PredictionAlertPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {riskAreas.map((area, idx) => (
-                    <tr key={area.area} className={idx % 2 === 0 ? "bg-[#F9F6F2]" : "bg-white"}>
-                      <td className="py-3 px-6 font-medium text-black">{area.area}</td>
-                      <td className="py-3 px-6">
-                        <span
-                          className={`px-3 py-1 rounded-full text-sm font-semibold ${riskLevelStyles[area.riskLevel]} flex items-center gap-2 w-fit`}
-                        >
-                          <div className={`w-2 h-2 rounded-full ${area.color}`}></div>
-                          {area.riskLevel}
-                        </span>
-                      </td>
-                      <td className="py-3 px-6">
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 bg-gray-200 rounded-full h-2">
-                            <div
-                              className={`h-2 rounded-full ${area.color}`}
-                              style={{ width: `${area.confidence}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-sm font-medium">{area.confidence}%</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-6 text-black">{area.date}</td>
-                      <td className="py-3 px-6">
-                        <div className="flex gap-2">
-                          <button className="text-[#A21C1C] hover:bg-[#F3EAD8] p-2 rounded-lg">
-                            <FiEye />
-                          </button>
-                          <button className="text-[#A21C1C] hover:bg-[#F3EAD8] p-2 rounded-lg">
-                            <FiDownload />
-                          </button>
-                        </div>
-                      </td>
+                  {filteredAreas.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="text-center py-8 text-gray-500">No areas match the selected filters.</td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredAreas.map((area, idx) => (
+                      <tr key={area.area} className={idx % 2 === 0 ? "bg-[#F9F6F2]" : "bg-white"}>
+                        <td className="py-3 px-6 font-medium text-black">{area.area}</td>
+                        <td className="py-3 px-6">
+                          <span
+                            className={`px-3 py-1 rounded-full text-sm font-semibold ${riskLevelStyles[area.riskLevel]} flex items-center gap-2 w-fit`}
+                          >
+                            <div className={`w-2 h-2 rounded-full ${area.color}`}></div>
+                            {area.riskLevel}
+                          </span>
+                        </td>
+                        <td className="py-3 px-6">
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full ${area.color}`}
+                                style={{ width: `${area.confidence}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-sm font-medium">{area.confidence}%</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-6 text-black">{area.date}</td>
+                        <td className="py-3 px-6">
+                          <div className="flex gap-2">
+                            <button className="text-[#A21C1C] hover:bg-[#F3EAD8] p-2 rounded-lg" onClick={() => setShowDetails(area)}>
+                              <FiEye />
+                            </button>
+                            <button className="text-[#A21C1C] hover:bg-[#F3EAD8] p-2 rounded-lg" onClick={handleExport} disabled={loading}>
+                              <FiDownload />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
-            <div className="text-sm text-gray-500 mt-2">Showing 1 of 65 areas</div>
-          </div>
+            <div className="text-sm text-gray-500 mt-2">Showing {filteredAreas.length} of {riskAreas.length} areas</div>
+          </motion.div>
+
+          {/* View Details Modal */}
+          {showDetails && (
+            <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+              <div className="bg-white rounded-xl p-8 shadow-lg w-full max-w-md relative">
+                <button className="absolute top-2 right-2 text-gray-400 hover:text-black" onClick={() => setShowDetails(null)}>&times;</button>
+                <h2 className="text-xl font-bold mb-4">Area Details</h2>
+                <div className="mb-2"><span className="font-semibold">Area:</span> {showDetails.area}</div>
+                <div className="mb-2"><span className="font-semibold">Risk Level:</span> {showDetails.riskLevel}</div>
+                <div className="mb-2"><span className="font-semibold">Confidence:</span> {showDetails.confidence}%</div>
+                <div className="mb-2"><span className="font-semibold">Prediction Date:</span> {showDetails.date}</div>
+                <div className="mt-4">
+                  <button className="bg-[#A21C1C] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#7C1D1D]" onClick={() => setShowDetails(null)}>Close</button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Notification Settings */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+          <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
             {/* Set Alert Rules */}
             <div className="bg-white rounded-xl p-6 shadow">
               <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
@@ -275,7 +396,8 @@ export default function PredictionAlertPage() {
 
                 <div className="mt-6">
                   <div className="text-sm font-semibold text-black mb-2">Notification Recipients</div>
-                  <select className="w-full rounded-lg border border-gray-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#E2C275]">
+                  <select className="w-full rounded-lg border border-gray-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#E2C275]" value={alertRecipient} onChange={e => setAlertRecipient(e.target.value)}>
+                    <option value="">-- Select Recipients --</option>
                     <option>All Health Officials</option>
                   </select>
                 </div>
@@ -298,8 +420,10 @@ export default function PredictionAlertPage() {
                   </div>
                 </div>
 
-                <button className="w-full bg-[#A21C1C] text-white py-2 rounded-lg font-bold hover:bg-[#7C1D1D] mt-4">
-                  Save Alert Rules
+                {alertSaveError && <div className="text-red-600 bg-red-100 border border-red-200 rounded-lg px-4 py-2 font-semibold">{alertSaveError}</div>}
+                {alertSaveSuccess && <div className="text-green-700 bg-green-100 border border-green-200 rounded-lg px-4 py-2 font-semibold">{alertSaveSuccess}</div>}
+                <button className="w-full bg-[#A21C1C] text-white py-2 rounded-lg font-bold hover:bg-[#7C1D1D] mt-4 disabled:opacity-60" onClick={handleSaveAlertRules} disabled={savingAlert || !alertRecipient}>
+                  {savingAlert ? "Saving..." : "Save Alert Rules"}
                 </button>
               </div>
             </div>
@@ -387,18 +511,18 @@ export default function PredictionAlertPage() {
                 </button>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Bottom Actions */}
-          <div className="flex justify-end gap-4">
+          <motion.div variants={item} className="flex justify-end gap-4">
             <button className="bg-[#E5E7EB] text-black px-8 py-2 rounded-lg font-bold text-base hover:bg-[#F3EAD8]">
               Reset to Defaults
             </button>
             <button className="bg-[#A21C1C] text-white px-8 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D]">
               Save All Settings
             </button>
-          </div>
-        </section>
+          </motion.div>
+        </motion.section>
       </main>
     </div>
   )
