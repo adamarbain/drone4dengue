@@ -1,11 +1,44 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { FiSearch, FiLogOut, FiBell, FiMail, FiChevronDown, FiAlertCircle } from "react-icons/fi"
+import { useAuth } from '@/context/AuthContext';
 
 export default function AdminHeader() {
   const [showNotifications, setShowNotifications] = useState(false)
+  const { logout, user, token } = useAuth();
+
+  const [userData, setUserData] = useState<any>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState('');
+  const [profileSuccess, setProfileSuccess] = useState('');
+
+  const API_URL = 'http://localhost:4000';
+
+  // Fetch user on mount or when user/token changes
+  useEffect(() => {
+    async function fetchUser() {
+      if (!user?.id || !token) return;
+      setProfileLoading(true);
+      setProfileError('');
+      setProfileSuccess('');
+      try {
+        const res = await fetch(`${API_URL}/users/${user.id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Failed to fetch user');
+        const data = await res.json();
+        setUserData(data.user);
+        console.log(data.user);
+      } catch (err) {
+        setProfileError(err instanceof Error ? err.message : 'Failed to fetch user');
+      } finally {
+        setProfileLoading(false);
+      }
+    }
+    fetchUser();
+  }, [user?.id, token]);
 
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between px-8 py-4 bg-white border-b border-[#E2C275]/50 shadow-sm">
@@ -78,14 +111,14 @@ export default function AdminHeader() {
 
           <div className="h-6 w-px bg-gray-300 mx-1"></div>
 
-          <button className="flex items-center gap-2 bg-[#A21C1C] text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-[#7C1D1D] transition-colors">
+          <button className="flex items-center gap-2 bg-[#A21C1C] text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-[#7C1D1D] transition-colors" onClick={logout}>
             <FiLogOut className="w-4 h-4" />
             <span>Logout</span>
           </button>
 
           <div className="flex items-center gap-3 pl-3">
             <div className="flex flex-col items-end">
-              <span className="font-medium text-sm">Alex Johnson</span>
+              <span className="font-medium text-sm">{userData?.username || 'User'}</span>
               <span className="text-xs text-gray-500">Administrator</span>
             </div>
             <div className="relative">

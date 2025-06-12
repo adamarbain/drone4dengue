@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { User, Lock, Eye, EyeOff, AlertCircle } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 import { motion } from "framer-motion"
+import Image from "next/image"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -102,13 +103,17 @@ export default function LoginPage() {
               {/* Mosquito icon */}
               <div className="flex justify-center mb-6">
                 <motion.div
-                  className="w-24 h-24 bg-red-500 rounded-full flex items-center justify-center shadow-lg"
+                  className="w-24 h-24 rounded-lg flex items-center justify-center"
                   whileHover={{ scale: 1.05 }}
                   transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 >
-                  <svg viewBox="0 0 24 24" className="w-12 h-12 text-white" fill="currentColor">
-                    <path d="M12 2C10.9 2 10 2.9 10 4C10 5.1 10.9 6 12 6C13.1 6 14 5.1 14 4C14 2.9 13.1 2 12 2ZM21 9V7L19 8L17 7V9L19 10L21 9ZM7 7V9L5 10L3 9V7L5 8L7 7ZM12 8C9.8 8 8 9.8 8 12C8 14.2 9.8 16 12 16C14.2 16 16 14.2 16 12C16 9.8 14.2 8 12 8ZM12 14C10.9 14 10 13.1 10 12C10 10.9 10.9 10 12 10C13.1 10 14 10.9 14 12C14 13.1 13.1 14 12 14ZM12 18C10.9 18 10 18.9 10 20C10 21.1 10.9 22 12 22C13.1 22 14 21.1 14 20C14 18.9 13.1 18 12 18Z" />
-                  </svg>
+                  <Image
+                    src="/images/drone4dengue-logo.png"
+                    alt="Drone4Dengue Logo"
+                    width={80}
+                    height={80}
+                    className="object-contain"
+                  />
                 </motion.div>
               </div>
 
@@ -134,7 +139,7 @@ export default function LoginPage() {
                     <Input
                       id="email"
                       type="email"
-                      placeholder="Enter your email"
+                      placeholder=""
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -150,7 +155,7 @@ export default function LoginPage() {
                     </Label>
                     <Link
                       href="/forgot-password"
-                      className="text-yellow-300 hover:text-yellow-200 transition-colors text-sm"
+                      className="text-white hover:text-gray-200 transition-colors text-sm"
                     >
                       Forgot Password ?
                     </Link>
@@ -160,11 +165,11 @@ export default function LoginPage() {
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
+                      placeholder=""
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-12 pr-12 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="pl-12 pr-12 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                     <Button
                       type="button"
@@ -182,7 +187,7 @@ export default function LoginPage() {
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-red-900 font-semibold rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition-all shadow-lg disabled:opacity-70"
+                    className="w-full py-3 bg-gradient-to-r from-white to-white text-red-900 font-semibold rounded-lg hover:from-gray-100 hover:to-gray-200 transition-all shadow-lg disabled:opacity-70"
                   >
                     {isLoading ? "LOGGING IN..." : "LOGIN"}
                   </Button>
@@ -194,7 +199,7 @@ export default function LoginPage() {
                 <span className="text-white/70 text-sm">{"Don't have an account? "}</span>
                 <Link
                   href="/signup"
-                  className="text-yellow-300 font-semibold hover:text-yellow-200 transition-colors text-sm"
+                  className="text-white font-semibold hover:text-gray-200 transition-colors text-sm"
                 >
                   Sign up
                 </Link>

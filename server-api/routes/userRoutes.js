@@ -9,4 +9,7 @@ router.patch('/:id', checkToken, userController.updateProfile);
 // GET /users/:id
 router.get('/:id', checkToken, userController.getUserById);
 
+// PATCH /users/:id/password
+router.patch('/:id/password', checkToken, userController.updatePassword);
+
 module.exports = router;

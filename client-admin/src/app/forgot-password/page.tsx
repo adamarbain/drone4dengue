@@ -119,7 +119,7 @@ export default function ForgotPasswordPage() {
                     <Input
                       id="email"
                       type="email"
-                      placeholder="EMAIL ADDRESS"
+                      placeholder=""
                       required
                       value={email}
                       onChange={e => setEmail(e.target.value)}
@@ -145,7 +145,7 @@ export default function ForgotPasswordPage() {
                     <Input
                       id="code"
                       type="text"
-                      placeholder="RESET CODE"
+                      placeholder=""
                       required
                       value={code}
                       onChange={e => setCode(e.target.value)}

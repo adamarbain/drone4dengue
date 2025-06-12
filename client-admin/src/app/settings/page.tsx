@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import AdminSidebar from "@/components/AdminSidebar"
 import AdminHeader from "@/components/AdminHeader"
@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { FiSave, FiEdit2, FiLock, FiMail, FiUser, FiSettings, FiSliders, FiRefreshCw } from "react-icons/fi"
+import { useAuth } from '@/context/AuthContext';
 
 const container = {
   hidden: { opacity: 0 },
@@ -24,6 +25,8 @@ const item = {
   show: { opacity: 1, y: 0 },
 }
 
+const API_URL = 'http://localhost:4000';
+
 export default function SettingsPage() {
   const [profileEditable, setProfileEditable] = useState(false)
   const [emailNotifications, setEmailNotifications] = useState(true)
@@ -31,6 +34,132 @@ export default function SettingsPage() {
   const [alertFrequency, setAlertFrequency] = useState("immediate")
   const [alertThreshold, setAlertThreshold] = useState("medium")
   const [syncMode, setSyncMode] = useState("automatic")
+
+  // Auth context
+  const { user, token } = useAuth();
+
+  // User profile state
+  const [userData, setUserData] = useState(null);
+  const [profileForm, setProfileForm] = useState({ name: '', username: '', email: '', phone: '', organization: '' });
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState('');
+  const [profileSuccess, setProfileSuccess] = useState('');
+
+  // Password update state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+
+  // Fetch user on mount or when user/token changes
+  useEffect(() => {
+    async function fetchUser() {
+      if (!user?.id || !token) return;
+      setProfileLoading(true);
+      setProfileError('');
+      setProfileSuccess('');
+      try {
+        const res = await fetch(`${API_URL}/users/${user.id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Failed to fetch user');
+        const data = await res.json();
+        setUserData(data.user);
+        setProfileForm({
+          name: data.user.name || '',
+          username: data.user.username || '',
+          email: data.user.email || '',
+          phone: data.user.phone || '',
+          organization: data.user.organization || '',
+        });
+      } catch (err) {
+        setProfileError(err instanceof Error ? err.message : 'Failed to fetch user');
+      } finally {
+        setProfileLoading(false);
+      }
+    }
+    fetchUser();
+  }, [user?.id, token]);
+
+  // Handle profile form changes
+  function handleProfileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setProfileForm({ ...profileForm, [e.target.name]: e.target.value });
+  }
+
+  // Handle profile save
+  async function handleProfileSave() {
+    setProfileError('');
+    setProfileSuccess('');
+    try {
+      if (!user?.id || !token) throw new Error('No user ID or token found');
+      const res = await fetch(`${API_URL}/users/${user.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: profileForm.name,
+          username: profileForm.username,
+          phone: profileForm.phone,
+          organization: profileForm.organization,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to update profile');
+      }
+      const data = await res.json();
+      setUserData(data.user);
+      setProfileSuccess('Profile updated successfully!');
+      setProfileEditable(false);
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : 'Failed to update profile');
+    }
+  }
+
+  // Handle password update
+  async function handlePasswordUpdate() {
+    setPasswordError('');
+    setPasswordSuccess('');
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match.');
+      return;
+    }
+    if (!user?.id || !token) {
+      setPasswordError('No user ID or token found.');
+      return;
+    }
+    setPasswordLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/users/${user.id}/password`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ password: newPassword }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to update password');
+      }
+      setPasswordSuccess('Password updated successfully!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : 'Failed to update password');
+    } finally {
+      setPasswordLoading(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#FFF7E3] flex flex-row  border-[8px] border-[#E2C275] overflow-hidden">
@@ -64,62 +193,90 @@ export default function SettingsPage() {
                       <button
                         onClick={() => setProfileEditable(!profileEditable)}
                         className="flex items-center gap-2 text-[#A21C1C] hover:bg-[#F3EAD8] p-2 rounded-lg"
+                        disabled={profileLoading}
                       >
                         <FiEdit2 />
                         <span>{profileEditable ? "Cancel" : "Edit Profile"}</span>
                       </button>
                     </div>
 
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Name</Label>
-                        <Input
-                          id="name"
-                          defaultValue="Alex Johnson"
-                          disabled={!profileEditable}
-                          className={`${
-                            !profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#A21C1C]"
-                          }`}
-                        />
-                      </div>
+                    {profileLoading ? (
+                      <div className="text-gray-500">Loading...</div>
+                    ) : profileError ? (
+                      <div className="text-red-600">{profileError}</div>
+                    ) : (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Name</Label>
+                          <Input
+                            id="name"
+                            name="name"
+                            value={profileForm.name}
+                            onChange={handleProfileChange}
+                            disabled={!profileEditable}
+                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#A21C1C]"}`}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="username">Username</Label>
+                          <Input
+                            id="username"
+                            name="username"
+                            value={profileForm.username}
+                            onChange={handleProfileChange}
+                            disabled={!profileEditable}
+                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#A21C1C]"}`}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email</Label>
+                          <Input
+                            id="email"
+                            name="email"
+                            value={profileForm.email}
+                            onChange={handleProfileChange}
+                            disabled={true}
+                            className={"bg-gray-100 text-gray-700"}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="phone">Phone</Label>
+                          <Input
+                            id="phone"
+                            name="phone"
+                            value={profileForm.phone}
+                            onChange={handleProfileChange}
+                            disabled={!profileEditable}
+                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#A21C1C]"}`}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="organization">Organization</Label>
+                          <Input
+                            id="organization"
+                            name="organization"
+                            value={profileForm.organization}
+                            onChange={handleProfileChange}
+                            disabled={!profileEditable}
+                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#A21C1C]"}`}
+                          />
+                        </div>
+                      </>
+                    )}
 
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          defaultValue="alex.johnson@universiti-malaya.edu"
-                          disabled={!profileEditable}
-                          className={`${
-                            !profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#A21C1C]"
-                          }`}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="organization">Organization</Label>
-                        <Input
-                          id="organization"
-                          defaultValue="University Malaya"
-                          disabled={!profileEditable}
-                          className={`${
-                            !profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#A21C1C]"
-                          }`}
-                        />
-                      </div>
-                    </div>
-
-                    {profileEditable && (
+                    {profileEditable && !profileLoading && (
                       <div className="pt-4">
                         <button
                           className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2"
-                          onClick={() => setProfileEditable(false)}
+                          onClick={handleProfileSave}
+                          disabled={profileLoading}
                         >
                           <FiSave />
                           Save Changes
                         </button>
                       </div>
                     )}
+                    {profileSuccess && <div className="text-green-600 mt-2">{profileSuccess}</div>}
                   </div>
                 </CardContent>
               </Card>
@@ -141,37 +298,48 @@ export default function SettingsPage() {
                       <Input
                         id="current-password"
                         type="password"
-                        defaultValue="••••••••"
-                        className="border-[#E2C275] focus:border-[#A21C1C]"
+                        value={currentPassword}
+                        onChange={e => setCurrentPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="border-[#E2C275] bg-gray-100 text-gray-700"
+                        autoComplete="current-password"
+                        disabled={true}
                       />
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="new-password">New Password</Label>
                       <Input
                         id="new-password"
                         type="password"
-                        defaultValue=""
+                        value={newPassword}
+                        onChange={e => setNewPassword(e.target.value)}
                         placeholder="••••••••"
                         className="border-[#E2C275] focus:border-[#A21C1C]"
+                        autoComplete="new-password"
                       />
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="confirm-password">Confirm New Password</Label>
                       <Input
                         id="confirm-password"
                         type="password"
-                        defaultValue=""
+                        value={confirmPassword}
+                        onChange={e => setConfirmPassword(e.target.value)}
                         placeholder="••••••••"
                         className="border-[#E2C275] focus:border-[#A21C1C]"
+                        autoComplete="new-password"
                       />
                     </div>
-
+                    {passwordError && <div className="text-red-600 mt-2">{passwordError}</div>}
+                    {passwordSuccess && <div className="text-green-600 mt-2">{passwordSuccess}</div>}
                     <div className="pt-4">
-                      <button className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2">
+                      <button
+                        className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2"
+                        onClick={handlePasswordUpdate}
+                        disabled={passwordLoading}
+                      >
                         <FiLock />
-                        Update Password
+                        {passwordLoading ? 'Updating...' : 'Update Password'}
                       </button>
                     </div>
                   </div>

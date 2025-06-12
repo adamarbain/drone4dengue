@@ -1,18 +1,20 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const bcrypt = require('bcrypt');
+const SALT_ROUNDS = 10;
 
 // PATCH /users/:id
 exports.updateProfile = async (req, res) => {
   const userId = req.params.id;
-  const { name, username, phone } = req.body;
+  const { name, username, phone, organization } = req.body;
   
   console.log('[UPDATE PROFILE] Request received:', {
     userId,
-    requestBody: { name, username, phone }
+    requestBody: { name, username, phone, organization }
   });
 
   if (!name && !username && !email && !phone) {
-    console.log('[UPDATE PROFILE] No fields to update');
+    console.log('[UPDATE PROFILE] No required fields to update');
     return res.status(400).json({ error: 'No fields to update.' });
   }
 
@@ -22,8 +24,9 @@ exports.updateProfile = async (req, res) => {
       where: { id: userId },
       data: {
         ...(name && { name }),
-        ...(username && { username }),
+        ...(username && { username }), 
         ...(phone && { phone }),
+        ...(organization && { organization }) // Organization remains optional
       },
     });
 
@@ -64,3 +67,32 @@ exports.getUserById = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch user.' });
   }
 };    
+
+// PATCH /users/:id/password
+exports.updatePassword = async (req, res) => {
+  const userId = req.params.id;
+  const { password } = req.body;
+
+  console.log('[UPDATE PASSWORD] Request received:', { userId, requestBody: { password: !!password } });
+
+  if (!password || password.length < 6) {
+    return res.status(400).json({ error: 'Password is required and must be at least 6 characters.' });
+  }
+
+  try {
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+    // Update the user in the database
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+
+    console.log('[UPDATE PASSWORD] Password updated for user:', userId);
+    res.json({ message: 'Password updated successfully.' });
+  } catch (err) {
+    console.error('[UPDATE PASSWORD ERROR]', err);
+    res.status(500).json({ error: 'Failed to update password.' });
+  }
+};
