@@ -1,19 +1,71 @@
-import React from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, Image, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNav from './components/BottomNav';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { fetchCurrentUser } from '../utils/userApi';
+
+type User = {
+  id: string;
+  name: string;
+  username: string;
+  email: string;
+  phone: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export default function ProfilePage() {
   const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Debug: Check token and expiration
+  useEffect(() => {
+    (async () => {
+      const token = await AsyncStorage.getItem('token');
+      const tokenExp = await AsyncStorage.getItem('token_exp');
+      console.log('[DEBUG] Token:', token);
+      console.log('[DEBUG] Token Expiration:', tokenExp, 'Current Time:', Date.now());
+      if (tokenExp && Date.now() > parseInt(tokenExp, 10)) {
+        console.log('[DEBUG] Token is expired.');
+      }
+    })();
+  }, []);
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem('token');
     await AsyncStorage.removeItem('token_exp');
     router.replace('/(auth)/login');
   };
+
+  // Fetch user every time the screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      fetchCurrentUser()
+        .then(user => {
+          setUser(user);
+          console.log('[DEBUG] User fetched:', user);
+        })
+        .catch((err) => {
+          console.log('[DEBUG] fetchCurrentUser error:', err);
+          handleLogout();
+        })
+        .finally(() => setLoading(false));
+    }, [])
+  );
+
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 bg-[#F8F8F8] items-center justify-center">
+        <ActivityIndicator size="large" color="#7D0A0A" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-[#F8F8F8]">
@@ -22,7 +74,7 @@ export default function ProfilePage() {
         <Text className="text-3xl font-extrabold text-[#181D27] mb-1" style={{ fontFamily: 'SF Pro' }}>
           Profile
         </Text>
-        <Text className="text-base text-[#7D0A0A] font-semibold mb-2">Welcome back, Aida!</Text>
+        <Text className="text-base text-[#7D0A0A] font-semibold mb-2">Welcome back, {user?.username || ''}!</Text>
       </View>
 
      {/* User Card */}
@@ -31,8 +83,8 @@ export default function ProfilePage() {
           <Image source={require('../assets/profile-user-image.png')} className="w-full h-full" resizeMode="cover" />
         </View>
         <View className="flex-1">
-          <Text className="text-lg font-bold text-white" style={{ fontFamily: 'SF Pro' }}>Aida Sophea</Text>
-          <Text className="text-xs text-[#D7D7D7]" style={{ fontFamily: 'SF Pro' }}>@aidasophea</Text>
+          <Text className="text-lg font-bold text-white" style={{ fontFamily: 'SF Pro' }}>{user?.name || ''}</Text>
+          <Text className="text-xs text-[#D7D7D7]" style={{ fontFamily: 'SF Pro' }}>@{user?.username || ''}</Text>
         </View>
         <TouchableOpacity
           onPress={handleLogout}
@@ -47,7 +99,7 @@ export default function ProfilePage() {
       {/* Profile Options */}
       <View className="mx-6 space-y-5">
         {/* My Account */}
-        <View className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4">
+        <TouchableOpacity onPress={() => router.push('/edit-profile')} className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4">
           <View className="w-12 h-12 rounded-full bg-[#7D0A0A]/10 items-center justify-center mr-4">
             <Ionicons name="person-outline" size={26} color="#7D0A0A" />
           </View>
@@ -55,7 +107,7 @@ export default function ProfilePage() {
             <Text className="text-lg font-semibold text-[#181D27]">My Account</Text>
             <Text className="text-xs text-[#ABABAB]">Make changes to your account</Text>
           </View>
-        </View>
+        </TouchableOpacity>
         {/* Organisation Details */}
         <View className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4">
           <View className="w-12 h-12 rounded-full bg-[#7D0A0A]/10 items-center justify-center mr-4">

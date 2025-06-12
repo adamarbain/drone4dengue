@@ -9,8 +9,7 @@ app.use(express.json());
 
 // Routers (to be implemented in separate files)
 app.use('/auth', require('./routes/authRoutes'));
-// app.use('/drones', require('./routes/droneRoutes'));
-// app.use('/users', require('./routes/userRoutes'));
+app.use('/users', require('./routes/userRoutes'));
 // app.use('/images', require('./routes/images'));
 // app.use('/weather', require('./routes/admin/weatherRoutes'));
 // app.use('/dengue-data', require('./routes/admin/dengueDataRoutes'));
