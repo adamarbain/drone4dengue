@@ -7,7 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://192.168.1.175:4000/auth'; // Change to your backend URL
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -32,7 +32,7 @@ export default function LoginScreen() {
     setResetError('');
     setResetSuccess('');
     try {
-      const res = await fetch(`${API_URL}/reset-request`, {
+      const res = await fetch(`${API_URL}/auth/reset-request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: resetEmail }),
@@ -53,7 +53,7 @@ export default function LoginScreen() {
     setResetError('');
     setResetSuccess('');
     try {
-      const res = await fetch(`${API_URL}/reset-verify`, {
+      const res = await fetch(`${API_URL}/auth/reset-verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: resetEmail, code: resetCode }),
@@ -79,7 +79,7 @@ export default function LoginScreen() {
       return;
     }
     try {
-      const res = await fetch(`${API_URL}/reset`, {
+      const res = await fetch(`${API_URL}/auth/reset`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: resetEmail, code: resetCode, newPassword: resetNewPassword }),
@@ -109,7 +109,7 @@ export default function LoginScreen() {
     setLoginLoading(true);
     setLoginError('');
     try {
-      const res = await fetch(`${API_URL}/login`, {
+      const res = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

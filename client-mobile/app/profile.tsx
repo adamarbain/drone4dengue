@@ -71,7 +71,7 @@ export default function ProfilePage() {
     <SafeAreaView className="flex-1 bg-[#F8F8F8]">
       {/* Header */}
       <View className="px-6 pt-10 pb-2">
-        <Text className="text-3xl font-extrabold text-[#181D27] mb-1" style={{ fontFamily: 'SF Pro' }}>
+        <Text className="text-4xl font-extrabold text-[#181D27] mb-1" style={{ fontFamily: 'SF Pro' }}>
           Profile
         </Text>
         <Text className="text-base text-[#7D0A0A] font-semibold mb-2">Welcome back, {user?.username || ''}!</Text>
