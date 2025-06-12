@@ -7,7 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://192.168.0.9:4000/auth'; // Change to your backend URL
+const API_URL = 'http://192.168.1.175:4000/auth'; // Change to your backend URL
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');

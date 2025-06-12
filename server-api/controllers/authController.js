@@ -9,10 +9,10 @@ const email_sender_email = process.env.SENDER_EMAIL;
 const email_sender_password = process.env.SENDER_EMAIL_PW;
 
 exports.registerUser = async (req, res) => {
-  const { email, password, name, phone } = req.body;
-  if (!email || !password || !name || !phone) {
+  const { email, password, name, phone, username } = req.body;
+  if (!email || !password || !name || !phone || !username) {
     console.log(`[REGISTER ERROR] Missing required fields for ${email}`);
-    return res.status(400).json({ error: 'Email, password, name, and phone are required.' });
+    return res.status(400).json({ error: 'Email, password, name, phone, and username are required.' });
   }
   try {
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -22,11 +22,11 @@ exports.registerUser = async (req, res) => {
     }
     const hash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, password: hash, name, phone, role: 'user' },
+      data: { email, password: hash, name, phone, username, role: 'user' },
     });
     const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     console.log(`[REGISTER SUCCESS] New user registered: ${email}`);
-    res.json({ token, user: { id: user.id, email: user.email, name: user.name, phone: user.phone, role: user.role } });
+    res.json({ token, user: { id: user.id, email: user.email, name: user.name, phone: user.phone, username: user.username, role: user.role } });
   } catch (err) {
     console.error('[REGISTER ERROR] Registration failed:', err);
     res.status(500).json({ error: 'Registration failed.' });

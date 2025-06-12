@@ -43,7 +43,7 @@ export default function BottomNav() {
             className="flex-1 items-center"
             onPress={() => {
               if (tab.key === 'dashboard') {
-                router.replace('/' as '/');
+                router.replace('/dashboard' as '/dashboard');
               } else if (tab.key === 'action') {
                 router.replace('/action' as '/action');
               } else if (tab.key === 'drone') {

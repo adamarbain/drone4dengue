@@ -8,6 +8,7 @@ import { KeyboardAvoidingView, Platform } from 'react-native';
 
 export default function RegisterScreen() {
     const [fullName, setFullName] = useState('');
+    const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -20,7 +21,7 @@ export default function RegisterScreen() {
     const router = useRouter();
 
     const validateForm = () => {
-        if (!fullName || !email || !password || !confirmPassword || !phone) {
+        if (!fullName || !username || !email || !password || !confirmPassword || !phone) {
             setError('Please fill in all fields.');
             return false;
         }
@@ -55,6 +56,7 @@ export default function RegisterScreen() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name: fullName,
+                    username,
                     email,
                     password,
                     phone,
@@ -99,6 +101,17 @@ export default function RegisterScreen() {
                         placeholderTextColor="#A3A3A3"
                         value={fullName}
                         onChangeText={setFullName}
+                        autoCapitalize="none"
+                        textAlignVertical="center"
+                    />
+                    {/* Username */}
+                    <Text className="text-lg text-gray-500 mb-1">Username</Text>
+                    <TextInput
+                        className="w-full border border-black rounded-xl px-4 py-4 text-md mb-6"
+                        placeholder="Username"
+                        placeholderTextColor="#A3A3A3"
+                        value={username}
+                        onChangeText={setUsername}
                         autoCapitalize="none"
                         textAlignVertical="center"
                     />
