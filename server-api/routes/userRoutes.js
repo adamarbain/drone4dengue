@@ -12,4 +12,25 @@ router.get('/:id', checkToken, userController.getUserById);
 // PATCH /users/:id/password
 router.patch('/:id/password', checkToken, userController.updatePassword);
 
+// GET /users
+router.get('/', checkToken, userController.getAllUsers);
+
+// POST /users
+router.post('/', checkToken, userController.createUser);
+
+// DELETE /users/:id
+router.delete('/:id', checkToken, userController.deleteUser);
+
+// POST /users/bulk-delete
+router.post('/bulk-delete', checkToken, userController.bulkDeleteUsers);
+
+// PUT /users/:id/permissions
+router.put('/:id/permissions', checkToken, userController.updateUserPermission);
+
+// GET /users/summary
+router.get('/summary/dashboard', checkToken, userController.getUserSummary);
+
+// PUT /users/:id/status
+router.put('/:id/status', checkToken, userController.adminUpdateUserStatus);
+
 module.exports = router;

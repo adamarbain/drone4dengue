@@ -20,6 +20,8 @@ export default function RegisterScreen() {
     const [error, setError] = useState('');
     const router = useRouter();
 
+    const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
+
     const validateForm = () => {
         if (!fullName || !username || !email || !password || !confirmPassword || !phone) {
             setError('Please fill in all fields.');
@@ -51,7 +53,7 @@ export default function RegisterScreen() {
         setError('');
         try {
             // Replace with your actual API endpoint
-            const response = await fetch('http://192.168.0.21:4000/auth/register', {
+            const response = await fetch(`${API_URL}/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

@@ -16,6 +16,7 @@ type User = {
   role: string;
   createdAt: string;
   updatedAt: string;
+  status: string;
 };
 
 export default function ProfilePage() {
@@ -118,6 +119,21 @@ export default function ProfilePage() {
             <Text className="text-xs text-[#ABABAB]">View details about your organisation</Text>
           </View>
         </View>
+        {/* Verify Account */}
+        {user?.status !== 'Verified' && (
+          <TouchableOpacity
+            onPress={() => router.push('/verify-otp')}
+            className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4"
+          >
+            <View className="w-12 h-12 rounded-full bg-[#7D0A0A]/10 items-center justify-center mr-4">
+              <Ionicons name="keypad-outline" size={26} color="#7D0A0A" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-lg font-semibold text-[#181D27]">Verify Account</Text>
+              <Text className="text-xs text-[#ABABAB]">Verify your phone number via Email OTP</Text>
+            </View>
+          </TouchableOpacity>
+        )}
         {/* About App */}
         <View className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4">
           <View className="w-12 h-12 rounded-full bg-[#7D0A0A]/10 items-center justify-center mr-4">

@@ -1,32 +1,62 @@
-const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
+const prisma = require('../prisma/client');
+const twilio = require('twilio');
 
-const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
 const email_sender_email = process.env.SENDER_EMAIL;
 const email_sender_password = process.env.SENDER_EMAIL_PW;
 
+const twilioClient = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
+
+const twilio_phone_number = process.env.TWILIO_PHONE_NUMBER;
+
 exports.registerUser = async (req, res) => {
   const { email, password, name, phone, username } = req.body;
+
+  // Validate required fields
   if (!email || !password || !name || !phone || !username) {
     console.log(`[REGISTER ERROR] Missing required fields for ${email}`);
     return res.status(400).json({ error: 'Email, password, name, phone, and username are required.' });
   }
+
   try {
+    // Check if email already exists
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       console.log(`[REGISTER ERROR] Email already exists: ${email}`);
       return res.status(409).json({ error: 'Email already registered.' });
     }
+
+    // Hash password
     const hash = await bcrypt.hash(password, 10);
+
+    // Create new user
     const user = await prisma.user.create({
-      data: { email, password: hash, name, phone, username, role: 'user' },
+      data: {
+        email,
+        password: hash,
+        name,
+        phone,
+        username,
+        role: 'user',
+        status: 'Pending'
+      }
     });
+
+    // Generate JWT token
     const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+
     console.log(`[REGISTER SUCCESS] New user registered: ${email}`);
-    res.json({ token, user: { id: user.id, email: user.email, name: user.name, phone: user.phone, username: user.username, role: user.role } });
+
+    // Return user data without password
+    const { password: _, ...userWithoutPassword } = user;
+    res.json({ token, user: userWithoutPassword });
+
   } catch (err) {
     console.error('[REGISTER ERROR] Registration failed:', err);
     res.status(500).json({ error: 'Registration failed.' });
@@ -34,24 +64,47 @@ exports.registerUser = async (req, res) => {
 };
 
 exports.registerAdmin = async (req, res) => {
-  const { email, password, name, phone } = req.body;
-  if (!email || !password || !name || !phone) {
+  const { email, password, name, phone, username } = req.body;
+
+  // Validate required fields
+  if (!email || !password || !name || !phone || !username) {
     console.log(`[REGISTER ADMIN ERROR] Missing required fields for ${email}`);
-    return res.status(400).json({ error: 'Email, password, name, and phone are required.' });
+    return res.status(400).json({ error: 'Email, password, name, phone, and username are required.' });
   }
+
   try {
+    // Check if email already exists
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       console.log(`[REGISTER ADMIN ERROR] Email already exists: ${email}`);
       return res.status(409).json({ error: 'Email already registered.' });
     }
+
+    // Hash password
     const hash = await bcrypt.hash(password, 10);
+
+    // Create new admin user
     const user = await prisma.user.create({
-      data: { email, password: hash, name, phone, role: 'admin' },
+      data: {
+        email,
+        password: hash,
+        name,
+        phone,
+        username,
+        role: 'admin',
+        status: 'Verified' // Admins are automatically verified
+      }
     });
+
+    // Generate JWT token
     const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+
     console.log(`[REGISTER ADMIN SUCCESS] New admin registered: ${email}`);
-    res.json({ token, user: { id: user.id, email: user.email, name: user.name, phone: user.phone, role: user.role } });
+
+    // Return user data without password
+    const { password: _, ...userWithoutPassword } = user;
+    res.json({ token, user: userWithoutPassword });
+
   } catch (err) {
     console.error('[REGISTER ADMIN ERROR] Registration failed:', err);
     res.status(500).json({ error: 'Registration failed.' });
@@ -140,4 +193,67 @@ exports.reset = async (req, res) => {
 exports.forgotPassword = (req, res) => {
   // Not implemented in original auth.js, kept for compatibility
   res.status(501).json({ error: 'Not implemented' });
+};
+
+// --- EMAIL OTP VERIFICATION ---
+
+// POST /auth/send-otp
+exports.sendOtp = async (req, res) => {
+  let { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email is required.' });
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
+    await prisma.user.update({ where: { email }, data: { otpCode: otp, otpExpiry: expiry } });
+    // Send OTP via email
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: email_sender_email,
+        pass: email_sender_password,
+      },
+    });
+    const mailOptions = {
+      from: email_sender_email,
+      to: email,
+      subject: 'DengueEye - Your OTP Code',
+      text: `Your OTP code is: ${otp}`,
+      html: `<p>Your OTP code is: <b>${otp}</b></p>`,
+    };
+    await transporter.sendMail(mailOptions);
+    res.json({ message: 'OTP sent to email.' });
+  } catch (err) {
+    console.error('[SEND OTP ERROR]', err);
+    res.status(500).json({ error: 'Failed to send OTP.' });
+  }
+};
+
+// POST /auth/verify-otp
+exports.verifyOtp = async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) return res.status(400).json({ error: 'Email and OTP are required.' });
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || !user.otpCode || !user.otpExpiry) {
+      return res.status(400).json({ error: 'OTP not requested or expired.' });
+    }
+    if (user.otpCode !== otp) {
+      return res.status(400).json({ error: 'Invalid OTP.' });
+    }
+    if (new Date() > user.otpExpiry) {
+      return res.status(400).json({ error: 'OTP expired.' });
+    }
+    // Mark user as Verified and clear OTP fields
+    await prisma.user.update({
+      where: { email },
+      data: { status: 'Verified', otpCode: null, otpExpiry: null },
+    });
+    res.json({ message: 'Account verified.' });
+  } catch (err) {
+    console.error('[VERIFY OTP ERROR]', err);
+    res.status(500).json({ error: 'Failed to verify OTP.' });
+  }
 }; 

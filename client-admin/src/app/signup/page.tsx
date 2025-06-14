@@ -22,6 +22,7 @@ export default function SignUpPage() {
   const [formData, setFormData] = useState({
     email: "",
     username: "",
+    name: "",
     phone: "",
     password: "",
     confirmPassword: "",
@@ -38,6 +39,10 @@ export default function SignUpPage() {
 
     if (formData.username.length < 3) {
       newErrors.push("Username must be at least 3 characters long")
+    }
+
+    if (!formData.name) {
+      newErrors.push("Please enter a name")
     }
 
     if (!formData.phone || formData.phone.replace(/\D/g, "").length < 8) {
@@ -66,7 +71,8 @@ export default function SignUpPage() {
     try {
       await api.post("/auth/register-admin", {
         email: formData.email,
-        name: formData.username,
+        username: formData.username,
+        name: formData.name,
         phone: formData.phone,
         password: formData.password,
       })
@@ -195,6 +201,25 @@ export default function SignUpPage() {
                     />
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="username" className="text-white/80 text-sm">
+                    Full Name
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-300 w-5 h-5" />
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder=""
+                      required
+                      value={formData.name}
+                      onChange={(e) => handleInputChange("name", e.target.value)}
+                      className="pl-12 pr-4 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    />
+                  </div>
+                </div>
+                
 
                 <div className="space-y-2">
                   <Label htmlFor="username" className="text-white/80 text-sm">
