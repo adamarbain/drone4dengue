@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { User, Lock, Mail, Eye, EyeOff, AlertCircle, Phone, CheckCircle } from "lucide-react"
 import { api } from "@/lib/api"
 import { motion } from "framer-motion"
+import Image from "next/image"
 
 export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -138,13 +139,17 @@ export default function SignUpPage() {
               {/* Mosquito icon */}
               <div className="flex justify-center mb-6">
                 <motion.div
-                  className="w-24 h-24 bg-red-500 rounded-full flex items-center justify-center shadow-lg"
+                  className="w-28 h-28 rounded-lg flex items-center justify-center"
                   whileHover={{ scale: 1.05 }}
                   transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 >
-                  <svg viewBox="0 0 24 24" className="w-12 h-12 text-white" fill="currentColor">
-                    <path d="M12 2C10.9 2 10 2.9 10 4C10 5.1 10.9 6 12 6C13.1 6 14 5.1 14 4C14 2.9 13.1 2 12 2ZM21 9V7L19 8L17 7V9L19 10L21 9ZM7 7V9L5 10L3 9V7L5 8L7 7ZM12 8C9.8 8 8 9.8 8 12C8 14.2 9.8 16 12 16C14.2 16 16 14.2 16 12C16 9.8 14.2 8 12 8ZM12 14C10.9 14 10 13.1 10 12C10 10.9 10.9 10 12 10C13.1 10 14 10.9 14 12C14 13.1 13.1 14 12 14ZM12 18C10.9 18 10 18.9 10 20C10 21.1 10.9 22 12 22C13.1 22 14 21.1 14 20C14 18.9 13.1 18 12 18Z" />
-                  </svg>
+                  <Image
+                    src="/images/drone4dengue-logo.png"
+                    alt="Drone4Dengue Logo"
+                    width={80}
+                    height={80}
+                    className="object-contain"
+                  />
                 </motion.div>
               </div>
 
@@ -182,7 +187,7 @@ export default function SignUpPage() {
                     <Input
                       id="email"
                       type="email"
-                      placeholder="Enter your email"
+                      placeholder=""
                       required
                       value={formData.email}
                       onChange={(e) => handleInputChange("email", e.target.value)}
@@ -200,7 +205,7 @@ export default function SignUpPage() {
                     <Input
                       id="username"
                       type="text"
-                      placeholder="Choose a username"
+                      placeholder=""
                       required
                       value={formData.username}
                       onChange={(e) => handleInputChange("username", e.target.value)}
@@ -218,7 +223,7 @@ export default function SignUpPage() {
                     <Input
                       id="phone"
                       type="tel"
-                      placeholder="Enter your phone number"
+                      placeholder=""
                       required
                       value={formData.phone}
                       onChange={(e) => handleInputChange("phone", e.target.value)}
@@ -236,7 +241,7 @@ export default function SignUpPage() {
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Create a password"
+                      placeholder=""
                       required
                       value={formData.password}
                       onChange={(e) => handleInputChange("password", e.target.value)}
@@ -263,7 +268,7 @@ export default function SignUpPage() {
                     <Input
                       id="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Confirm your password"
+                      placeholder=""
                       required
                       value={formData.confirmPassword}
                       onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
@@ -282,7 +287,7 @@ export default function SignUpPage() {
                 </div>
 
                 <div className="flex items-center gap-2 mt-2">
-                  <CheckCircle className="text-yellow-300 h-4 w-4" />
+                  <CheckCircle className="text-white h-4 w-4" />
                   <span className="text-white/70 text-xs">
                     By signing up, you agree to our Terms and Privacy Policy
                   </span>
@@ -292,7 +297,7 @@ export default function SignUpPage() {
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-red-900 font-semibold rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition-all shadow-lg disabled:opacity-70"
+                    className="w-full py-3 bg-gradient-to-r from-white to-white text-red-900 font-semibold rounded-lg hover:from-gray-100 hover:to-gray-200 transition-all shadow-lg disabled:opacity-70"
                   >
                     {isLoading ? "CREATING ACCOUNT..." : "SIGN UP"}
                   </Button>
@@ -304,7 +309,7 @@ export default function SignUpPage() {
                 <span className="text-white/70 text-sm">{"Already have an account? "}</span>
                 <Link
                   href="/"
-                  className="text-yellow-300 font-semibold hover:text-yellow-200 transition-colors text-sm"
+                  className="text-white font-semibold hover:text-gray-200 transition-colors text-sm"
                 >
                   Login
                 </Link>
