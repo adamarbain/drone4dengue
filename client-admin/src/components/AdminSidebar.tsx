@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { FiBarChart2, FiUsers, FiCamera, FiDatabase, FiAlertCircle, FiSettings, FiHome } from "react-icons/fi"
+import { FiBarChart2, FiUsers, FiCamera, FiDatabase, FiAlertCircle, FiSettings, FiHome, FiCloud } from "react-icons/fi"
 import { motion } from "framer-motion"
 
 const links = [
@@ -10,6 +10,7 @@ const links = [
   { label: "User Management", href: "/user-management", icon: <FiUsers /> },
   { label: "Drone Management", href: "/drone-management", icon: <FiCamera /> },
   { label: "Data Management", href: "/data-management", icon: <FiDatabase /> },
+  { label: "Weather Data", href: "/weather-data", icon: <FiCloud /> },
   { label: "Prediction & Alert", href: "/prediction-alert", icon: <FiAlertCircle /> },
   { label: "Reports", href: "/reports", icon: <FiBarChart2 /> },
   { label: "Settings", href: "/settings", icon: <FiSettings /> },
@@ -61,7 +62,7 @@ export default function AdminSidebar({ current }: { current: string }) {
         })}
       </nav>
 
-      <div className="mt-auto mx-4 mb-6 bg-gradient-to-r from-[#FFF7E3] to-[#E2C275]/30 p-4 rounded-xl">
+      {/* <div className="mt-auto mx-4 mb-6 bg-gradient-to-r from-[#FFF7E3] to-[#E2C275]/30 p-4 rounded-xl">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-8 h-8 rounded-full bg-[#A21C1C] flex items-center justify-center text-white">
             <FiAlertCircle size={16} />
@@ -72,7 +73,7 @@ export default function AdminSidebar({ current }: { current: string }) {
         <button className="w-full py-2 bg-[#A21C1C] text-white text-sm font-medium rounded-lg hover:bg-[#7C1D1D] transition-colors">
           Contact Support
         </button>
-      </div>
+      </div> */}
     </aside>
   )
 }

@@ -57,11 +57,18 @@ model Image {
 }
 
 model Weather {
-  id        String   @id @default(uuid())
-  location  String
-  data      Json
-  createdAt DateTime @default(now())
+  id          String   @id @default(uuid())
+  date        DateTime
+  temperature Float
+  humidity    Float
+  rainfall    Float
+  location    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([date, location])
 }
+
 
 model DengueData {
   id        String   @id @default(uuid())
