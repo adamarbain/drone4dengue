@@ -20,7 +20,7 @@ model User {
   password        String
   name            String
   role            String // 'admin' or 'user'
-  status          String   // e.g. "Verified", "Pending", "In Progress"
+  status          String   // e.g. "Verified", "Pending"
   username        String?
   phone           String?   @unique
   address         String?
@@ -92,4 +92,12 @@ model Report {
   user        User     @relation(fields: [userId], references: [id])
   description String
   createdAt   DateTime @default(now())
+}
+
+model Recommendation {
+  id        String   @id @default(uuid())
+  risk      String   // 'high', 'medium', 'low'
+  title     String
+  details   String
+  createdAt DateTime @default(now())
 }

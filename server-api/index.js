@@ -11,6 +11,7 @@ app.use(express.json());
 app.use('/auth', require('./routes/authRoutes'));
 app.use('/users', require('./routes/userRoutes'));
 app.use('/weather', require('./routes/admin/weatherRoutes'));
+app.use('/recommendations', require('./routes/recommendationRoutes'));
 
 // app.use('/images', require('./routes/images'));
 // app.use('/dengue-data', require('./routes/admin/dengueDataRoutes'));

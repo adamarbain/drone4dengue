@@ -1,33 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Modal, ScrollView, StatusBar } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNav from './components/BottomNav';
 
-const RECOMMENDATIONS = {
-    high: [
-        { title: 'Conduct Immediate Fogging', details: 'Contact your local authority urgently to conduct immediate fogging in your area.' },
-        { title: 'Clear stagnant water', details: 'Immediately around your home - Remove all stagnant water sources to prevent mosquito breeding.' },
-        { title: 'Apply Mosquito repellents', details: '(e.g., DEET-based, citronella oil) - Use EPA-approved insect repellent on exposed skin and clothing.' },
-        { title: 'Wear long sleeves and trousers', details: 'especially during morning and late evening - Wear protective clothing to reduce skin exposure.' },
-        { title: 'Use Mosquito Nets', details: 'Sleep under mosquito nets, especially during the day when Aedes mosquitoes are active.' },
-    ],
-    medium: [
-        { title: 'Trim vegetation', details: 'Around your residence - Keep vegetation trimmed to reduce mosquito resting areas.' },
-        { title: 'Inspections for stagnant water', details: 'Schedule inspections for stagnant water sources around your property.' },
-        { title: 'Participate a community cleanup', details: 'Participate in or organize a community cleanup to eliminate breeding sites.' },
-        { title: 'Ensure proper waste management', details: 'Ensure proper waste management at home and in your community.' },
-    ],
-    low: [
-        { title: 'Maintain cleanliness', details: 'Maintain cleanliness of home surroundings - Keep your area clean and free from trash.' },
-        { title: 'Encourage family', details: 'Encourage family and community to stay vigilant about dengue prevention.' },
-        { title: 'Stay Hydrated', details: 'Stay Hydrated by drinking 8L water per day - Maintain good health and hydration.' },
-        { title: 'Check and clean flower pots', details: 'Check and clean flower pots, roof gutters regularly to prevent water accumulation.' },
-    ],
-};
-
-type RiskLevel = keyof typeof RECOMMENDATIONS;
+// Remove hardcoded RECOMMENDATIONS
+// type RiskLevel = keyof typeof RECOMMENDATIONS;
+type RiskLevel = 'high' | 'medium' | 'low';
 type Recommendation = { title: string; details: string };
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
 
 const getRiskConfig = (riskLevel: RiskLevel) => {
     switch (riskLevel) {
@@ -62,10 +44,16 @@ export default function RecommendationsPage() {
     const router = useRouter();
     const { risk } = useLocalSearchParams();
     const [selected, setSelected] = useState<number | null>(null);
-
+    const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
     const riskLevel: RiskLevel = (typeof risk === 'string' && ['high', 'medium', 'low'].includes(risk)) ? (risk as RiskLevel) : 'low';
-    const recommendations = RECOMMENDATIONS[riskLevel];
     const riskConfig = getRiskConfig(riskLevel);
+
+    useEffect(() => {
+        fetch(`${API_URL}/recommendations/${riskLevel}`)
+            .then(res => res.json())
+            .then(data => setRecommendations(data))
+            .catch(() => setRecommendations([]));
+    }, [riskLevel]);
 
     return (
         <SafeAreaView className="flex-1" style={{ backgroundColor: riskConfig.backgroundColor }}>

@@ -67,48 +67,30 @@ async function main() {
   // Insert users with hashed passwords
   await prisma.user.createMany({ data: users });
 
-  // Insert dummy weather data
-  // await prisma.weather.createMany({
-  //   data: [
-  //     {
-  //       date: new Date('2024-01-15'),
-  //       temperature: 28.5,
-  //       humidity: 75,
-  //       rainfall: 12.3,
-  //       location: 'Kuala Lumpur',
-  //     },
-  //     {
-  //       date: new Date('2024-01-14'),
-  //       temperature: 30.2,
-  //       humidity: 68,
-  //       rainfall: 0,
-  //       location: 'Kuala Lumpur',
-  //     },
-  //     {
-  //       date: new Date('2024-01-13'),
-  //       temperature: 29.8,
-  //       humidity: 82,
-  //       rainfall: 25.7,
-  //       location: 'Kuala Lumpur',
-  //     },
-  //     {
-  //       date: new Date('2024-01-12'),
-  //       temperature: 27.1,
-  //       humidity: 80,
-  //       rainfall: 5.2,
-  //       location: 'Petaling Jaya',
-  //     },
-  //     {
-  //       date: new Date('2024-01-11'),
-  //       temperature: 31.0,
-  //       humidity: 70,
-  //       rainfall: 0,
-  //       location: 'Shah Alam',
-  //     },
-  //   ],
-  // });
-
   console.log('Seeded users (with hashed passwords)!');
+
+  // Insert recommendations
+  await prisma.recommendation.deleteMany();
+  await prisma.recommendation.createMany({
+    data: [
+      // High risk
+      { risk: 'high', title: 'Conduct Immediate Fogging', details: 'Contact your local authority urgently to conduct immediate fogging in your area.' },
+      { risk: 'high', title: 'Clear stagnant water', details: 'Immediately around your home - Remove all stagnant water sources to prevent mosquito breeding.' },
+      { risk: 'high', title: 'Apply Mosquito repellents', details: '(e.g., DEET-based, citronella oil) - Use EPA-approved insect repellent on exposed skin and clothing.' },
+      { risk: 'high', title: 'Wear long sleeves and trousers', details: 'especially during morning and late evening - Wear protective clothing to reduce skin exposure.' },
+      { risk: 'high', title: 'Use Mosquito Nets', details: 'Sleep under mosquito nets, especially during the day when Aedes mosquitoes are active.' },
+      // Medium risk
+      { risk: 'medium', title: 'Trim vegetation', details: 'Around your residence - Keep vegetation trimmed to reduce mosquito resting areas.' },
+      { risk: 'medium', title: 'Inspections for stagnant water', details: 'Schedule inspections for stagnant water sources around your property.' },
+      { risk: 'medium', title: 'Participate a community cleanup', details: 'Participate in or organize a community cleanup to eliminate breeding sites.' },
+      { risk: 'medium', title: 'Ensure proper waste management', details: 'Ensure proper waste management at home and in your community.' },
+      // Low risk
+      { risk: 'low', title: 'Maintain cleanliness', details: 'Maintain cleanliness of home surroundings - Keep your area clean and free from trash.' },
+      { risk: 'low', title: 'Encourage family', details: 'Encourage family and community to stay vigilant about dengue prevention.' },
+      { risk: 'low', title: 'Stay Hydrated', details: 'Stay Hydrated by drinking 8L water per day - Maintain good health and hydration.' },
+      { risk: 'low', title: 'Check and clean flower pots', details: 'Check and clean flower pots, roof gutters regularly to prevent water accumulation.' },
+    ]
+  });
 }
 
 main()
