@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 prisma.$use(async (params, next) => {
   if (params.model === 'User' && params.action === 'create') {
     const lastUser = await prisma.user.findFirst({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { userId: 'desc' },
       select: { userId: true },
     });
 
