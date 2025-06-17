@@ -20,7 +20,7 @@ model User {
   password        String
   name            String
   role            String // 'admin' or 'user'
-  status          String   // e.g. "Verified", "Pending"
+  status          String // e.g. "Verified", "Pending"
   username        String?
   phone           String?   @unique
   address         String?
@@ -33,9 +33,9 @@ model User {
   otpExpiry       DateTime? // for OTP verification
 
   // Relations
-  drones          Drone[]
-  reports         Report[]
-  alerts          Alert[]
+  drones  Drone[]
+  reports Report[]
+  alerts  Alert[]
 }
 
 model Drone {
@@ -69,13 +69,20 @@ model Weather {
   @@unique([date, location])
 }
 
-
 model DengueData {
-  id        String   @id @default(uuid())
-  location  String
-  cases     Int
-  date      DateTime
-  createdAt DateTime @default(now())
+  id            String   @id @default(uuid())
+  location      String
+  date          DateTime
+  activeCases   Int?
+  totalCases    Int?
+  days_duration Int?
+  coverageArea  String?
+  status        String?
+  source        String?
+  latitude      Float?
+  longitude     Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Alert {
@@ -96,7 +103,7 @@ model Report {
 
 model Recommendation {
   id        String   @id @default(uuid())
-  risk      String   // 'high', 'medium', 'low'
+  risk      String // 'high', 'medium', 'low'
   title     String
   details   String
   createdAt DateTime @default(now())

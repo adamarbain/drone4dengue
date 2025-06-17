@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "DengueData" ADD COLUMN     "days_duration" INTEGER,
+ALTER COLUMN "activeCases" DROP NOT NULL,
+ALTER COLUMN "coverageArea" DROP NOT NULL,
+ALTER COLUMN "source" DROP NOT NULL,
+ALTER COLUMN "status" DROP NOT NULL,
+ALTER COLUMN "totalCases" DROP NOT NULL;

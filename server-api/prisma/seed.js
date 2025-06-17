@@ -1,6 +1,126 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const { parse } = require('csv-parse');
+const axios = require('axios');
 const prisma = new PrismaClient();
+
+function extractPlaceName(address) {
+  return (
+    address.suburb ||
+    address.city ||
+    address.town ||
+    address.village ||
+    address.state ||
+    address.county ||
+    address.country ||
+    null
+  );
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+const geocodeCache = new Map();
+// async function getPlaceName(lat, lon) {
+//   const key = `${lat},${lon}`;
+//   if (geocodeCache.has(key)) return geocodeCache.get(key);
+//   try {
+//     const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
+//     const geoRes = await axios.get(geoUrl);
+//     const address = geoRes.data.address || {};
+//     const place = extractPlaceName(address);
+//     const result = place || `Lat:${lat},Lon:${lon}`;
+//     geocodeCache.set(key, result);
+//     return result;
+//   } catch {
+//     const fallback = `Lat:${lat},Lon:${lon}`;
+//     geocodeCache.set(key, fallback);
+//     return fallback;
+//   }
+// }
+
+async function seedDengueDataFromCSV() {
+  await prisma.dengueData.deleteMany();
+  // Seed from active_dengue.csv
+  const activeRows = [];
+  await new Promise((resolve, reject) => {
+    fs.createReadStream(__dirname + '/active_dengue.csv')
+      .pipe(parse({ columns: true, trim: true }))
+      .on('data', row => {
+        try {
+          const [day, month, year] = row.date.split('/');
+          activeRows.push({
+            date: new Date(`${year}-${month}-${day}`),
+            location: row.location,
+            activeCases: parseInt(row.total_active_cases) || 0,
+            totalCases: null,
+            coverageArea: '', // to be filled later
+            status: 'Active Cases',
+            source: 'active_dengue',
+            latitude: parseFloat(row.centroid_y),
+            longitude: parseFloat(row.centroid_x),
+            days_duration: null,
+          });
+        } catch (e) {}
+      })
+      .on('end', resolve)
+      .on('error', reject);
+  });
+  // Fill coverageArea using reverse geocode, with rate limit and cache
+  // for (const row of activeRows) {
+  //   if (row.latitude && row.longitude) {
+  //     row.coverageArea = await getPlaceName(row.latitude, row.longitude);
+  //     await delay(1100); // 1.1s to respect Nominatim rate limit
+  //   } else {
+  //     row.coverageArea = '';
+  //   }
+  // }
+  if (activeRows.length) await prisma.dengueData.createMany({ data: activeRows });
+
+  // Seed from dengue_hotspot.csv
+  const hotspotRows = [];
+  const seenHotspot = new Set();
+  await new Promise((resolve, reject) => {
+    fs.createReadStream(__dirname + '/dengue_hotspot.csv')
+      .pipe(parse({ columns: true, trim: true }))
+      .on('data', row => {
+        try {
+          const [day, month, year] = row.date.split('/');
+          const dateStr = `${year}-${month}-${day}`;
+          const key = `${dateStr}_${row.total_active_cases}`;
+          if (seenHotspot.has(key)) return; // skip duplicate
+          seenHotspot.add(key);
+          hotspotRows.push({
+            date: new Date(dateStr),
+            location: row.area,
+            activeCases: parseInt(row.total_active_cases) || 0,
+            totalCases: parseInt(row.total_active_cases) || 0,
+            coverageArea: '', // to be filled later
+            status: 'Hotspot',
+            source: 'dengue_hotspot',
+            latitude: parseFloat(row.y),
+            longitude: parseFloat(row.x),
+            days_duration: row.days_duration ? parseInt(row.days_duration) : null,
+          });
+        } catch (e) {}
+      })
+      .on('end', resolve)
+      .on('error', reject);
+  });
+  // Fill coverageArea using reverse geocode, with rate limit and cache
+  // for (const row of hotspotRows) {
+  //   if (row.latitude && row.longitude) {
+  //     row.coverageArea = await getPlaceName(row.latitude, row.longitude);
+  //     await delay(1100); // 1.1s to respect Nominatim rate limit
+  //   } else {
+  //     row.coverageArea = '';
+  //   }
+  // }
+  if (hotspotRows.length) await prisma.dengueData.createMany({ data: hotspotRows });
+  console.log('Seeded DengueData from CSVs!');
+}
 
 async function main() {
   // Clear existing data
@@ -91,6 +211,9 @@ async function main() {
       { risk: 'low', title: 'Check and clean flower pots', details: 'Check and clean flower pots, roof gutters regularly to prevent water accumulation.' },
     ]
   });
+
+  // Seed DengueData from CSVs
+  await seedDengueDataFromCSV();
 }
 
 main()

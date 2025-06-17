@@ -12,9 +12,9 @@ app.use('/auth', require('./routes/authRoutes'));
 app.use('/users', require('./routes/userRoutes'));
 app.use('/weather', require('./routes/admin/weatherRoutes'));
 app.use('/recommendations', require('./routes/recommendationRoutes'));
+app.use('/dengue-data', require('./routes/admin/dengueDataRoutes'));
 
 // app.use('/images', require('./routes/images'));
-// app.use('/dengue-data', require('./routes/admin/dengueDataRoutes'));
 // app.use('/alerts', require('./routes/alerts'));
 // app.use('/reports', require('./routes/admin/reportRoutes'));
 
