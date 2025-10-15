@@ -3,7 +3,7 @@
 import type React from "react"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,9 +26,30 @@ export default function SignUpPage() {
     phone: "",
     password: "",
     confirmPassword: "",
+    companyId: "", // Add company selection
   })
+  const [companies, setCompanies] = useState<any[]>([])
+  const [loadingCompanies, setLoadingCompanies] = useState(true)
   const [errors, setErrors] = useState<string[]>([])
   const router = useRouter()
+
+  // Fetch companies on component mount
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const response = await fetch('http://localhost:4000/companies')
+        if (response.ok) {
+          const data = await response.json()
+          setCompanies(data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch companies:', error)
+      } finally {
+        setLoadingCompanies(false)
+      }
+    }
+    fetchCompanies()
+  }, [])
 
   const validateForm = () => {
     const newErrors: string[] = []
@@ -57,6 +78,10 @@ export default function SignUpPage() {
       newErrors.push("Passwords do not match")
     }
 
+    if (!formData.companyId) {
+      newErrors.push("Please select a company")
+    }
+
     setErrors(newErrors)
     return newErrors.length === 0
   }
@@ -75,6 +100,7 @@ export default function SignUpPage() {
         name: formData.name,
         phone: formData.phone,
         password: formData.password,
+        companyId: formData.companyId,
       })
       router.push("/")
     } catch (err: any) {
@@ -254,6 +280,32 @@ export default function SignUpPage() {
                       onChange={(e) => handleInputChange("phone", e.target.value)}
                       className="pl-12 pr-4 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="company" className="text-white/80 text-sm">
+                    Company
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-300 w-5 h-5" />
+                    <select
+                      id="company"
+                      required
+                      value={formData.companyId}
+                      onChange={(e) => handleInputChange("companyId", e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      disabled={loadingCompanies}
+                    >
+                      <option value="" className="bg-gray-800 text-white">
+                        {loadingCompanies ? "Loading companies..." : "Select a company"}
+                      </option>
+                      {companies.map((company) => (
+                        <option key={company.id} value={company.id} className="bg-gray-800 text-white">
+                          {company.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 

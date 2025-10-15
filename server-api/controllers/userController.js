@@ -109,7 +109,9 @@ exports.getAllUsers = async (req, res) => {
 
   try {
     // Build where clause based on filters
-    const where = {};
+    const where = {
+      companyId: req.companyId // Filter by user's company
+    };
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
@@ -140,6 +142,7 @@ exports.getAllUsers = async (req, res) => {
         role: true,
         status: true,
         organization: true,
+        companyId: true,
         createdAt: true,
         updatedAt: true
       },
@@ -148,7 +151,7 @@ exports.getAllUsers = async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    console.log(`[GET ALL USERS] Retrieved ${users.length} users`);
+    console.log(`[GET ALL USERS] Retrieved ${users.length} users for company ${req.companyId}`);
     
     res.json({
       users,
@@ -199,11 +202,12 @@ exports.createUser = async (req, res) => {
         role: role || 'user',
         status: status || 'Pending',
         username,
-        organization
+        organization,
+        companyId: req.companyId // Assign to current user's company
       }
     });
 
-    console.log(`[CREATE USER SUCCESS] New user created: ${email}`);
+    console.log(`[CREATE USER SUCCESS] New user created: ${email} for company ${req.companyId}`);
     
     // Return user without password
     const { password: _, ...userWithoutPassword } = user;
@@ -333,25 +337,29 @@ exports.updateUserPermission = async (req, res) => {
 // }
 exports.getUserSummary = async (req, res) => {
   try {
-    // Get total users count
-    const total = await prisma.user.count();
+    const companyId = req.companyId;
+    
+    // Get total users count for the company
+    const total = await prisma.user.count({
+      where: { companyId }
+    });
 
     // Get active users (status = 'Verified')
     const active = await prisma.user.count({
-      where: { status: 'Verified' }
+      where: { status: 'Verified', companyId }
     });
 
     // Get pending users (status = 'Pending') 
     const pending = await prisma.user.count({
-      where: { status: 'Pending' }
+      where: { status: 'Pending', companyId }
     });
 
     // Get admin users count
     const admin = await prisma.user.count({
-      where: { role: 'admin' }
+      where: { role: 'admin', companyId }
     });
 
-    console.log('[GET USER SUMMARY] Successfully retrieved user summary');
+    console.log(`[GET USER SUMMARY] Successfully retrieved user summary for company ${companyId}`);
     res.json({
       total,
       active, 

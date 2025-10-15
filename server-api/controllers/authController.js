@@ -16,12 +16,12 @@ const twilioClient = twilio(
 const twilio_phone_number = process.env.TWILIO_PHONE_NUMBER;
 
 exports.registerUser = async (req, res) => {
-  const { email, password, name, phone, username } = req.body;
+  const { email, password, name, phone, username, companyId } = req.body;
 
   // Validate required fields
-  if (!email || !password || !name || !phone || !username) {
+  if (!email || !password || !name || !phone || !username || !companyId) {
     console.log(`[REGISTER ERROR] Missing required fields for ${email}`);
-    return res.status(400).json({ error: 'Email, password, name, phone, and username are required.' });
+    return res.status(400).json({ error: 'Email, password, name, phone, username, and companyId are required.' });
   }
 
   try {
@@ -30,6 +30,13 @@ exports.registerUser = async (req, res) => {
     if (existing) {
       console.log(`[REGISTER ERROR] Email already exists: ${email}`);
       return res.status(409).json({ error: 'Email already registered.' });
+    }
+
+    // Check if company exists
+    const company = await prisma.company.findUnique({ where: { id: companyId } });
+    if (!company) {
+      console.log(`[REGISTER ERROR] Company not found: ${companyId}`);
+      return res.status(400).json({ error: 'Invalid company ID.' });
     }
 
     // Hash password
@@ -44,12 +51,13 @@ exports.registerUser = async (req, res) => {
         phone,
         username,
         role: 'user',
-        status: 'Pending'
+        status: 'Pending',
+        companyId
       }
     });
 
     // Generate JWT token
-    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id, role: user.role, companyId: user.companyId }, JWT_SECRET, { expiresIn: '7d' });
 
     console.log(`[REGISTER SUCCESS] New user registered: ${email}`);
 
@@ -64,12 +72,12 @@ exports.registerUser = async (req, res) => {
 };
 
 exports.registerAdmin = async (req, res) => {
-  const { email, password, name, phone, username } = req.body;
+  const { email, password, name, phone, username, companyId } = req.body;
 
   // Validate required fields
-  if (!email || !password || !name || !phone || !username) {
+  if (!email || !password || !name || !phone || !username || !companyId) {
     console.log(`[REGISTER ADMIN ERROR] Missing required fields for ${email}`);
-    return res.status(400).json({ error: 'Email, password, name, phone, and username are required.' });
+    return res.status(400).json({ error: 'Email, password, name, phone, username, and companyId are required.' });
   }
 
   try {
@@ -78,6 +86,13 @@ exports.registerAdmin = async (req, res) => {
     if (existing) {
       console.log(`[REGISTER ADMIN ERROR] Email already exists: ${email}`);
       return res.status(409).json({ error: 'Email already registered.' });
+    }
+
+    // Check if company exists
+    const company = await prisma.company.findUnique({ where: { id: companyId } });
+    if (!company) {
+      console.log(`[REGISTER ADMIN ERROR] Company not found: ${companyId}`);
+      return res.status(400).json({ error: 'Invalid company ID.' });
     }
 
     // Hash password
@@ -92,12 +107,13 @@ exports.registerAdmin = async (req, res) => {
         phone,
         username,
         role: 'admin',
-        status: 'Verified' // Admins are automatically verified
+        status: 'Verified', // Admins are automatically verified
+        companyId
       }
     });
 
     // Generate JWT token
-    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id, role: user.role, companyId: user.companyId }, JWT_SECRET, { expiresIn: '7d' });
 
     console.log(`[REGISTER ADMIN SUCCESS] New admin registered: ${email}`);
 
@@ -128,14 +144,45 @@ exports.login = async (req, res) => {
       console.log(`[LOGIN ERROR] Invalid password for user: ${email}`);
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
-    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id, role: user.role, companyId: user.companyId }, JWT_SECRET, { expiresIn: '7d' });
     console.log(`[LOGIN SUCCESS] User logged in: ${email}`);
-    res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
+    res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role, companyId: user.companyId } });
   } catch (err) {
     console.error('[LOGIN ERROR] Login failed:', err);
     res.status(500).json({ error: 'Login failed.' });
   }
 };
+
+exports.adminLogin = async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    console.log(`[ADMIN LOGIN ERROR] Missing credentials for ${email}`);
+    return res.status(400).json({ error: 'Email and password are required.' });
+  }
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      console.log(`[ADMIN LOGIN ERROR] User not found: ${email}`);
+      return res.status(401).json({ error: 'Invalid credentials.' });
+    }
+    if (user.role !== 'admin') {
+      console.log(`[ADMIN LOGIN ERROR] User is not an admin: ${email}`);
+      return res.status(403).json({ error: 'Access denied. Admin only.' });
+    }
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      console.log(`[ADMIN LOGIN ERROR] Invalid password for admin: ${email}`);
+      return res.status(401).json({ error: 'Invalid credentials.' });
+    }
+    const token = jwt.sign({ userId: user.id, role: user.role, companyId: user.companyId }, JWT_SECRET, { expiresIn: '7d' });
+    console.log(`[ADMIN LOGIN SUCCESS] Admin logged in: ${email}`);
+    res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role, companyId: user.companyId } });
+  }
+  catch (err) {
+    console.error('[ADMIN LOGIN ERROR] Login failed:', err);
+    res.status(500).json({ error: 'Login failed.' });
+  }
+}
 
 exports.resetRequest = async (req, res) => {
   const { email } = req.body;

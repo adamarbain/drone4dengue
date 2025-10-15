@@ -2,6 +2,7 @@
 
 import AdminSidebar from "@/components/AdminSidebar"
 import AdminHeader from "@/components/AdminHeader"
+import { useAuth } from "@/context/AuthContext"
 import {
   FiSearch,
   FiPlus,
@@ -90,6 +91,8 @@ const overlayVariants = {
 }
 
 export default function UserManagementPage() {
+  const { companyId } = useAuth()
+  const company = useAuth().company
   const [users, setUsers] = useState<any[]>([])
   const [summary, setSummary] = useState<any>({})
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
@@ -105,6 +108,7 @@ export default function UserManagementPage() {
     phone: "",
     address: "",
     role: "user",
+    companyId: "", // Add company field
   })
   const [updating, setUpdating] = useState(false)
   const [updateUser, setUpdateUser] = useState<any>(null)
@@ -186,7 +190,7 @@ export default function UserManagementPage() {
         const errData = await res.json()
         throw new Error(errData.error || "Failed to create user")
       }
-      setNewUser({ name: "", email: "", password: "", phone: "", address: "", role: "user" })
+      setNewUser({ name: "", email: "", password: "", phone: "", address: "", role: "user", companyId: "" })
       setCreating(false)
       setOpenModalCreateUser(false)
       fetchUsers()
@@ -372,7 +376,7 @@ export default function UserManagementPage() {
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-[#A21C1C]"></div>
               <div className="text-lg text-gray-600">
-                Manage all users that registered within the same organization.
+                Manage all users within your company. Users can only see and manage data from their own company.
               </div>
             </div>
           </motion.div>
@@ -737,7 +741,7 @@ export default function UserManagementPage() {
               onClick={() => setOpenModalCreateUser(false)}
             >
               <motion.div
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[80vh] flex flex-col"
                 variants={modalVariants}
                 initial="hidden"
                 animate="visible"
@@ -766,7 +770,7 @@ export default function UserManagementPage() {
                 </div>
 
                 {/* Modal Body */}
-                <div className="p-6 space-y-4">
+                <div className="p-6 space-y-4 overflow-y-auto flex-1">
                   {error && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                       {error}
@@ -864,6 +868,17 @@ export default function UserManagementPage() {
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent transition-all"
                       />
                     </div>
+
+                    {/* Company Field - Note: This will be automatically set to current user's company */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <FiShield className="text-[#A21C1C]" size={16} />
+                        Company
+                      </label>
+                      <div className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
+                        {company.name}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -910,7 +925,7 @@ export default function UserManagementPage() {
               onClick={() => setUpdateUser(null)}
             >
               <motion.div
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[80vh] flex flex-col"
                 variants={modalVariants}
                 initial="hidden"
                 animate="visible"
@@ -939,7 +954,7 @@ export default function UserManagementPage() {
                 </div>
 
                 {/* Modal Body */}
-                <div className="p-6 space-y-4">
+                <div className="p-6 space-y-4 overflow-y-auto flex-1">
                   {error && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                       {error}
@@ -1038,6 +1053,18 @@ export default function UserManagementPage() {
                         <option value="admin">Admin</option>
                       </select>
                     </div>
+
+
+                    {/* Company Field */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <FiShield className="text-[#A21C1C]" size={16} />
+                        Company
+                      </label>
+                      <div className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
+                        {company.name}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -1084,7 +1111,7 @@ export default function UserManagementPage() {
               onClick={() => setConfirmDialog(null)}
             >
               <motion.div
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[80vh] flex flex-col"
                 variants={modalVariants}
                 initial="hidden"
                 animate="visible"
@@ -1115,7 +1142,7 @@ export default function UserManagementPage() {
                 </div>
 
                 {/* Modal Body */}
-                <div className="p-6">
+                <div className="p-6 overflow-y-auto flex-1">
                   <div className="flex items-start gap-4">
                     <div
                       className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${

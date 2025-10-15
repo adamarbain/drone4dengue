@@ -8,7 +8,10 @@ exports.getRecommendationsByRisk = async (req, res) => {
   }
   try {
     const recommendations = await prisma.recommendation.findMany({
-      where: { risk },
+      where: { 
+        risk,
+        companyId: req.companyId
+      },
       orderBy: { createdAt: 'asc' }
     });
     res.json(recommendations);

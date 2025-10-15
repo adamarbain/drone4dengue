@@ -19,6 +19,7 @@ import { useState, useEffect, useRef } from "react"
 import type { JSX } from "react"
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
 import dynamic from 'next/dynamic';
+import { useAuth } from "@/context/AuthContext"
 
 // If you see TypeScript errors for leaflet, run: npm install --save-dev @types/leaflet
 
@@ -59,6 +60,7 @@ const item = {
 const CoverageMap = dynamic(() => import('./CoverageMap'), { ssr: false });
 
 export default function DataManagementPage() {
+  const { companyId } = useAuth()
   const [searchTerm, setSearchTerm] = useState("")
   const [dataRows, setDataRows] = useState<any[]>([])
   const [summary, setSummary] = useState<any>(null)
@@ -262,7 +264,7 @@ export default function DataManagementPage() {
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-[#A21C1C]"></div>
               <div className="text-lg text-gray-600">
-                Manage data related to dengue cases including resource allocation
+                Manage data related to dengue cases including resource allocation within your company
               </div>
             </div>
           </motion.div>

@@ -20,13 +20,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const router = useRouter()
-  const { login, isLoading } = useAuth()
+  const { loginAdmin, isLoading } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     try {
-      await login(email, password)
+      await loginAdmin(email, password)
       router.push("/dashboard")
     } catch (err: any) {
       setError(err?.response?.data?.error || "Login failed. Please try again.")

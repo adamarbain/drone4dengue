@@ -14,6 +14,7 @@ import {
 } from "react-icons/fi"
 import { motion } from "framer-motion"
 import { useState } from "react"
+import { useAuth } from "@/context/AuthContext"
 
 const areas = ["Universiti Malaya", "Damansara Utama", "Petaling Jaya", "Vista Angkasa"]
 const dataTypes = ["Active Cases", "Total Cases", "Coverage Area"]
@@ -34,6 +35,7 @@ const item = {
 }
 
 export default function ReportsPage() {
+  const { companyId } = useAuth()
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
   const [selectedLocation, setSelectedLocation] = useState("")
@@ -93,7 +95,7 @@ export default function ReportsPage() {
             <h1 className="text-3xl font-bold text-black mb-1">Report Generation</h1>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-[#A21C1C]"></div>
-              <div className="text-lg text-gray-600">Customize and generate data insights reports</div>
+              <div className="text-lg text-gray-600">Customize and generate data insights reports for your company</div>
             </div>
           </motion.div>
 

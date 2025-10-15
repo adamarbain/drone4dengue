@@ -13,6 +13,43 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Company {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String   @unique // e.g., "COMP001"
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  users       User[]
+  locations   CompanyLocation[]
+  drones      Drone[]
+  reports     Report[]
+  alerts      Alert[]
+  recommendations Recommendation[]
+}
+
+model CompanyLocation {
+  id          String   @id @default(uuid())
+  name        String
+  address     String?
+  latitude    Float?
+  longitude   Float?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+
+  // Relations
+  weather     Weather[]
+  dengueData  DengueData[]
+
+  @@unique([name, companyId])
+}
+
 model User {
   id              String    @id @default(uuid())
   userId          String    @unique // for display e.g. U-001
@@ -31,6 +68,8 @@ model User {
   resetCodeExpiry DateTime? // for password reset
   otpCode         String? // for OTP verification
   otpExpiry       DateTime? // for OTP verification
+  companyId       String
+  company         Company   @relation(fields: [companyId], references: [id])
 
   // Relations
   drones  Drone[]
@@ -44,6 +83,8 @@ model Drone {
   serial    String   @unique
   userId    String?
   user      User?    @relation(fields: [userId], references: [id])
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
   images    Image[]
   createdAt DateTime @default(now())
 }
@@ -63,10 +104,12 @@ model Weather {
   humidity    Float
   rainfall    Float
   location    String
+  companyLocationId String
+  companyLocation   CompanyLocation @relation(fields: [companyLocationId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@unique([date, location])
+  @@unique([date, location, companyLocationId])
 }
 
 model DengueData {
@@ -81,6 +124,8 @@ model DengueData {
   source        String?
   latitude      Float?
   longitude     Float?
+  companyLocationId String
+  companyLocation   CompanyLocation @relation(fields: [companyLocationId], references: [id])
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
@@ -90,6 +135,8 @@ model Alert {
   message   String
   userId    String?
   user      User?    @relation(fields: [userId], references: [id])
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
   createdAt DateTime @default(now())
 }
 
@@ -98,6 +145,8 @@ model Report {
   userId      String
   user        User     @relation(fields: [userId], references: [id])
   description String
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
   createdAt   DateTime @default(now())
 }
 
@@ -106,5 +155,7 @@ model Recommendation {
   risk      String // 'high', 'medium', 'low'
   title     String
   details   String
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
   createdAt DateTime @default(now())
 }

@@ -7,7 +7,8 @@ import AdminHeader from "@/components/AdminHeader"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { FiSave, FiEdit2, FiLock, FiMail, FiUser, FiSettings, FiSliders, FiRefreshCw } from "react-icons/fi"
+import { FiSave, FiEdit2, FiLock, FiMail, FiUser, FiSettings, FiSliders, FiRefreshCw, FiMapPin, FiPlus, FiEdit3, FiTrash2 } from "react-icons/fi"
+import MapPicker from "@/components/MapPicker"
 import { useAuth } from '@/context/AuthContext';
 
 const container = {
@@ -40,10 +41,11 @@ export default function SettingsPage() {
 
   // User profile state
   const [userData, setUserData] = useState(null);
-  const [profileForm, setProfileForm] = useState({ name: '', username: '', email: '', phone: '', organization: '' });
+  const [profileForm, setProfileForm] = useState({ name: '', username: '', email: '', phone: '' });
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState('');
   const [profileSuccess, setProfileSuccess] = useState('');
+  const company = useAuth().company;
 
   // Password update state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -52,6 +54,17 @@ export default function SettingsPage() {
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
+
+  // Company locations state
+  const [locations, setLocations] = useState([]);
+  const [locationsLoading, setLocationsLoading] = useState(true);
+  const [locationsError, setLocationsError] = useState('');
+  const [showAddLocation, setShowAddLocation] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<any>(null);
+  const [locationForm, setLocationForm] = useState({ name: '', address: '', latitude: '', longitude: '' });
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState('');
+  const [locationSuccess, setLocationSuccess] = useState('');
 
   // Fetch user on mount or when user/token changes
   useEffect(() => {
@@ -71,8 +84,7 @@ export default function SettingsPage() {
           name: data.user.name || '',
           username: data.user.username || '',
           email: data.user.email || '',
-          phone: data.user.phone || '',
-          organization: data.user.organization || '',
+          phone: data.user.phone || ''
         });
       } catch (err) {
         setProfileError(err instanceof Error ? err.message : 'Failed to fetch user');
@@ -82,6 +94,28 @@ export default function SettingsPage() {
     }
     fetchUser();
   }, [user?.id, token]);
+
+  // Fetch company locations
+  useEffect(() => {
+    async function fetchLocations() {
+      if (!token) return;
+      setLocationsLoading(true);
+      setLocationsError('');
+      try {
+        const res = await fetch(`${API_URL}/company-locations`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Failed to fetch locations');
+        const data = await res.json();
+        setLocations(data);
+      } catch (err) {
+        setLocationsError(err instanceof Error ? err.message : 'Failed to fetch locations');
+      } finally {
+        setLocationsLoading(false);
+      }
+    }
+    fetchLocations();
+  }, [token]);
 
   // Handle profile form changes
   function handleProfileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -104,7 +138,6 @@ export default function SettingsPage() {
           name: profileForm.name,
           username: profileForm.username,
           phone: profileForm.phone,
-          organization: profileForm.organization,
         }),
       });
       if (!res.ok) {
@@ -159,6 +192,87 @@ export default function SettingsPage() {
     } finally {
       setPasswordLoading(false);
     }
+  }
+
+  // Handle location form changes
+  function handleLocationChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setLocationForm({ ...locationForm, [e.target.name]: e.target.value });
+  }
+
+  // Handle add/edit location
+  async function handleLocationSave() {
+    setLocationError('');
+    setLocationSuccess('');
+    if (!locationForm.name.trim()) {
+      setLocationError('Location name is required.');
+      return;
+    }
+    if (!token) {
+      setLocationError('No token found.');
+      return;
+    }
+    setLocationLoading(true);
+    try {
+      const url = editingLocation 
+        ? `${API_URL}/company-locations/${editingLocation.id}`
+        : `${API_URL}/company-locations`;
+      const method = editingLocation ? 'PUT' : 'POST';
+      
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: locationForm.name.trim(),
+          address: locationForm.address.trim() || null,
+          latitude: locationForm.latitude ? parseFloat(locationForm.latitude) : null,
+          longitude: locationForm.longitude ? parseFloat(locationForm.longitude) : null,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Failed to ${editingLocation ? 'update' : 'create'} location`);
+      }
+      setLocationSuccess(`Location ${editingLocation ? 'updated' : 'created'} successfully!`);
+      setLocationForm({ name: '', address: '', latitude: '', longitude: '' });
+      setShowAddLocation(false);
+      setEditingLocation(null);
+      // Refresh locations
+      const refreshRes = await fetch(`${API_URL}/company-locations`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (refreshRes.ok) {
+        const data = await refreshRes.json();
+        setLocations(data);
+      }
+    } catch (err) {
+      setLocationError(err instanceof Error ? err.message : `Failed to ${editingLocation ? 'update' : 'create'} location`);
+    } finally {
+      setLocationLoading(false);
+    }
+  }
+
+  // Handle edit location
+  function handleEditLocation(location: any) {
+    setEditingLocation(location);
+    setLocationForm({
+      name: location.name || '',
+      address: location.address || '',
+      latitude: location.latitude?.toString() || '',
+      longitude: location.longitude?.toString() || '',
+    });
+    setShowAddLocation(true);
+  }
+
+  // Handle cancel location form
+  function handleCancelLocation() {
+    setLocationForm({ name: '', address: '', latitude: '', longitude: '' });
+    setShowAddLocation(false);
+    setEditingLocation(null);
+    setLocationError('');
+    setLocationSuccess('');
   }
 
   return (
@@ -251,13 +365,13 @@ export default function SettingsPage() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="organization">Organization</Label>
+                          <Label htmlFor="company">Company</Label>
                           <Input
-                            id="organization"
-                            name="organization"
-                            value={profileForm.organization}
+                            id="company"
+                            name="company"
+                            value={company?.name}
                             onChange={handleProfileChange}
-                            disabled={!profileEditable}
+                            disabled={true}
                             className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#A21C1C]"}`}
                           />
                         </div>
@@ -533,6 +647,197 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             </motion.div>
+          </motion.div>
+
+          {/* Company Locations */}
+          <motion.div variants={item} className="mt-8">
+            <Card className="bg-white shadow-md rounded-xl overflow-hidden">
+              <div className="bg-[#F3EAD8] px-6 py-4 border-b border-[#E2C275]">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-bold flex items-center gap-2">
+                    <FiMapPin className="text-[#A21C1C]" />
+                    Company Locations
+                  </h2>
+                  <button
+                    onClick={() => setShowAddLocation(true)}
+                    className="bg-[#A21C1C] text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#7C1D1D] flex items-center gap-2"
+                  >
+                    <FiPlus />
+                    Add Location
+                  </button>
+                </div>
+              </div>
+              <CardContent className="p-6">
+                {locationsLoading ? (
+                  <div className="text-gray-500 text-center py-8">Loading locations...</div>
+                ) : locationsError ? (
+                  <div className="text-red-600 text-center py-8">{locationsError}</div>
+                ) : locations.length === 0 ? (
+                  <div className="text-gray-500 text-center py-8">
+                    No locations found. Add your first location to get started.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {locations.map((location: any) => (
+                      <div key={location.id} className="border border-[#E2C275] rounded-lg p-4 bg-[#F9F6F2]">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg text-gray-800">{location.name}</h3>
+                            {location.address && (
+                              <p className="text-gray-600 mt-1">{location.address}</p>
+                            )}
+                            {(location.latitude && location.longitude) && (
+                              <p className="text-sm text-gray-500 mt-1">
+                                Coordinates: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2 mt-2">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                location.isActive 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {location.isActive ? 'Active' : 'Inactive'}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                Created: {new Date(location.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 ml-4">
+                            <button
+                              onClick={() => handleEditLocation(location)}
+                              className="text-[#A21C1C] hover:bg-[#F3EAD8] p-2 rounded-lg"
+                              title="Edit location"
+                            >
+                              <FiEdit3 />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add/Edit Location Form */}
+                {showAddLocation && (
+                  <div className="mt-6 border-t border-[#E2C275] pt-6">
+                    <h3 className="text-lg font-semibold mb-4">
+                      {editingLocation ? 'Edit Location' : 'Add New Location'}
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="location-name">Location Name *</Label>
+                          <Input
+                            id="location-name"
+                            name="name"
+                            value={locationForm.name}
+                            onChange={handleLocationChange}
+                            placeholder="Enter location name"
+                            className="border-[#E2C275] focus:border-[#A21C1C]"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="location-address">Address</Label>
+                          <Input
+                            id="location-address"
+                            name="address"
+                            value={locationForm.address}
+                            onChange={handleLocationChange}
+                            placeholder="Enter address (optional)"
+                            className="border-[#E2C275] focus:border-[#A21C1C]"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="location-latitude">Latitude</Label>
+                          <Input
+                            id="location-latitude"
+                            name="latitude"
+                            type="number"
+                            step="any"
+                            value={locationForm.latitude}
+                            onChange={handleLocationChange}
+                            placeholder="Enter latitude (optional)"
+                            className="border-[#E2C275] focus:border-[#A21C1C]"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="location-longitude">Longitude</Label>
+                          <Input
+                            id="location-longitude"
+                            name="longitude"
+                            type="number"
+                            step="any"
+                            value={locationForm.longitude}
+                            onChange={handleLocationChange}
+                            placeholder="Enter longitude (optional)"
+                            className="border-[#E2C275] focus:border-[#A21C1C]"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Map picker to select coordinates */}
+                      <div className="space-y-2">
+                        <Label>Pin Exact Location on Map</Label>
+                        <MapPicker
+                          value={(() => {
+                            const lat = parseFloat(locationForm.latitude as unknown as string)
+                            const lng = parseFloat(locationForm.longitude as unknown as string)
+                            return isNaN(lat) || isNaN(lng) ? null : { lat, lng }
+                          })()}
+                          onChange={async (coords) => {
+                            setLocationForm(prev => ({
+                              ...prev,
+                              latitude: coords.lat.toString(),
+                              longitude: coords.lng.toString(),
+                            }))
+                            try {
+                              const res = await fetch(`${API_URL}/geocode/reverse?lat=${coords.lat}&lon=${coords.lng}`, {
+                                headers: { 'Accept': 'application/json' }
+                              })
+                              if (res.ok) {
+                                const data = await res.json()
+                                const display = data?.display_name || ''
+                                if (display) {
+                                  setLocationForm(prev => ({ ...prev, address: display }))
+                                }
+                              }
+                            } catch {
+                              // ignore reverse geocode errors silently
+                            }
+                          }}
+                          height={360}
+                        />
+                        <p className="text-xs text-gray-500">
+                          Selected: {locationForm.latitude || '-'}, {locationForm.longitude || '-'}
+                        </p>
+                      </div>
+                      
+                      {locationError && <div className="text-red-600">{locationError}</div>}
+                      {locationSuccess && <div className="text-green-600">{locationSuccess}</div>}
+                      
+                      <div className="flex gap-3">
+                        <button
+                          onClick={handleLocationSave}
+                          disabled={locationLoading}
+                          className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2 disabled:opacity-50"
+                        >
+                          <FiSave />
+                          {locationLoading ? 'Saving...' : (editingLocation ? 'Update Location' : 'Add Location')}
+                        </button>
+                        <button
+                          onClick={handleCancelLocation}
+                          className="bg-gray-500 text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-gray-600"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </motion.div>
 
           {/* Advanced Settings */}

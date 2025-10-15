@@ -18,6 +18,7 @@ import Image from "next/image"
 import { motion } from "framer-motion"
 import { useState } from "react"
 import type { JSX } from "react"
+import { useAuth } from "@/context/AuthContext"
 
 const drones = [
   { id: "DRN-001", date: "13/05/2022", area: "FSKTM UM", status: "Operational" },
@@ -59,6 +60,7 @@ const item = {
 }
 
 export default function DroneManagementPage() {
+  const { companyId } = useAuth()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedDrone, setSelectedDrone] = useState("DRN-001")
 
@@ -79,7 +81,7 @@ export default function DroneManagementPage() {
             <h1 className="text-3xl font-bold text-black mb-1">Drone Management</h1>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-[#A21C1C]"></div>
-              <div className="text-lg text-gray-600">Manage all aspects of the drones and images captured by drone</div>
+              <div className="text-lg text-gray-600">Manage all aspects of the drones and images captured by drone within your company</div>
             </div>
           </motion.div>
 

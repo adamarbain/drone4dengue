@@ -8,6 +8,7 @@ function checkToken(req, res, next) {
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) return res.status(403).json({ message: 'Invalid token' });
     req.user = user;
+    req.companyId = user.companyId; // Add company context to request
     next();
   });
 }

@@ -7,44 +7,58 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function AdminHeader() {
   const [showNotifications, setShowNotifications] = useState(false)
-  const { logout, user, token } = useAuth();
+  const { logout, user, token, companyId } = useAuth();
 
   const [userData, setUserData] = useState<any>(null);
+  const [companyData, setCompanyData] = useState<any>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState('');
   const [profileSuccess, setProfileSuccess] = useState('');
 
   const API_URL = 'http://localhost:4000';
 
-  // Fetch user on mount or when user/token changes
+  // Fetch user and company data on mount or when user/token/companyId changes
   useEffect(() => {
-    async function fetchUser() {
+    async function fetchUserAndCompany() {
       if (!user?.id || !token) return;
       setProfileLoading(true);
       setProfileError('');
       setProfileSuccess('');
       try {
-        const res = await fetch(`${API_URL}/users/${user.id}`, {
+        // Fetch user data
+        const userRes = await fetch(`${API_URL}/users/${user.id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (!res.ok) throw new Error('Failed to fetch user');
-        const data = await res.json();
-        setUserData(data.user);
-        console.log(data.user);
+        if (!userRes.ok) throw new Error('Failed to fetch user');
+        const userData = await userRes.json();
+        setUserData(userData.user);
+        
+        // Fetch company data if companyId is available
+        if (companyId) {
+          const companyRes = await fetch(`${API_URL}/companies/${companyId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (companyRes.ok) {
+            const companyData = await companyRes.json();
+            setCompanyData(companyData);
+          }
+        }
       } catch (err) {
         setProfileError(err instanceof Error ? err.message : 'Failed to fetch user');
       } finally {
         setProfileLoading(false);
       }
     }
-    fetchUser();
-  }, [user?.id, token]);
+    fetchUserAndCompany();
+  }, [user?.id, token, companyId]);
 
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between px-8 py-4 bg-white border-b border-[#E2C275]/50 shadow-sm">
       <div className="flex items-center">
         <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FFF7E3] rounded-lg">
-          <span className="text-[#A21C1C] font-medium text-sm">Admin Portal</span>
+          <span className="text-[#A21C1C] font-medium text-sm">
+            {profileLoading ? 'Loading Company...' : companyData?.name || 'Company Portal'}
+          </span>
           <div className="w-2 h-2 rounded-full bg-[#A21C1C] animate-pulse"></div>
         </div>
       </div>
@@ -118,7 +132,7 @@ export default function AdminHeader() {
 
           <div className="flex items-center gap-3 pl-3">
             <div className="flex flex-col items-end">
-              <span className="font-medium text-sm">{userData?.username || 'User'}</span>
+              <span className="font-medium text-sm">{userData?.name || 'User'}</span>
               <span className="text-xs text-gray-500">Administrator</span>
             </div>
             <div className="relative">

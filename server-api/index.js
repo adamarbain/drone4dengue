@@ -13,6 +13,9 @@ app.use('/users', require('./routes/userRoutes'));
 app.use('/weather', require('./routes/admin/weatherRoutes'));
 app.use('/recommendations', require('./routes/recommendationRoutes'));
 app.use('/dengue-data', require('./routes/admin/dengueDataRoutes'));
+app.use('/companies', require('./routes/companies'));
+app.use('/company-locations', require('./routes/companyLocationRoutes'));
+app.use('/geocode', require('./routes/geocode'));
 
 // app.use('/images', require('./routes/images'));
 // app.use('/alerts', require('./routes/alerts'));

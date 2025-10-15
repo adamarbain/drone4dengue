@@ -6,6 +6,7 @@ import { FiFilter, FiDownload, FiRefreshCw, FiEye, FiAlertTriangle, FiCheckCircl
 import Image from "next/image"
 import { useState } from "react"
 import { motion } from "framer-motion"
+import { useAuth } from "@/context/AuthContext"
 
 const riskAreas = [
   { area: "Andher East, Mumbai", riskLevel: "High", confidence: 85, date: "April 20, 2025", color: "bg-red-500" },
@@ -75,6 +76,7 @@ const item = {
 }
 
 export default function PredictionAlertPage() {
+  const { companyId } = useAuth()
   // Filter states
   const [selectedState, setSelectedState] = useState("All States")
   const [selectedCity, setSelectedCity] = useState("All Cities")
@@ -161,7 +163,7 @@ export default function PredictionAlertPage() {
             <h1 className="text-3xl font-bold text-black mb-1">Prediction & Alert</h1>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-[#A21C1C]"></div>
-              <div className="text-lg text-gray-600">Dengue Prediction & Alert System</div>
+              <div className="text-lg text-gray-600">Dengue Prediction & Alert System for your company</div>
             </div>
           </motion.div>
 

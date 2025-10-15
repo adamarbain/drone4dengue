@@ -29,6 +29,7 @@ import {
   RefreshCw,
 } from "lucide-react"
 import axios from "axios"
+import { useAuth } from "@/context/AuthContext"
 
 interface WeatherRecord {
   id: string
@@ -220,6 +221,7 @@ const container = {
 const API_BASE_URL = "http://localhost:4000"
 
 export default function WeatherDataPage() {
+  const { companyId } = useAuth()
   const [weatherData, setWeatherData] = useState<WeatherRecord[]>([])
   const [stats, setStats] = useState<WeatherStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -488,7 +490,7 @@ export default function WeatherDataPage() {
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-[#A21C1C]"></div>
                     <div className="text-lg text-gray-600">
-                      Manage weather datasets for dengue prediction analysis
+                      Manage weather datasets for dengue prediction analysis within your company
                     </div>
                   </div>
                 </div>

@@ -8,11 +8,28 @@ const parse = require('csv-parse');
 async function getAll(req, res) {
   try {
     const { location, date, status } = req.query;
-    const where = {};
+    
+    // Get company locations for the company
+    const companyLocations = await prisma.companyLocation.findMany({
+      where: { companyId: req.companyId },
+      select: { id: true }
+    });
+    const locationIds = companyLocations.map(loc => loc.id);
+    
+    const where = { companyLocationId: { in: locationIds } }; // Filter by company locations
     if (location) where.location = location;
     if (status) where.status = status;
     if (date) where.date = new Date(date);
-    const data = await prisma.dengueData.findMany({ where, orderBy: { date: 'desc' } });
+    
+    const data = await prisma.dengueData.findMany({ 
+      where, 
+      include: {
+        companyLocation: {
+          select: { name: true, address: true }
+        }
+      },
+      orderBy: { date: 'desc' } 
+    });
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -34,7 +51,25 @@ async function getOne(req, res) {
 // Create a new dengue data record
 async function create(req, res) {
   try {
-    const data = req.body;
+    const { companyLocationId, ...otherData } = req.body;
+    
+    if (!companyLocationId) {
+      return res.status(400).json({ error: 'companyLocationId is required.' });
+    }
+    
+    // Verify the companyLocationId belongs to the company
+    const companyLocation = await prisma.companyLocation.findFirst({
+      where: { 
+        id: companyLocationId,
+        companyId: req.companyId 
+      }
+    });
+    
+    if (!companyLocation) {
+      return res.status(400).json({ error: 'Invalid company location ID or location does not belong to your company.' });
+    }
+    
+    const data = { ...otherData, companyLocationId };
     const record = await prisma.dengueData.create({ data });
     res.status(201).json(record);
   } catch (err) {
@@ -68,6 +103,24 @@ async function remove(req, res) {
 // Upload CSV and import dengue data
 async function uploadCSV(req, res) {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  
+  const { companyLocationId } = req.body;
+  if (!companyLocationId) {
+    return res.status(400).json({ error: 'companyLocationId is required.' });
+  }
+  
+  // Verify the companyLocationId belongs to the company
+  const companyLocation = await prisma.companyLocation.findFirst({
+    where: { 
+      id: companyLocationId,
+      companyId: req.companyId 
+    }
+  });
+  
+  if (!companyLocation) {
+    return res.status(400).json({ error: 'Invalid company location ID or location does not belong to your company.' });
+  }
+  
   const filePath = req.file.path;
   const results = [];
   const errors = [];
@@ -86,6 +139,7 @@ async function uploadCSV(req, res) {
           source: row.source || 'csv',
           latitude: row.latitude ? parseFloat(row.latitude) : null,
           longitude: row.longitude ? parseFloat(row.longitude) : null,
+          companyLocationId,
         };
         await prisma.dengueData.create({ data });
         results.push(data);
@@ -104,9 +158,21 @@ async function uploadCSV(req, res) {
 // Get summary stats
 async function getSummary(req, res) {
   try {
-    const totalRecords = await prisma.dengueData.count();
-    const activeCases = await prisma.dengueData.aggregate({ _sum: { activeCases: true } });
-    const locations = await prisma.dengueData.findMany({ select: { location: true }, distinct: ['location'] });
+    // Get company locations for the company
+    const companyLocations = await prisma.companyLocation.findMany({
+      where: { companyId: req.companyId },
+      select: { id: true }
+    });
+    const locationIds = companyLocations.map(loc => loc.id);
+    const where = { companyLocationId: { in: locationIds } };
+    
+    const totalRecords = await prisma.dengueData.count({ where });
+    const activeCases = await prisma.dengueData.aggregate({ where, _sum: { activeCases: true } });
+    const locations = await prisma.dengueData.findMany({ 
+      where, 
+      select: { location: true }, 
+      distinct: ['location'] 
+    });
     // Data accuracy is mocked for now
     res.json({
       totalRecords,
@@ -122,7 +188,15 @@ async function getSummary(req, res) {
 // Get historical trend data
 async function getHistorical(req, res) {
   try {
+    // Get company locations for the company
+    const companyLocations = await prisma.companyLocation.findMany({
+      where: { companyId: req.companyId },
+      select: { id: true }
+    });
+    const locationIds = companyLocations.map(loc => loc.id);
+    
     const data = await prisma.dengueData.findMany({
+      where: { companyLocationId: { in: locationIds } },
       select: { date: true, totalCases: true, activeCases: true },
       orderBy: { date: 'asc' },
     });
@@ -143,7 +217,15 @@ async function getHistorical(req, res) {
 // Get map data
 async function getMapData(req, res) {
   try {
+    // Get company locations for the company
+    const companyLocations = await prisma.companyLocation.findMany({
+      where: { companyId: req.companyId },
+      select: { id: true }
+    });
+    const locationIds = companyLocations.map(loc => loc.id);
+    
     const data = await prisma.dengueData.findMany({
+      where: { companyLocationId: { in: locationIds } },
       select: {
         id: true,
         location: true,
@@ -164,7 +246,15 @@ async function getMapData(req, res) {
 async function exportData(req, res) {
   try {
     const { location, date, status } = req.query;
-    const where = {};
+    
+    // Get company locations for the company
+    const companyLocations = await prisma.companyLocation.findMany({
+      where: { companyId: req.companyId },
+      select: { id: true }
+    });
+    const locationIds = companyLocations.map(loc => loc.id);
+    
+    const where = { companyLocationId: { in: locationIds } };
     if (location) where.location = location;
     if (status) where.status = status;
     if (date) where.date = new Date(date);

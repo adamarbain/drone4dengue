@@ -6,8 +6,24 @@ const axios = require('axios');
 // Support filters: date range, location
 exports.listWeatherData = async (req, res) => {
     try {
-        console.log('[WEATHER] Fetching weather data', { query: req.query });
+        console.log('[WEATHER] Fetching weather data', { query: req.query, companyId: req.companyId });
+        
+        // Get company locations for the company
+        const companyLocations = await prisma.companyLocation.findMany({
+            where: { companyId: req.companyId },
+            select: { id: true }
+        });
+        const locationIds = companyLocations.map(loc => loc.id);
+        
         const weather = await prisma.weather.findMany({
+            where: { 
+                companyLocationId: { in: locationIds }
+            },
+            include: {
+                companyLocation: {
+                    select: { name: true, address: true }
+                }
+            },
             orderBy: { date: 'desc' },
         });
         res.status(200).json(weather);
@@ -27,12 +43,21 @@ exports.listWeatherData = async (req, res) => {
 // }
 exports.getWeatherSummary = async (req, res) => {
     try {
-        console.log('[WEATHER] Fetching weather summary');
+        console.log('[WEATHER] Fetching weather summary for company', req.companyId);
+        
+        // Get company locations for the company
+        const companyLocations = await prisma.companyLocation.findMany({
+            where: { companyId: req.companyId },
+            select: { id: true }
+        });
+        const locationIds = companyLocations.map(loc => loc.id);
+        const where = { companyLocationId: { in: locationIds } };
+        
         const [count, avgTemp, avgHumidity, totalRain] = await Promise.all([
-            prisma.weather.count(),
-            prisma.weather.aggregate({ _avg: { temperature: true } }),
-            prisma.weather.aggregate({ _avg: { humidity: true } }),
-            prisma.weather.aggregate({ _sum: { rainfall: true } }),
+            prisma.weather.count({ where }),
+            prisma.weather.aggregate({ where, _avg: { temperature: true } }),
+            prisma.weather.aggregate({ where, _avg: { humidity: true } }),
+            prisma.weather.aggregate({ where, _sum: { rainfall: true } }),
         ]);
         res.status(200).json({
             totalRecords: count,
@@ -49,16 +74,36 @@ exports.getWeatherSummary = async (req, res) => {
 // POST /weather/
 // Add new manual weather record
 exports.addManualWeatherRecord = async (req, res) => {
-    const { date, temperature, humidity, rainfall, location } = req.body;
-    if (!date || temperature == null || humidity == null || rainfall == null || !location) {
+    const { date, temperature, humidity, rainfall, location, companyLocationId } = req.body;
+    if (!date || temperature == null || humidity == null || rainfall == null || !location || !companyLocationId) {
         console.log('[WEATHER ERROR] Missing required fields for manual weather record', req.body);
-        return res.status(400).json({ error: 'All fields (date, temperature, humidity, rainfall, location) are required.' });
+        return res.status(400).json({ error: 'All fields (date, temperature, humidity, rainfall, location, companyLocationId) are required.' });
     }
+    
+    // Verify the companyLocationId belongs to the company
+    const companyLocation = await prisma.companyLocation.findFirst({
+        where: { 
+            id: companyLocationId,
+            companyId: req.companyId 
+        }
+    });
+    
+    if (!companyLocation) {
+        return res.status(400).json({ error: 'Invalid company location ID or location does not belong to your company.' });
+    }
+    
     try {
         const weather = await prisma.weather.create({
-            data: { date: new Date(date), temperature, humidity, rainfall, location },
+            data: { 
+                date: new Date(date), 
+                temperature, 
+                humidity, 
+                rainfall, 
+                location,
+                companyLocationId
+            },
         });
-        console.log('[WEATHER] Added manual weather record:', weather);
+        console.log('[WEATHER] Added manual weather record for company', req.companyId, ':', weather);
         res.status(200).json(weather);
     } catch (err) {
         console.error('[WEATHER ERROR] Failed to add manual weather record:', err);
@@ -70,15 +115,28 @@ exports.addManualWeatherRecord = async (req, res) => {
 // Update an existing weather record
 exports.updateWeatherRecord = async (req, res) => {
     const { id } = req.params;
-    const { date, temperature, humidity, rainfall, location } = req.body;
-    if (!id || !date || temperature == null || humidity == null || rainfall == null || !location) {
+    const { date, temperature, humidity, rainfall, location, companyLocationId } = req.body;
+    if (!id || !date || temperature == null || humidity == null || rainfall == null || !location || !companyLocationId) {
         console.log('[WEATHER ERROR] Missing required fields for update', { id, ...req.body });
-        return res.status(400).json({ error: 'All fields (id, date, temperature, humidity, rainfall, location) are required.' });
+        return res.status(400).json({ error: 'All fields (id, date, temperature, humidity, rainfall, location, companyLocationId) are required.' });
     }
+    
+    // Verify the companyLocationId belongs to the company
+    const companyLocation = await prisma.companyLocation.findFirst({
+        where: { 
+            id: companyLocationId,
+            companyId: req.companyId 
+        }
+    });
+    
+    if (!companyLocation) {
+        return res.status(400).json({ error: 'Invalid company location ID or location does not belong to your company.' });
+    }
+    
     try {
         const weather = await prisma.weather.update({
             where: { id },
-            data: { date: new Date(date), temperature, humidity, rainfall, location },
+            data: { date: new Date(date), temperature, humidity, rainfall, location, companyLocationId },
         });
         console.log('[WEATHER] Updated weather record:', weather);
         res.status(200).json(weather);
@@ -117,15 +175,40 @@ exports.uploadWeatherCSV = async (req, res) => {
         console.log('[WEATHER ERROR] No CSV file uploaded');
         return res.status(400).json({ error: 'CSV file is required.' });
     }
+    
+    const { companyLocationId } = req.body;
+    if (!companyLocationId) {
+        return res.status(400).json({ error: 'companyLocationId is required.' });
+    }
+    
+    // Verify the companyLocationId belongs to the company
+    const companyLocation = await prisma.companyLocation.findFirst({
+        where: { 
+            id: companyLocationId,
+            companyId: req.companyId 
+        }
+    });
+    
+    if (!companyLocation) {
+        return res.status(400).json({ error: 'Invalid company location ID or location does not belong to your company.' });
+    }
+    
     try {
         const csvData = req.file.buffer.toString('utf-8');
         const rows = csvData.split('\n').slice(1).filter(Boolean);
         const weatherData = rows.map(row => {
             const [date, temperature, humidity, rainfall, location] = row.split(',');
-            return { date: new Date(date), temperature: Number(temperature), humidity: Number(humidity), rainfall: Number(rainfall), location };
+            return { 
+                date: new Date(date), 
+                temperature: Number(temperature), 
+                humidity: Number(humidity), 
+                rainfall: Number(rainfall), 
+                location,
+                companyLocationId
+            };
         });
         await prisma.weather.createMany({ data: weatherData, skipDuplicates: true });
-        console.log(`[WEATHER] Uploaded CSV with ${weatherData.length} records`);
+        console.log(`[WEATHER] Uploaded CSV with ${weatherData.length} records for company ${req.companyId}`);
         res.status(200).json({ message: `Uploaded ${weatherData.length} records.` });
     } catch (err) {
         console.error('[WEATHER ERROR] Failed to upload CSV:', err);
@@ -137,11 +220,20 @@ exports.uploadWeatherCSV = async (req, res) => {
 // Return downloadable CSV of all weather data
 exports.exportWeatherData = async (req, res) => {
     try {
-        const weather = await prisma.weather.findMany();
+        // Get company locations for the company
+        const companyLocations = await prisma.companyLocation.findMany({
+            where: { companyId: req.companyId },
+            select: { id: true }
+        });
+        const locationIds = companyLocations.map(loc => loc.id);
+        
+        const weather = await prisma.weather.findMany({
+            where: { companyLocationId: { in: locationIds } }
+        });
         const csv = convertToCSV(weather);
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader('Content-Disposition', 'attachment; filename="weather-data.csv"');
-        console.log(`[WEATHER] Exported ${weather.length} weather records as CSV`);
+        console.log(`[WEATHER] Exported ${weather.length} weather records as CSV for company ${req.companyId}`);
         res.status(200).send(csv);
     } catch (err) {
         console.error('[WEATHER ERROR] Failed to export weather data:', err);
@@ -165,9 +257,21 @@ function convertToCSV(data) {
 // POST /weather/fetch-and-store
 // Fetch daily weather data for the past month from Open-Meteo and store in DB
 exports.fetchAndStoreWeather = async (req, res) => {
-    const { latitude, longitude } = req.body;
-    if (!latitude || !longitude) {
-        return res.status(400).json({ error: 'Latitude and longitude are required.' });
+    const { latitude, longitude, companyLocationId } = req.body;
+    if (!latitude || !longitude || !companyLocationId) {
+        return res.status(400).json({ error: 'Latitude, longitude, and companyLocationId are required.' });
+    }
+    
+    // Verify the companyLocationId belongs to the company
+    const companyLocation = await prisma.companyLocation.findFirst({
+        where: { 
+            id: companyLocationId,
+            companyId: req.companyId 
+        }
+    });
+    
+    if (!companyLocation) {
+        return res.status(400).json({ error: 'Invalid company location ID or location does not belong to your company.' });
     }
 
     // Calculate date range for the past week
@@ -221,6 +325,7 @@ exports.fetchAndStoreWeather = async (req, res) => {
                 humidity: avgHumidity,
                 rainfall: Number((daily.precipitation_sum[i] ?? 0).toFixed(2)),
                 location: placeName,
+                companyLocationId,
             };
         });
 
@@ -238,6 +343,7 @@ exports.fetchAndStoreWeather = async (req, res) => {
                     lte: new Date(end),
                 },
                 location: placeName,
+                companyLocationId,
             },
             orderBy: { date: 'desc' },
         });

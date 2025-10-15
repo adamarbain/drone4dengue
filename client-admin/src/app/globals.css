@@ -89,6 +89,9 @@
   }
 }
 
+/* Leaflet map CSS */
+@import 'leaflet/dist/leaflet.css';
+
 /* Custom input styles for transparent backgrounds */
 input::placeholder {
   opacity: 0.7;
