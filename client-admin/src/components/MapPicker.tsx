@@ -109,13 +109,13 @@ export default function MapPicker({ value, onChange, height = 320 }: MapPickerPr
   return (
     <div style={{ height }} className="relative w-full overflow-hidden rounded-lg border border-[#E2C275]">
       {/* Search overlay */}
-      <div className="absolute z-[1000] left-3 right-3 top-3 flex flex-col gap-2">
+      <div className="absolute z-[1000] right-3 top-3 flex flex-col gap-2">
         <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search place or address..."
-            className="w-full rounded-md border border-[#E2C275] bg-white px-3 py-2 text-sm shadow"
+            className="w-[300px] rounded-md border border-[#E2C275] bg-white px-3 py-2 text-sm shadow"
           />
           <button
             type="submit"
@@ -126,7 +126,7 @@ export default function MapPicker({ value, onChange, height = 320 }: MapPickerPr
           </button>
         </form>
         {searchOpen && searchResults.length > 0 && (
-          <div className="max-h-56 overflow-auto rounded-md border border-[#E2C275] bg-white shadow">
+          <div className="w-[300px] max-h-56 overflow-auto rounded-md border border-[#E2C275] bg-white shadow">
             {searchResults.map((r, idx) => (
               <button
                 key={`${r.lat}-${r.lon}-${idx}`}

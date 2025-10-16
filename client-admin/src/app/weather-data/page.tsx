@@ -41,6 +41,21 @@ interface WeatherRecord {
   createdAt: string
   updatedAt: string
   createdBy: string
+  companyLocationId: string
+  companyLocation?: {
+    name: string
+    address: string
+  }
+}
+
+interface CompanyLocation {
+  id: string
+  name: string
+  address: string
+  latitude: number
+  longitude: number
+  isActive: boolean
+  companyId: string
 }
 
 interface WeatherStats {
@@ -204,25 +219,27 @@ const emptyStateVariants = {
 }
 
 const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
     },
-  }
-  
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 },
-  }
+  },
+}
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 },
+}
 
 const API_BASE_URL = "http://localhost:4000"
 
 export default function WeatherDataPage() {
   const { companyId } = useAuth()
   const [weatherData, setWeatherData] = useState<WeatherRecord[]>([])
+  const [companyLocations, setCompanyLocations] = useState<CompanyLocation[]>([])
+  const [selectedLocationId, setSelectedLocationId] = useState<string>("")
   const [stats, setStats] = useState<WeatherStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
@@ -241,6 +258,7 @@ export default function WeatherDataPage() {
     humidity: "",
     rainfall: "",
     location: "",
+    companyLocationId: "",
   })
 
   // Helper: get token
@@ -249,41 +267,68 @@ export default function WeatherDataPage() {
     return TOKEN
   }
 
-  useEffect(() => {
-    // Only fetch if no weather data yet
-    if (weatherData.length === 0) {
-      if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(async (position) => {
-          try {
-            setLoading(true);
-            console.log("Latitude: ", position.coords.latitude)
-            console.log("Longitude: ", position.coords.longitude)
-            const res = await axios.post(
-              `${API_BASE_URL}/weather/fetch-and-store`,
-              {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-              },
-              { headers: { Authorization: `Bearer ${getToken()}` } }
-            );
-            setWeatherData(res.data);
-            loadWeatherStats();
-            loadWeatherData();
-          } catch (err) {
-            setError('Failed to fetch weather data from Open-Meteo');
-          } finally {
-            setLoading(false);
-          }
-        }, () => {
-          setError('Failed to get your location.');
-        });
-      } else {
-        setError('Geolocation is not supported by your browser.');
+  // Fetch company locations
+  const loadCompanyLocations = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/company-locations`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      })
+      setCompanyLocations(res.data)
+      // Auto-select first location if available
+      if (res.data.length > 0 && !selectedLocationId) {
+        setSelectedLocationId(res.data[0].id)
       }
-    } else {
-      loadWeatherStats();
+    } catch (err: any) {
+      setError(err.response?.data?.error || "Failed to load company locations")
     }
-  }, []);
+  }
+
+  useEffect(() => {
+    // Load company locations first
+    loadCompanyLocations()
+  }, [])
+
+  useEffect(() => {
+    // Fetch weather data when a location is selected and no weather data exists
+    if (selectedLocationId && weatherData.length === 0) {
+      fetchWeatherForLocation(selectedLocationId)
+    } else if (weatherData.length > 0) {
+      loadWeatherStats()
+    }
+  }, [selectedLocationId])
+
+  const fetchWeatherForLocation = async (locationId: string) => {
+    const location = companyLocations.find(loc => loc.id === locationId)
+    if (!location || !location.latitude || !location.longitude) {
+      setError('Selected location does not have valid coordinates')
+      setLoading(false)
+      return
+    }
+
+    try {
+      setLoading(true)
+      console.log("Fetching weather for location:", location.name)
+      console.log("Latitude: ", location.latitude)
+      console.log("Longitude: ", location.longitude)
+
+      const res = await axios.post(
+        `${API_BASE_URL}/weather/fetch-and-store`,
+        {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          companyLocationId: locationId,
+        },
+        { headers: { Authorization: `Bearer ${getToken()}` } }
+      )
+      setWeatherData(res.data)
+      loadWeatherStats()
+      loadWeatherData()
+    } catch (err) {
+      setError('Failed to fetch weather data from Open-Meteo')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (filterDate) {
@@ -327,7 +372,7 @@ export default function WeatherDataPage() {
     setSuccess(null)
 
     // Validate form data
-    if (!formData.date || !formData.temperature || !formData.humidity || !formData.rainfall || !formData.location) {
+    if (!formData.date || !formData.temperature || !formData.humidity || !formData.rainfall || !formData.location || !formData.companyLocationId) {
       setError("All fields are required")
       return
     }
@@ -362,6 +407,7 @@ export default function WeatherDataPage() {
             humidity,
             rainfall,
             location: formData.location,
+            companyLocationId: formData.companyLocationId,
           },
           { headers: { Authorization: `Bearer ${getToken()}` } }
         )
@@ -377,12 +423,13 @@ export default function WeatherDataPage() {
             humidity,
             rainfall,
             location: formData.location,
+            companyLocationId: formData.companyLocationId,
           },
           { headers: { Authorization: `Bearer ${getToken()}` } }
         )
         setSuccess("Weather record added successfully")
       }
-      setFormData({ date: "", temperature: "", humidity: "", rainfall: "", location: "" })
+      setFormData({ date: "", temperature: "", humidity: "", rainfall: "", location: "", companyLocationId: "" })
       setShowAddForm(false)
       loadWeatherData()
       loadWeatherStats()
@@ -399,12 +446,17 @@ export default function WeatherDataPage() {
       setError("Please select a CSV file")
       return
     }
+    if (!selectedLocationId) {
+      setError("Please select a company location")
+      return
+    }
     setError(null)
     setSuccess(null)
     setUploading(true)
     try {
       const formDataObj = new FormData()
       formDataObj.append("file", csvFile)
+      formDataObj.append("companyLocationId", selectedLocationId)
       await axios.post(`${API_BASE_URL}/weather/upload-csv`, formDataObj, {
         headers: {
           Authorization: `Bearer ${getToken()}`,
@@ -430,6 +482,7 @@ export default function WeatherDataPage() {
       humidity: record.humidity.toString(),
       rainfall: record.rainfall.toString(),
       location: record.location,
+      companyLocationId: record.companyLocationId,
     })
     setShowAddForm(true)
   }
@@ -551,25 +604,66 @@ export default function WeatherDataPage() {
               )}
             </AnimatePresence>
 
-            {/* Date Filter UI */}
-            <div className="flex items-center gap-2 mb-4">
-              <Label htmlFor="dateFilter">Filter by Date:</Label>
-              <Input
-                id="dateFilter"
-                type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-                className="w-48"
-              />
-              <Button
-                variant="outline"
-                onClick={() => setFilterDate("")}
-                className="ml-2"
-                disabled={!filterDate}
-              >
-                Clear Filter
-              </Button>
-            </div>
+            {/* Location Selector and Date Filter UI */}
+            {/* <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="locationSelect">Company Location:</Label>
+                <select
+                  id="locationSelect"
+                  value={selectedLocationId}
+                  onChange={(e) => {
+                    setSelectedLocationId(e.target.value)
+                    setWeatherData([]) // Clear existing data to trigger refetch
+                  }}
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select a location</option>
+                  {companyLocations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {location.name} - {location.address}
+                    </option>
+                  ))}
+                </select>
+                {selectedLocationId && (
+                  <Button
+                    variant="outline"
+                    onClick={() => fetchWeatherForLocation(selectedLocationId)}
+                    disabled={loading}
+                    className="ml-2"
+                  >
+                    {loading ? (
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </motion.div>
+                    ) : (
+                      "Fetch Weather"
+                    )}
+                  </Button>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Label htmlFor="dateFilter">Filter by Date:</Label>
+                <Input
+                  id="dateFilter"
+                  type="date"
+                  value={filterDate}
+                  onChange={(e) => setFilterDate(e.target.value)}
+                  className="w-48"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => setFilterDate("")}
+                  className="ml-2"
+                  disabled={!filterDate}
+                >
+                  Clear Filter
+                </Button>
+              </div>
+            </div> */}
 
             {/* Statistics Cards */}
             {stats && (
@@ -761,6 +855,7 @@ export default function WeatherDataPage() {
                             humidity: "",
                             rainfall: "",
                             location: "",
+                            companyLocationId: selectedLocationId || "",
                           })
                         }}
                         className="w-full"
@@ -808,7 +903,7 @@ export default function WeatherDataPage() {
                     <CardContent>
                       <form
                         onSubmit={handleFormSubmit}
-                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
                       >
                         <motion.div
                           initial={{ opacity: 0, y: 20 }}
@@ -896,10 +991,31 @@ export default function WeatherDataPage() {
                           />
                         </motion.div>
                         <motion.div
-                          className="md:col-span-2 lg:col-span-5 flex gap-3"
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.6 }}
+                        >
+                          <Label htmlFor="companyLocationId">Company Location</Label>
+                          <select
+                            id="companyLocationId"
+                            value={formData.companyLocationId}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, companyLocationId: e.target.value }))}
+                            className="mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+                            required
+                          >
+                            <option value="">Select a company location</option>
+                            {companyLocations.map((location) => (
+                              <option key={location.id} value={location.id}>
+                                {location.name} - {location.address}
+                              </option>
+                            ))}
+                          </select>
+                        </motion.div>
+                        <motion.div
+                          className="md:col-span-2 lg:col-span-3 flex gap-3"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.7 }}
                         >
                           <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                             <Button type="submit" disabled={uploading} className="w-full">
@@ -941,6 +1057,144 @@ export default function WeatherDataPage() {
               )}
             </AnimatePresence>
 
+            {/* Location Selector and Date Filter UI */}
+            <motion.div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8" variants={itemVariants}>
+              {/* Location Selector Card */}
+              <motion.div variants={cardVariants} whileHover="hover">
+                <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 overflow-hidden">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <motion.div
+                        animate={{ rotate: [0, 15, -15, 0] }}
+                        transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+                      >
+                        <Cloud className="h-5 w-5 text-purple-600" />
+                      </motion.div>
+                      Weather Location
+                    </CardTitle>
+                    <CardDescription>
+                      Select a company location to fetch weather data for dengue prediction analysis
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="locationSelect" className="text-purple-700 font-medium">
+                          Company Location
+                        </Label>
+                        <select
+                          id="locationSelect"
+                          value={selectedLocationId}
+                          onChange={(e) => {
+                            setSelectedLocationId(e.target.value)
+                            setWeatherData([]) // Clear existing data to trigger refetch
+                          }}
+                          className="mt-2 w-full px-3 py-2 border border-purple-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
+                        >
+                          <option value="">Select a location</option>
+                          {companyLocations.map((location) => (
+                            <option key={location.id} value={location.id}>
+                              {location.name} - {location.address}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      {selectedLocationId && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                            <Button
+                              onClick={() => fetchWeatherForLocation(selectedLocationId)}
+                              disabled={loading}
+                              className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                            >
+                              {loading ? (
+                                <motion.div className="flex items-center gap-2">
+                                  <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                                  >
+                                    <RefreshCw className="h-4 w-4" />
+                                  </motion.div>
+                                  Fetching Weather...
+                                </motion.div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <Cloud className="h-4 w-4" />
+                                  Fetch Weather Data
+                                </div>
+                              )}
+                            </Button>
+                          </motion.div>
+                        </motion.div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Date Filter Card */}
+              <motion.div variants={cardVariants} whileHover="hover">
+                <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 overflow-hidden">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <motion.div
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+                      >
+                        <Calendar className="h-5 w-5 text-green-600" />
+                      </motion.div>
+                      Date Filter
+                    </CardTitle>
+                    <CardDescription>
+                      Filter weather records by specific date for detailed analysis
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="dateFilter" className="text-green-700 font-medium">
+                          Filter by Date
+                        </Label>
+                        <Input
+                          id="dateFilter"
+                          type="date"
+                          value={filterDate}
+                          onChange={(e) => setFilterDate(e.target.value)}
+                          className="mt-2 border-green-200 focus:ring-green-500 focus:border-green-500"
+                        />
+                      </div>
+                      
+                      {filterDate && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                            <Button
+                              variant="outline"
+                              onClick={() => setFilterDate("")}
+                              className="w-full border-green-300 text-green-700 hover:bg-green-50"
+                            >
+                              <div className="flex items-center gap-2">
+                                <RefreshCw className="h-4 w-4" />
+                                Clear Filter
+                              </div>
+                            </Button>
+                          </motion.div>
+                        </motion.div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </motion.div>
+
             {/* Weather Data Table */}
             <motion.div variants={itemVariants}>
               <Card>
@@ -970,7 +1224,9 @@ export default function WeatherDataPage() {
                       >
                         <RefreshCw className="h-8 w-8 text-blue-600" />
                       </motion.div>
-                      <span className="ml-2 text-gray-600">Loading weather data...</span>
+                      <span className="ml-2 text-gray-600">
+                        {companyLocations.length === 0 ? "Loading company locations..." : "Loading weather data..."}
+                      </span>
                     </motion.div>
                   ) : filteredWeatherData.length === 0 ? (
                     <motion.div
@@ -985,14 +1241,23 @@ export default function WeatherDataPage() {
                       >
                         <Cloud className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                       </motion.div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Weather Data</h3>
-                      <p className="text-gray-600 mb-4">Start by uploading CSV data or adding records manually</p>
-                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button onClick={() => setShowAddForm(true)}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add First Record
-                        </Button>
-                      </motion.div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        {companyLocations.length === 0 ? "No Company Locations" : "No Weather Data"}
+                      </h3>
+                      <p className="text-gray-600 mb-4">
+                        {companyLocations.length === 0
+                          ? "Please add company locations first before managing weather data"
+                          : "Start by selecting a company location and fetching weather data"
+                        }
+                      </p>
+                      {companyLocations.length > 0 && (
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                          <Button onClick={() => setShowAddForm(true)}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add First Record
+                          </Button>
+                        </motion.div>
+                      )}
                     </motion.div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -1004,6 +1269,7 @@ export default function WeatherDataPage() {
                             <th className="text-left py-3 px-4 font-medium text-gray-900">Humidity</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-900">Rainfall</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-900">Location</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-900">Company Location</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-900">Last Updated</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-900">Actions</th>
                           </tr>
@@ -1044,6 +1310,16 @@ export default function WeatherDataPage() {
                                 </div>
                               </td>
                               <td className="py-3 px-4 text-gray-900">{record.location}</td>
+                              <td className="py-3 px-4 text-gray-900">
+                                {record.companyLocation ? (
+                                  <div>
+                                    <div className="font-medium">{record.companyLocation.name}</div>
+                                    <div className="text-sm text-gray-600">{record.companyLocation.address}</div>
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-500">N/A</span>
+                                )}
+                              </td>
                               <td className="py-3 px-4 text-sm text-gray-600">
                                 {new Date(record.updatedAt).toLocaleString()}
                               </td>
