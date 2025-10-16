@@ -25,6 +25,7 @@ from datetime import datetime, timedelta
 import pytz
 import json
 import csv
+import re
 
 """Weather API Functions for Open Meteo Integration"""
 
@@ -239,18 +240,75 @@ def save_to_csv(df, file_path):
                 existing_df = existing_df.reindex(columns=combined_columns)
                 df_to_save = df.reindex(columns=combined_columns)
                 combined_df = pd.concat([existing_df, df_to_save], ignore_index=True)
-                combined_df.to_csv(file_path, index=False)
+                combined_df.to_csv(file_path, index=False, lineterminator='\n')
                 print(f"Schema updated and data merged into {file_path}")
             else:
-                df.to_csv(file_path, mode="a", header=False, index=False)
+                # Ensure the existing file ends with a newline before appending
+                try:
+                    needs_newline = False
+                    with open(file_path, "rb") as f:
+                        f.seek(0, os.SEEK_END)
+                        if f.tell() > 0:
+                            f.seek(-1, os.SEEK_END)
+                            last_char = f.read(1)
+                            if last_char not in (b"\n", b"\r"):
+                                needs_newline = True
+                    if needs_newline:
+                        with open(file_path, "ab") as f:
+                            f.write(b"\n")
+                except Exception:
+                    # If any issue occurs while checking, proceed with normal append
+                    pass
+
+                df.to_csv(file_path, mode="a", header=False, index=False, lineterminator='\n')
                 print(f"Data appended to {file_path}")
         else:
-            df.to_csv(file_path, index=False)
+            df.to_csv(file_path, index=False, lineterminator='\n')
             print(f"Data saved to {file_path}")
     else:
         # New file - write with header
-        df.to_csv(file_path, index=False)
+        df.to_csv(file_path, index=False, lineterminator='\n')
         print(f"Data saved to {file_path}")
+
+
+def repair_csv_concatenations(file_path):
+    """
+    Insert missing newlines where two records were concatenated on one line.
+    Heuristic: if a line contains two DD/MM/YYYY occurrences, split before the second.
+    """
+    if not os.path.exists(file_path):
+        return
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        date_regex = r"(\b\d{2}/\d{2}/\d{4}\b)"
+
+        def split_on_second_date(line: str) -> str:
+            matches = list(re.finditer(date_regex, line))
+            if len(matches) >= 2:
+                pos = matches[1].start()
+                return line[:pos] + "\n" + line[pos:]
+            return line
+
+        lines = content.splitlines()
+        fixed_lines = []
+        for line in lines:
+            once = split_on_second_date(line)
+            # Handle rare triple concatenations by attempting a second pass on the resultant segment
+            twice = split_on_second_date(once)
+            fixed_lines.extend(twice.splitlines())
+
+        fixed_content = "\n".join(fixed_lines)
+        if fixed_content and not fixed_content.endswith("\n"):
+            fixed_content += "\n"
+
+        if fixed_content != content:
+            with open(file_path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(fixed_content)
+            print(f"Repaired concatenated rows in {file_path}")
+    except Exception as e:
+        print(f"Failed to repair {file_path}: {e}")
 
 """API 1 : Fetch UM Location from Idengue.com"""
 
@@ -669,7 +727,7 @@ def backfill_weather_for_csv(file_path, lon_col="x", lat_col="y", date_col="date
     # Write atomically
     tmp_path = f"{file_path}.tmp"
     try:
-        df.to_csv(tmp_path, index=False)
+        df.to_csv(tmp_path, index=False, lineterminator='\n')
         os.replace(tmp_path, file_path)
         print(f"Backfill completed and saved to {file_path}")
     finally:
@@ -688,6 +746,9 @@ if __name__ == "__main__":
     print("Fetching dengue data and weather information...")
     print("Note: This process may take time due to weather API calls.")
     print("=" * 60)
+    # Repair previous malformed lines (if any) before continuing
+    repair_csv_concatenations(dengue_hotspot_csv)
+    repair_csv_concatenations(active_dengue_csv)
     
     results = {}
     
