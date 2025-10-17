@@ -23,9 +23,11 @@ jobs:
           pip install requests pandas matplotlib geopandas shapely folium plotly pytz scikit-learn joblib seaborn
 
       - name: Run Daily Data Processing Script
+        working-directory: daily-scrap-dengue-data
         run: python dailydenguedataprocessing.py
 
       - name: Train ML Models
+        working-directory: daily-scrap-dengue-data
         run: python dengue_ml_models_improved.py
 
       - name: Commit and Push Changes
