@@ -1,6 +1,7 @@
 import { View, Text, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNav from './components/BottomNav';
+import DengueRiskCard from '../components/DengueRiskCard';
 
 export default function Dashboard() {
   return (
@@ -30,7 +31,11 @@ export default function Dashboard() {
             resizeMode="cover"
           />
         </View>
-        {/* Location and Risk */}
+        
+        {/* Dengue Risk Prediction Card */}
+        <DengueRiskCard />
+        
+        {/* Legacy Location and Risk (keeping for reference) */}
         <Text className="text-2xl font-bold text-black mb-1" style={{ fontFamily: 'SF Pro' }}>
           Current Location
         </Text>

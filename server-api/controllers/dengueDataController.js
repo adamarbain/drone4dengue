@@ -9,25 +9,18 @@ async function getAll(req, res) {
   try {
     const { location, date, status } = req.query;
     
-    // Get company locations for the company
-    const companyLocations = await prisma.companyLocation.findMany({
-      where: { companyId: req.companyId },
-      select: { id: true }
-    });
-    const locationIds = companyLocations.map(loc => loc.id);
-    
-    const where = { companyLocationId: { in: locationIds } }; // Filter by company locations
+    const where = { };
     if (location) where.location = location;
     if (status) where.status = status;
     if (date) where.date = new Date(date);
     
     const data = await prisma.dengueData.findMany({ 
       where, 
-      include: {
-        companyLocation: {
-          select: { name: true, address: true }
-        }
-      },
+      // include: {
+      //   companyLocation: {
+      //     select: { name: true, address: true }
+      //   }
+      // },
       orderBy: { date: 'desc' } 
     });
     res.json(data);
@@ -158,27 +151,22 @@ async function uploadCSV(req, res) {
 // Get summary stats
 async function getSummary(req, res) {
   try {
-    // Get company locations for the company
-    const companyLocations = await prisma.companyLocation.findMany({
-      where: { companyId: req.companyId },
-      select: { id: true }
-    });
-    const locationIds = companyLocations.map(loc => loc.id);
-    const where = { companyLocationId: { in: locationIds } };
+    const where = { };
     
     const totalRecords = await prisma.dengueData.count({ where });
-    const activeCases = await prisma.dengueData.aggregate({ where, _sum: { activeCases: true } });
+    const activeCases = await prisma.dengueData.count({ where: { status: 'Active Cases' } });
     const locations = await prisma.dengueData.findMany({ 
       where, 
       select: { location: true }, 
       distinct: ['location'] 
     });
-    // Data accuracy is mocked for now
+    // Use hotspot count as requested
+    const hotspotCount = await prisma.dengueData.count({ where: { status: 'Hotspot' } });
     res.json({
       totalRecords,
-      activeCases: activeCases._sum.activeCases || 0,
+      activeCases: activeCases,
       locationsCovered: locations.length,
-      dataAccuracy: 98.5
+      hotspotCount: hotspotCount
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -188,25 +176,18 @@ async function getSummary(req, res) {
 // Get historical trend data
 async function getHistorical(req, res) {
   try {
-    // Get company locations for the company
-    const companyLocations = await prisma.companyLocation.findMany({
-      where: { companyId: req.companyId },
-      select: { id: true }
-    });
-    const locationIds = companyLocations.map(loc => loc.id);
-    
-    const data = await prisma.dengueData.findMany({
-      where: { companyLocationId: { in: locationIds } },
-      select: { date: true, totalCases: true, activeCases: true },
+  const data = await prisma.dengueData.findMany({
+      where: { },
+      select: { date: true, activeCases: true, status: true },
       orderBy: { date: 'asc' },
     });
     // Group by date
     const trends = {};
     data.forEach(row => {
       const d = row.date.toISOString().split('T')[0];
-      if (!trends[d]) trends[d] = { date: d, totalCases: 0, activeCases: 0 };
-      trends[d].totalCases += row.totalCases;
-      trends[d].activeCases += row.activeCases;
+      if (!trends[d]) trends[d] = { date: d, activeCases: 0, hotspotCount: 0 };
+      trends[d].activeCases += (row.activeCases || 0);
+      if (row.status === 'Hotspot') trends[d].hotspotCount += 1;
     });
     res.json(Object.values(trends));
   } catch (err) {
@@ -217,15 +198,8 @@ async function getHistorical(req, res) {
 // Get map data
 async function getMapData(req, res) {
   try {
-    // Get company locations for the company
-    const companyLocations = await prisma.companyLocation.findMany({
-      where: { companyId: req.companyId },
-      select: { id: true }
-    });
-    const locationIds = companyLocations.map(loc => loc.id);
-    
     const data = await prisma.dengueData.findMany({
-      where: { companyLocationId: { in: locationIds } },
+      where: { },
       select: {
         id: true,
         location: true,
@@ -247,14 +221,7 @@ async function exportData(req, res) {
   try {
     const { location, date, status } = req.query;
     
-    // Get company locations for the company
-    const companyLocations = await prisma.companyLocation.findMany({
-      where: { companyId: req.companyId },
-      select: { id: true }
-    });
-    const locationIds = companyLocations.map(loc => loc.id);
-    
-    const where = { companyLocationId: { in: locationIds } };
+    const where = { };
     if (location) where.location = location;
     if (status) where.status = status;
     if (date) where.date = new Date(date);

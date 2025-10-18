@@ -59,7 +59,45 @@ export async function updateUserProfile(fields) {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.error || 'Failed to update profile');
-  }
   const data = await res.json();
   return data.user;
+}
+
+// Prediction API functions
+export async function predictDengueRisk(latitude, longitude, userId = null) {
+  const res = await fetch(`${API_URL}/api/predict/public`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      lat: latitude,
+      lon: longitude,
+      userId: userId
+    }),
+  });
+  
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Prediction failed');
+  }
+  
+  const data = await res.json();
+  return data.prediction;
+}
+
+export async function checkPredictionServiceHealth() {
+  const res = await fetch(`${API_URL}/api/predict/health`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+  
+  if (!res.ok) {
+    throw new Error('Health check failed');
+  }
+  
+  const data = await res.json();
+  return data.services;
 } 

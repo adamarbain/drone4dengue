@@ -63,8 +63,58 @@ This document outlines core API routes and role-based access for the Drone4Dengu
 
 ---
 
-## 📊 Prediction & Alerts (Admin)
+## 📊 Prediction & Alerts
 
+### ML Prediction Service
+| Method | Endpoint                    | Description                                    | Access     |
+| ------ | --------------------------- | ---------------------------------------------- | ---------- |
+| POST   | /api/predict/company        | Company dengue risk prediction                 | Admin      |
+| POST   | /api/predict/public         | Public dengue risk prediction                  | Public     |
+| GET    | /api/predict/company/:id    | Get company prediction history                 | Admin      |
+| GET    | /api/predict/health         | Check prediction service health               | Public     |
+
+### Input Requirements
+- **Model 1 (Historical Cases)**: Uses only `latitude` and `longitude`
+- **Model 2 (Weather-based)**: Uses `latitude`, `longitude`, `humidity`, `temperature`, `rainfall`
+- Weather data is automatically fetched if not provided for Model 2
+
+### Request Examples
+```json
+// Company Prediction
+POST /api/predict/company
+{
+  "companyId": "company-uuid",
+  "lat": 1.3521,
+  "lon": 103.8198
+}
+
+// Public Prediction
+POST /api/predict/public
+{
+  "lat": 1.3521,
+  "lon": 103.8198,
+  "userId": "user-uuid" // optional
+}
+```
+
+### Response Format
+```json
+{
+  "success": true,
+  "prediction": {
+    "latitude": 1.3521,
+    "longitude": 103.8198,
+    "riskScore": 0.65,
+    "riskLevel": "medium",
+    "model1Score": 0.7,
+    "model2Score": 0.6,
+    "timestamp": "2025-01-17T10:30:00Z",
+    "cached": false
+  }
+}
+```
+
+### Admin Dashboard Prediction Features
 | Method | Endpoint        | Description                  |
 | ------ | --------------- | ---------------------------- |
 | GET    | /prediction     | Get prediction map and stats |

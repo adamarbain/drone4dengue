@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const { parse } = require('csv-parse');
+const path = require('path');
 const axios = require('axios');
 const prisma = new PrismaClient();
 
@@ -23,19 +24,25 @@ function delay(ms) {
 }
 
 const geocodeCache = new Map();
-// async function getPlaceName(lat, lon) {
+// async function getCoverageArea(lat, lon) {
+//   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return '';
 //   const key = `${lat},${lon}`;
 //   if (geocodeCache.has(key)) return geocodeCache.get(key);
 //   try {
-//     const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
-//     const geoRes = await axios.get(geoUrl);
-//     const address = geoRes.data.address || {};
-//     const place = extractPlaceName(address);
-//     const result = place || `Lat:${lat},Lon:${lon}`;
+//     const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&email=adamarbain2107@gmail.com`;
+//     const geoRes = await axios.get(url, {
+//       headers: {
+//         'User-Agent': 'Drone4Dengue Seeder/1.0 (adamarbain2107@gmail.com)',
+//         'Referer': 'https://drone4dengue.local/seed'
+//       },
+//       timeout: 15000,
+//     });
+//     const address = geoRes.data && geoRes.data.address ? geoRes.data.address : {};
+//     const result = address.locality || extractPlaceName(address) || '';
 //     geocodeCache.set(key, result);
 //     return result;
 //   } catch {
-//     const fallback = `Lat:${lat},Lon:${lon}`;
+//     const fallback = '';
 //     geocodeCache.set(key, fallback);
 //     return fallback;
 //   }
@@ -51,10 +58,15 @@ async function seedDengueDataFromCSV() {
     return;
   }
   
+  // Resolve CSV locations in shared daily-scrap-dengue-data folder
+  const DATA_DIR = path.resolve(__dirname, '../../daily-scrap-dengue-data');
+  const ACTIVE_DENGUE_CSV = path.join(DATA_DIR, 'active_dengue.csv');
+  const DENGUE_HOTSPOT_CSV = path.join(DATA_DIR, 'dengue_hotspot.csv');
+
   // Seed from active_dengue.csv
   const activeRows = [];
   await new Promise((resolve, reject) => {
-    fs.createReadStream(__dirname + '/active_dengue.csv')
+    fs.createReadStream(ACTIVE_DENGUE_CSV)
       .pipe(parse({ columns: true, trim: true }))
       .on('data', row => {
         try {
@@ -70,7 +82,7 @@ async function seedDengueDataFromCSV() {
             latitude: parseFloat(row.centroid_y),
             longitude: parseFloat(row.centroid_x),
             days_duration: null,
-            companyLocationId: firstLocation.id,
+            // companyLocationId: firstLocation.id,
           });
         } catch (e) {}
       })
@@ -80,8 +92,8 @@ async function seedDengueDataFromCSV() {
   // Fill coverageArea using reverse geocode, with rate limit and cache
   // for (const row of activeRows) {
   //   if (row.latitude && row.longitude) {
-  //     row.coverageArea = await getPlaceName(row.latitude, row.longitude);
-  //     await delay(1100); // 1.1s to respect Nominatim rate limit
+  //     row.coverageArea = await getCoverageArea(row.latitude, row.longitude);
+  //     await delay(1100); // respect Nominatim max 1 req/sec
   //   } else {
   //     row.coverageArea = '';
   //   }
@@ -92,7 +104,7 @@ async function seedDengueDataFromCSV() {
   const hotspotRows = [];
   const seenHotspot = new Set();
   await new Promise((resolve, reject) => {
-    fs.createReadStream(__dirname + '/dengue_hotspot.csv')
+    fs.createReadStream(DENGUE_HOTSPOT_CSV)
       .pipe(parse({ columns: true, trim: true }))
       .on('data', row => {
         try {
@@ -112,7 +124,7 @@ async function seedDengueDataFromCSV() {
             latitude: parseFloat(row.y),
             longitude: parseFloat(row.x),
             days_duration: row.days_duration ? parseInt(row.days_duration) : null,
-            companyLocationId: firstLocation.id,
+            // companyLocationId: firstLocation.id,
           });
         } catch (e) {}
       })
@@ -122,8 +134,8 @@ async function seedDengueDataFromCSV() {
   // Fill coverageArea using reverse geocode, with rate limit and cache
   // for (const row of hotspotRows) {
   //   if (row.latitude && row.longitude) {
-  //     row.coverageArea = await getPlaceName(row.latitude, row.longitude);
-  //     await delay(1100); // 1.1s to respect Nominatim rate limit
+  //     row.coverageArea = await getCoverageArea(row.latitude, row.longitude);
+  //     await delay(1100); // respect Nominatim max 1 req/sec
   //   } else {
   //     row.coverageArea = '';
   //   }
@@ -360,13 +372,13 @@ async function main() {
   ];
 
   // Create recommendations for each company
-  for (const company of companies) {
-    const companyRecommendations = recommendations.map(rec => ({
-      ...rec,
-      companyId: company.id
-    }));
-    await prisma.recommendation.createMany({ data: companyRecommendations });
-  }
+  // for (const company of companies) {
+  //   const companyRecommendations = recommendations.map(rec => ({
+  //     ...rec,
+  //     companyId: company.id
+  //   }));
+  //   await prisma.recommendation.createMany({ data: companyRecommendations });
+  // }
 
   // Seed DengueData from CSVs
   await seedDengueDataFromCSV();

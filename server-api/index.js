@@ -16,6 +16,7 @@ app.use('/dengue-data', require('./routes/admin/dengueDataRoutes'));
 app.use('/companies', require('./routes/companies'));
 app.use('/company-locations', require('./routes/companyLocationRoutes'));
 app.use('/geocode', require('./routes/geocode'));
+app.use('/api/predict', require('./routes/predictionRoutes'));
 
 // app.use('/images', require('./routes/images'));
 // app.use('/alerts', require('./routes/alerts'));

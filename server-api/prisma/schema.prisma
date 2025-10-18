@@ -27,8 +27,9 @@ model Company {
   locations   CompanyLocation[]
   drones      Drone[]
   reports     Report[]
-  alerts      Alert[]
-  recommendations Recommendation[]
+  predictions CompanyPrediction[]
+  // alerts      Alert[]
+  // recommendations Recommendation[]
 }
 
 model CompanyLocation {
@@ -45,7 +46,6 @@ model CompanyLocation {
 
   // Relations
   weather     Weather[]
-  dengueData  DengueData[]
 
   @@unique([name, companyId])
 }
@@ -124,8 +124,8 @@ model DengueData {
   source        String?
   latitude      Float?
   longitude     Float?
-  companyLocationId String
-  companyLocation   CompanyLocation @relation(fields: [companyLocationId], references: [id])
+  // companyLocationId String
+  // companyLocation   CompanyLocation @relation(fields: [companyLocationId], references: [id])
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
@@ -135,8 +135,8 @@ model Alert {
   message   String
   userId    String?
   user      User?    @relation(fields: [userId], references: [id])
-  companyId String
-  company   Company  @relation(fields: [companyId], references: [id])
+  // companyId String
+  // company   Company  @relation(fields: [companyId], references: [id])
   createdAt DateTime @default(now())
 }
 
@@ -155,7 +155,35 @@ model Recommendation {
   risk      String // 'high', 'medium', 'low'
   title     String
   details   String
-  companyId String
-  company   Company  @relation(fields: [companyId], references: [id])
+  // companyId String
+  // company   Company  @relation(fields: [companyId], references: [id])
   createdAt DateTime @default(now())
+}
+
+model CompanyPrediction {
+  id          String   @id @default(uuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  latitude    Float
+  longitude   Float
+  riskScore   Float
+  model1Score Float?   // Historical cases model score
+  model2Score Float?   // Weather-based model score
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([createdAt])
+}
+
+model PredictionLog {
+  id          String   @id @default(uuid())
+  latitude    Float
+  longitude   Float
+  userId      String?
+  riskScore   Float?
+  requestedAt DateTime @default(now())
+
+  @@index([requestedAt])
+  @@index([userId])
 }

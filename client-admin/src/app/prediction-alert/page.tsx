@@ -2,6 +2,7 @@
 
 import AdminSidebar from "@/components/AdminSidebar"
 import AdminHeader from "@/components/AdminHeader"
+import PredictionMap from "@/components/PredictionMap"
 import { FiFilter, FiDownload, FiRefreshCw, FiEye, FiAlertTriangle, FiCheckCircle, FiClock } from "react-icons/fi"
 import Image from "next/image"
 import { useState } from "react"
@@ -90,6 +91,7 @@ export default function PredictionAlertPage() {
   const [savingAlert, setSavingAlert] = useState(false)
   const [alertSaveError, setAlertSaveError] = useState("")
   const [alertSaveSuccess, setAlertSaveSuccess] = useState("")
+  const [predictions, setPredictions] = useState<any[]>([])
 
   // Filter risk areas
   const filteredAreas = riskAreas.filter((area) => {
@@ -107,19 +109,6 @@ export default function PredictionAlertPage() {
   })
 
   // Handlers
-  const handleUpdatePrediction = () => {
-    setLoading(true)
-    setError("")
-    setTimeout(() => {
-      // Simulate model/data missing
-      if (!modelAvailable) {
-        setError("Prediction model unavailable. Please try again later.")
-        setLoading(false)
-        return
-      }
-      setLoading(false)
-    }, 1200)
-  }
 
   const handleExport = () => {
     setLoading(true)
@@ -189,62 +178,8 @@ export default function PredictionAlertPage() {
             {!modelAvailable && (
               <div className="mb-4 text-red-600 font-semibold bg-red-100 rounded-lg px-4 py-2 border border-red-200">Prediction model unavailable. Please try again later.</div>
             )}
-            {/* Map and Risk Cards */}
-            <div className="flex gap-6 mb-8">
-              {/* Map */}
-              <motion.div variants={item} className="flex-1 bg-white rounded-xl overflow-hidden shadow">
-                <div className="p-4 bg-[#F3EAD8] border-b">
-                  <h3 className="font-semibold text-black">Prediction Map</h3>
-                  <div className="flex items-center gap-4 mt-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                      <span>High Risk</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                      <span>Medium Risk</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <span>Low Risk</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="h-80 relative">
-                  <Image src="/images/prediction-map.png" alt="Prediction Map" fill className="object-cover" />
-                </div>
-              </motion.div>
-
-              {/* Risk Level Cards */}
-              <motion.div variants={item} className="w-80 space-y-4">
-                <div className="bg-red-100 rounded-xl p-6 border-l-4 border-red-500">
-                  <div className="flex items-center gap-3 mb-2">
-                    <FiAlertTriangle className="text-red-500 text-xl" />
-                    <span className="font-semibold text-red-700">High Risk Areas</span>
-                  </div>
-                  <div className="text-3xl font-bold text-red-700">12</div>
-                  <div className="text-sm text-red-600">+2 from last week</div>
-                </div>
-
-                <div className="bg-yellow-100 rounded-xl p-6 border-l-4 border-yellow-500">
-                  <div className="flex items-center gap-3 mb-2">
-                    <FiClock className="text-yellow-600 text-xl" />
-                    <span className="font-semibold text-yellow-700">Medium Risk Areas</span>
-                  </div>
-                  <div className="text-3xl font-bold text-yellow-700">28</div>
-                  <div className="text-sm text-yellow-600">-5 from last week</div>
-                </div>
-
-                <div className="bg-green-100 rounded-xl p-6 border-l-4 border-green-500">
-                  <div className="flex items-center gap-3 mb-2">
-                    <FiCheckCircle className="text-green-500 text-xl" />
-                    <span className="font-semibold text-green-700">Low Risk Areas</span>
-                  </div>
-                  <div className="text-3xl font-bold text-green-700">45</div>
-                  <div className="text-sm text-green-600">+3 from last week</div>
-                </div>
-              </motion.div>
-            </div>
+            {/* New Prediction Map Component */}
+            <PredictionMap onPredictionUpdate={setPredictions} />
 
             {/* Filters */}
             <motion.div variants={item} className="mb-6">

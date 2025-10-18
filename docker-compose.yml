@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: dengue_db
+      POSTGRES_USER: dengue_user
+      POSTGRES_PASSWORD: dengue_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dengue_user -d dengue_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ML Service
+  ml-service:
+    build:
+      context: ./server-ml
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=production
+      - PORT=5001
+    volumes:
+      - ./daily-scrap-dengue-data:/app/models:ro
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # API Server
+  api-server:
+    build:
+      context: ./server-api
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - DATABASE_URL=postgresql://dengue_user:dengue_password@postgres:5432/dengue_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ML_SERVICE_URL=http://ml-service:5001
+      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+      - NODE_ENV=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ml-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/predict/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Admin Dashboard
+  admin-dashboard:
+    build:
+      context: ./client-admin
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:4000
+    depends_on:
+      - api-server
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: dengue-prediction-network

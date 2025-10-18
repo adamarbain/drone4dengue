@@ -20,6 +20,9 @@ import type { JSX } from "react"
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
 import dynamic from 'next/dynamic';
 import { useAuth } from "@/context/AuthContext"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 
 // If you see TypeScript errors for leaflet, run: npm install --save-dev @types/leaflet
 
@@ -28,11 +31,15 @@ const API_URL = "http://localhost:4000"
 const statusStyles: Record<string, string> = {
   Completed: "text-green-700 bg-green-100 border-green-200",
   Processing: "text-yellow-800 bg-yellow-100 border-yellow-200",
+  "Active Cases": "text-blue-700 bg-blue-100 border-blue-200",
+  Hotspot: "text-red-700 bg-red-100 border-red-200",
 }
 
 const statusIcons: Record<string, JSX.Element> = {
   Completed: <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-2"></span>,
   Processing: <span className="inline-block w-2 h-2 rounded-full bg-yellow-500 mr-2 animate-pulse"></span>,
+  "Active Cases": <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-2"></span>,
+  Hotspot: <span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-2"></span>,
 }
 
 // Helper: get token
@@ -82,7 +89,7 @@ export default function DataManagementPage() {
     ...Array.from(new Set(dataRows.map((row) => row.location))).filter(Boolean),
   ]
   const uniqueStatuses = [
-    "All Status",
+    "All Type",
     ...Array.from(new Set(dataRows.map((row) => row.status))).filter(Boolean),
   ]
 
@@ -238,8 +245,8 @@ export default function DataManagementPage() {
           <YAxis tick={{ fontSize: 12 }} />
           <Tooltip />
           <Legend />
-          <Line type="monotone" dataKey="totalCases" stroke="#A21C1C" strokeWidth={2} name="Total Cases" />
           <Line type="monotone" dataKey="activeCases" stroke="#2563eb" strokeWidth={2} name="Active Cases" />
+          <Line type="monotone" dataKey="hotspotCount" stroke="#A21C1C" strokeWidth={2} name="Hotspot Detected" />
         </LineChart>
       </ResponsiveContainer>
     )
@@ -264,7 +271,7 @@ export default function DataManagementPage() {
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-[#A21C1C]"></div>
               <div className="text-lg text-gray-600">
-                Manage data related to dengue cases including resource allocation within your company
+                View and Analyze data related to dengue cases
               </div>
             </div>
           </motion.div>
@@ -274,29 +281,23 @@ export default function DataManagementPage() {
             {summary && [
               { label: "Total Records", value: summary.totalRecords, icon: <FiDatabase />, color: "bg-blue-500" },
               { label: "Active Cases", value: summary.activeCases, icon: <FiActivity />, color: "bg-red-500" },
+              { label: "Dengue Hotspots", value: summary.hotspotCount, icon: <FiTrendingUp />, color: "bg-purple-500" },
               { label: "Locations Covered", value: summary.locationsCovered, icon: <FiMapPin />, color: "bg-green-500" },
-              { label: "Data Accuracy", value: `${summary.dataAccuracy}%`, icon: <FiTrendingUp />, color: "bg-purple-500" },
-            ].map((stat, idx) => (
-              <motion.div
-                key={stat.label}
-                className="bg-white rounded-xl shadow-md overflow-hidden border border-[#E2C275]/30"
-                whileHover={{ y: -5 }}
-                transition={{ type: "spring", stiffness: 300 }}
-              >
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className={`p-3 ${stat.color} rounded-lg text-white`}>{stat.icon}</div>
-                  </div>
+            ].map((stat) => (
+              <Card key={stat.label} className="border-[#E2C275]/30">
+                <CardHeader className="flex-row items-center justify-between">
+                  <div className={`p-3 ${stat.color} rounded-lg text-white`}>{stat.icon}</div>
+                </CardHeader>
+                <CardContent>
                   <div className="text-3xl font-bold mb-1">{stat.value}</div>
-                  <div className="text-gray-500">{stat.label}</div>
-                </div>
-                <div className={`h-1 ${stat.color}`}></div>
-              </motion.div>
+                  <CardTitle className="text-sm font-medium text-gray-500">{stat.label}</CardTitle>
+                </CardContent>
+              </Card>
             ))}
           </motion.div>
 
           {/* Upload Button */}
-          <motion.div variants={item} className="mb-8">
+          {/* <motion.div variants={item} className="mb-8">
             <button
               className={`bg-[#A21C1C] text-white px-8 py-3 rounded-lg font-bold text-base hover:bg-[#7C1D1D] transition-all flex items-center gap-2 shadow-md ${uploading ? "opacity-50 cursor-not-allowed" : ""}`}
               onClick={onUploadClick}
@@ -315,7 +316,7 @@ export default function DataManagementPage() {
             {uploadMsg && (
               <div className="mt-2 text-sm text-gray-700">{uploadMsg}</div>
             )}
-          </motion.div>
+          </motion.div> */}
 
           {/* Data Filters */}
           <motion.div variants={item} className="mb-8">
@@ -327,12 +328,12 @@ export default function DataManagementPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="relative">
                   <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
+                  <Input
                     type="text"
                     placeholder="Search by location or date"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent"
+                    className="pl-10"
                   />
                 </div>
                 <select
@@ -379,11 +380,11 @@ export default function DataManagementPage() {
                 <table className="min-w-full">
                   <thead>
                     <tr className="text-left text-black font-semibold text-base bg-gray-50 border-b border-gray-200">
-                      <th className="py-4 px-6">Date</th>
-                      <th className="py-4 px-6">Active Cases</th>
-                      <th className="py-4 px-6">Total Cases</th>
-                      <th className="py-4 px-6">Coverage Area</th>
-                      <th className="py-4 px-6">Status</th>
+                      <th className="py-4 px-6">Date & Location</th>
+                      <th className="py-4 px-6">Active/Total Cases</th>
+                      <th className="py-4 px-6">Cumulative Duration</th>
+                      <th className="py-4 px-6">Type</th>
+                      <th className="py-4 px-6">Latitude & Longtitude</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -409,18 +410,20 @@ export default function DataManagementPage() {
                           </div>
                         </td>
                         <td className="py-4 px-6">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <span className="text-blue-600 font-bold text-sm">{row.totalCases !== null && row.totalCases !== undefined ? row.totalCases : "-"}</span>
-                          </div>
+                          {row.status === 'Active Cases' ? (
+                            <span className="text-gray-500">N/A</span>
+                          ) : (
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-blue-600 font-bold text-sm">{row.days_duration}</span>
+                            </div>
+                          )}
                         </td>
-                        <td className="py-4 px-6 text-black">{row.coverageArea}</td>
-                        <td className="py-4 px-6">
-                          <span
-                            className={`px-3 py-1 rounded-full text-sm font-medium border flex items-center w-fit ${statusStyles[row.status]}`}
-                          >
-                            {statusIcons[row.status]}
-                            {row.status}
-                          </span>
+                        <td className="py-4 px-6 text-black">{row.status || '-'}</td>
+                        <td className="py-4 px-6 text-black">
+                          <div className="flex flex-col">
+                            <span>{row.latitude !== null && row.latitude !== undefined ? row.latitude : '-'}</span>
+                            <span>{row.longitude !== null && row.longitude !== undefined ? row.longitude : '-'}</span>
+                          </div>
                         </td>
                       </motion.tr>
                     ))}
@@ -457,8 +460,10 @@ export default function DataManagementPage() {
                 <FiTrendingUp className="text-[#A21C1C]" />
               </div>
               <div className="text-center mb-6">
-                <div className="text-4xl font-extrabold text-[#A21C1C] mb-2">1,250</div>
-                <div className="text-lg text-gray-500 mb-4">Total Dengue Cases</div>
+                <div className="text-4xl font-extrabold text-[#A21C1C] mb-2">{
+                  (historicalData || []).reduce((sum, row) => sum + (row.activeCases || 0), 0).toLocaleString()
+                }</div>
+                <div className="text-lg text-gray-500 mb-4">Total Active Cases</div>
               </div>
               <HistoricalTrendsChart />
               <button className="w-full bg-[#A21C1C] text-white py-3 rounded-lg font-bold text-base hover:bg-[#7C1D1D] transition-colors">
@@ -476,8 +481,10 @@ export default function DataManagementPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-3 bg-[#FFF7E3] rounded-lg">
-                  <div className="text-lg font-bold text-[#A21C1C]">85%</div>
-                  <div className="text-xs text-gray-600">Coverage Rate</div>
+                  <div className="text-lg font-bold text-[#A21C1C]">
+                    {uniqueLocations.length - 1}
+                  </div>
+                  <div className="text-xs text-gray-600">Locations Covered</div>
                 </div>
                 <div className="text-center p-3 bg-[#FFF7E3] rounded-lg">
                   <div className="text-lg font-bold text-[#A21C1C]">24/7</div>
