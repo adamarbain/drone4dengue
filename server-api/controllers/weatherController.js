@@ -286,14 +286,27 @@ exports.fetchAndStoreWeather = async (req, res) => {
     try {
         // Fetch from Open-Meteo (hourly)
         const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=precipitation_sum,temperature_2m_max,temperature_2m_min&hourly=relative_humidity_2m&timezone=Asia%2FSingapore&past_days=7&forecast_days=1`;
-        const response = await axios.get(url);
+        const response = await axios.get(url, {
+            headers: {
+                'User-Agent': 'drone4dengue-weather/1.0 (contact: adamarbain2107@gmail.com)',
+                'Accept': 'application/json'
+            },
+            timeout: 10000
+        });
 
         const daily = response.data.daily;
         const hourly = response.data.hourly;
 
         // Reverse geocode to get place name
         const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`;
-        const geoRes = await axios.get(geoUrl);
+        const geoRes = await axios.get(geoUrl, {
+            headers: {
+                'User-Agent': 'drone4dengue-weather/1.0 (contact: adamarbain2107@gmail.com)',
+                'Accept': 'application/json',
+                'Referer': 'https://drone4dengue.com/weather'
+            },
+            timeout: 8000
+        });
         const placeName = geoRes.data.name + " " + geoRes.data.address.city || `Lat:${latitude},Lon:${longitude}`;
 
         // Helper: group hourly humidity by day
