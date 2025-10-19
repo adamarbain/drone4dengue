@@ -10,11 +10,28 @@ let redisConnected = false;
 
 // Uncomment the following block to enable Redis
 try {
-  redisClient = redis.createClient({
-    host: process.env.REDIS_HOST || 'localhost',
-    port: process.env.REDIS_PORT || 6379,
-    password: process.env.REDIS_PASSWORD || undefined,
-  });
+  const redisUrl = process.env.REDIS_URL;
+  if (redisUrl) {
+    // Prefer REDIS_URL (supports rediss:// for TLS, e.g., Redis Cloud / Render Managed Redis)
+    redisClient = redis.createClient({
+      url: redisUrl,
+      socket: {
+        tls: redisUrl.startsWith('rediss://'),
+        // If your provider requires custom CA handling, you may need:
+        // rejectUnauthorized: false,
+      },
+    });
+  } else {
+    // Fallback to host/port/password (useful for local docker-compose)
+    redisClient = redis.createClient({
+      username: process.env.REDIS_USERNAME || 'default',
+      password: process.env.REDIS_PASSWORD || undefined,
+      socket: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: Number(process.env.REDIS_PORT || 6379),
+      },
+    });
+  }
 
   redisClient.on('error', (err) => {
     console.error('Redis Client Error:', err);
