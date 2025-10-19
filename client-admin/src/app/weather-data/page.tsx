@@ -233,7 +233,7 @@ const item = {
   show: { opacity: 1, y: 0 },
 }
 
-const API_BASE_URL = "http://localhost:4000"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
 export default function WeatherDataPage() {
   const { companyId } = useAuth()
