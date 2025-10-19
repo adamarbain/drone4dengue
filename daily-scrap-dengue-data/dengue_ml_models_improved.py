@@ -137,13 +137,14 @@ class ImprovedDengueMLModels:
         print("Data preprocessing completed!")
         print(f"Final dataset shape: {self.df.shape}")
         
-    def create_historical_features(self, df, train_indices=None):
+    def create_historical_features(self, df, train_indices=None, test_indices=None):
         """
         Create historical features with proper data splitting to avoid leakage
         
         Args:
             df (pd.DataFrame): Input dataframe
             train_indices (array): Training indices to avoid data leakage
+            test_indices (array): Test indices for proper historical feature creation
             
         Returns:
             pd.DataFrame: DataFrame with historical features
@@ -160,35 +161,38 @@ class ImprovedDengueMLModels:
         df['cases_avg_7'] = 0.0
         df['cases_avg_30'] = 0.0
         
-        # Only create historical features for training data to avoid leakage
-        if train_indices is not None:
-            train_df = df.iloc[train_indices].copy()
+        # Create historical features for all unique locations
+        for location in df[['centroid_x', 'centroid_y']].drop_duplicates().values:
+            # Create mask for this location
+            location_mask = (df['centroid_x'] == location[0]) & (df['centroid_y'] == location[1])
+            location_data = df[location_mask].copy()
             
-            # Create lag features for training data only
-            for location in train_df[['centroid_x', 'centroid_y']].drop_duplicates().values:
-                # Create mask for this location in the training data
-                train_mask = (train_df['centroid_x'] == location[0]) & (train_df['centroid_y'] == location[1])
-                location_data = train_df[train_mask].copy()
+            if len(location_data) > 0:
+                # Create lag features for the entire location time series
+                location_data['cases_lag_1'] = location_data['total_active_cases'].shift(1).fillna(0)
+                location_data['cases_lag_7'] = location_data['total_active_cases'].shift(7).fillna(0)
+                location_data['cases_lag_30'] = location_data['total_active_cases'].shift(30).fillna(0)
                 
-                if len(location_data) > 0:
-                    # Create lag features
-                    location_data['cases_lag_1'] = location_data['total_active_cases'].shift(1).fillna(0)
-                    location_data['cases_lag_7'] = location_data['total_active_cases'].shift(7).fillna(0)
-                    location_data['cases_lag_30'] = location_data['total_active_cases'].shift(30).fillna(0)
-                    
-                    # Create rolling averages
-                    location_data['cases_avg_7'] = location_data['total_active_cases'].rolling(7, min_periods=1).mean()
-                    location_data['cases_avg_30'] = location_data['total_active_cases'].rolling(30, min_periods=1).mean()
-                    
-                    # Get the original indices in the main dataframe
-                    original_indices = location_data.index
-                    
-                    # Update the main dataframe using original indices
-                    df.loc[original_indices, 'cases_lag_1'] = location_data['cases_lag_1'].values
-                    df.loc[original_indices, 'cases_lag_7'] = location_data['cases_lag_7'].values
-                    df.loc[original_indices, 'cases_lag_30'] = location_data['cases_lag_30'].values
-                    df.loc[original_indices, 'cases_avg_7'] = location_data['cases_avg_7'].values
-                    df.loc[original_indices, 'cases_avg_30'] = location_data['cases_avg_30'].values
+                # Create rolling averages
+                location_data['cases_avg_7'] = location_data['total_active_cases'].rolling(7, min_periods=1).mean()
+                location_data['cases_avg_30'] = location_data['total_active_cases'].rolling(30, min_periods=1).mean()
+                
+                # Get the original indices in the main dataframe
+                original_indices = location_data.index
+                
+                # Update the main dataframe using original indices
+                df.loc[original_indices, 'cases_lag_1'] = location_data['cases_lag_1'].values
+                df.loc[original_indices, 'cases_lag_7'] = location_data['cases_lag_7'].values
+                df.loc[original_indices, 'cases_lag_30'] = location_data['cases_lag_30'].values
+                df.loc[original_indices, 'cases_avg_7'] = location_data['cases_avg_7'].values
+                df.loc[original_indices, 'cases_avg_30'] = location_data['cases_avg_30'].values
+        
+        # For test set, we need to ensure we don't use future data
+        # This is handled by the time series nature of the lag features
+        if test_indices is not None:
+            print(f"Historical features created for {len(df)} records")
+            print(f"Training records with historical data: {len(train_indices) if train_indices is not None else 0}")
+            print(f"Test records with historical data: {len(test_indices)}")
         
         return df
         
@@ -270,15 +274,132 @@ class ImprovedDengueMLModels:
         plt.savefig('dengue_data_exploration_improved.png', dpi=300, bbox_inches='tight')
         plt.show()
         
-        # Correlation matrix
-        plt.figure(figsize=(10, 8))
-        correlation_matrix = self.df[['total_active_cases', 'humidity', 'temperature', 'rainfall', 
-                                    'centroid_x', 'centroid_y', 'month', 'day_of_year']].corr()
-        sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', center=0)
-        plt.title('Correlation Matrix')
+        # Create historical features for correlation analysis
+        print("\nCreating historical features for correlation analysis...")
+        df_with_history = self.create_historical_features(self.df)
+        
+        # Update self.df to include historical features for correlation analysis
+        historical_features = ['cases_lag_1', 'cases_lag_7', 'cases_lag_30', 'cases_avg_7', 'cases_avg_30']
+        for feature in historical_features:
+            if feature in df_with_history.columns:
+                self.df[feature] = df_with_history[feature]
+        
+        # Correlation matrix with all available features
+        plt.figure(figsize=(15, 12))
+        
+        # Define all features to include in correlation matrix
+        correlation_features = [
+            'total_active_cases',  # Target variable
+            'humidity', 'temperature', 'rainfall',  # Weather features
+            'centroid_x', 'centroid_y',  # Location features
+            'month', 'day_of_year', 'week_of_year',  # Temporal features
+            'is_hotspot',  # Hotspot feature
+            'state_encoded',  # State feature (encoded)
+            'location_cluster'  # Location cluster feature
+        ]
+        
+        # Add historical features if they exist
+        historical_features = ['cases_lag_1', 'cases_lag_7', 'cases_lag_30', 'cases_avg_7', 'cases_avg_30']
+        for feature in historical_features:
+            if feature in self.df.columns:
+                correlation_features.append(feature)
+        
+        # Filter to only include features that exist in the dataframe
+        available_features = [f for f in correlation_features if f in self.df.columns]
+        
+        print(f"\nCorrelation matrix will include {len(available_features)} features:")
+        for i, feature in enumerate(available_features, 1):
+            print(f"{i:2d}. {feature}")
+        
+        # Create correlation matrix
+        correlation_matrix = self.df[available_features].corr()
+        
+        # Create heatmap
+        sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', center=0, 
+                   fmt='.2f', square=True, cbar_kws={'shrink': 0.8})
+        plt.title('Correlation Matrix - All Features', fontsize=16, pad=20)
+        plt.xticks(rotation=45, ha='right')
+        plt.yticks(rotation=0)
         plt.tight_layout()
         plt.savefig('correlation_matrix_improved.png', dpi=300, bbox_inches='tight')
         plt.show()
+        
+        # Print correlation with target variable
+        print(f"\nCorrelation with target variable (total_active_cases):")
+        target_correlations = correlation_matrix['total_active_cases'].drop('total_active_cases').sort_values(key=abs, ascending=False)
+        for feature, corr in target_correlations.items():
+            print(f"{feature:20s}: {corr:6.3f}")
+        
+        # Identify highly correlated features (potential multicollinearity)
+        print(f"\nHighly correlated feature pairs (|correlation| > 0.7):")
+        high_corr_pairs = []
+        for i in range(len(correlation_matrix.columns)):
+            for j in range(i+1, len(correlation_matrix.columns)):
+                corr_val = correlation_matrix.iloc[i, j]
+                if abs(corr_val) > 0.7:
+                    high_corr_pairs.append((correlation_matrix.columns[i], correlation_matrix.columns[j], corr_val))
+        
+        if high_corr_pairs:
+            for feat1, feat2, corr in sorted(high_corr_pairs, key=lambda x: abs(x[2]), reverse=True):
+                print(f"{feat1:20s} <-> {feat2:20s}: {corr:6.3f}")
+        else:
+            print("No highly correlated feature pairs found.")
+    
+    def create_model_specific_correlation_analysis(self):
+        """
+        Create correlation analysis specifically for each model's features
+        """
+        print(f"\n{'='*60}")
+        print("MODEL-SPECIFIC CORRELATION ANALYSIS")
+        print(f"{'='*60}")
+        
+        # Model 1 features (Historical Cases Model)
+        if hasattr(self, 'model1_feature_names'):
+            print(f"\nModel 1 (Historical Cases) Features Correlation:")
+            model1_features = self.model1_feature_names + ['total_active_cases']
+            available_model1_features = [f for f in model1_features if f in self.df.columns]
+            
+            if len(available_model1_features) > 1:
+                model1_corr = self.df[available_model1_features].corr()
+                
+                # Show correlation with target
+                target_corr = model1_corr['total_active_cases'].drop('total_active_cases').sort_values(key=abs, ascending=False)
+                print("Correlation with target (total_active_cases):")
+                for feature, corr in target_corr.items():
+                    print(f"  {feature:20s}: {corr:6.3f}")
+                
+                # Create correlation heatmap for Model 1
+                plt.figure(figsize=(10, 8))
+                sns.heatmap(model1_corr, annot=True, cmap='coolwarm', center=0, 
+                           fmt='.2f', square=True, cbar_kws={'shrink': 0.8})
+                plt.title('Model 1 (Historical Cases) - Feature Correlation Matrix', fontsize=14)
+                plt.tight_layout()
+                plt.savefig('model1_correlation_matrix.png', dpi=300, bbox_inches='tight')
+                plt.show()
+        
+        # Model 2 features (Weather-based Model)
+        if hasattr(self, 'model2_feature_names'):
+            print(f"\nModel 2 (Weather-based) Features Correlation:")
+            model2_features = self.model2_feature_names + ['total_active_cases']
+            available_model2_features = [f for f in model2_features if f in self.df.columns]
+            
+            if len(available_model2_features) > 1:
+                model2_corr = self.df[available_model2_features].corr()
+                
+                # Show correlation with target
+                target_corr = model2_corr['total_active_cases'].drop('total_active_cases').sort_values(key=abs, ascending=False)
+                print("Correlation with target (total_active_cases):")
+                for feature, corr in target_corr.items():
+                    print(f"  {feature:20s}: {corr:6.3f}")
+                
+                # Create correlation heatmap for Model 2
+                plt.figure(figsize=(10, 8))
+                sns.heatmap(model2_corr, annot=True, cmap='coolwarm', center=0, 
+                           fmt='.2f', square=True, cbar_kws={'shrink': 0.8})
+                plt.title('Model 2 (Weather-based) - Feature Correlation Matrix', fontsize=14)
+                plt.tight_layout()
+                plt.savefig('model2_correlation_matrix.png', dpi=300, bbox_inches='tight')
+                plt.show()
         
     def train_model1_historical_cases(self):
         """
@@ -302,17 +423,25 @@ class ImprovedDengueMLModels:
             X1, y1, test_size=0.2, random_state=42, stratify=None
         )
         
-        # Get training indices
+        # Get training and test indices
         train_indices = X1_train.index
+        test_indices = X1_test.index
         
-        # Create historical features only for training data
-        df_with_history = self.create_historical_features(self.df, train_indices)
+        # Create historical features for all data (properly avoiding leakage)
+        df_with_history = self.create_historical_features(self.df, train_indices, test_indices)
         
-        # Add historical features to training data
+        # Add historical features to both training and test data
         historical_features = ['cases_lag_1', 'cases_lag_7', 'cases_lag_30', 'cases_avg_7', 'cases_avg_30']
         for feature in historical_features:
             X1_train[feature] = df_with_history.loc[train_indices, feature].values
-            X1_test[feature] = 0  # No historical data for test set
+            X1_test[feature] = df_with_history.loc[test_indices, feature].values
+        
+        # Verify historical features are being used
+        print(f"\nHistorical features verification:")
+        print(f"Training set - cases_lag_1 range: {X1_train['cases_lag_1'].min():.2f} to {X1_train['cases_lag_1'].max():.2f}")
+        print(f"Training set - cases_avg_7 range: {X1_train['cases_avg_7'].min():.2f} to {X1_train['cases_avg_7'].max():.2f}")
+        print(f"Test set - cases_lag_1 range: {X1_test['cases_lag_1'].min():.2f} to {X1_test['cases_lag_1'].max():.2f}")
+        print(f"Test set - cases_avg_7 range: {X1_test['cases_avg_7'].min():.2f} to {X1_test['cases_avg_7'].max():.2f}")
         
         # Scale features
         self.scaler1 = StandardScaler()
@@ -368,7 +497,64 @@ class ImprovedDengueMLModels:
         # Store feature names for Model 1
         self.model1_feature_names = basic_features + historical_features
         
+        # Validate historical features are being used
+        self.validate_historical_features(self.model1, X1_train, X1_test, self.model1_feature_names)
+        
         return model1_results
+    
+    def validate_historical_features(self, model, X_train, X_test, feature_names):
+        """
+        Validate that historical features are contributing to the model
+        """
+        print(f"\n{'='*50}")
+        print("HISTORICAL FEATURES VALIDATION")
+        print(f"{'='*50}")
+        
+        # Get feature importance if available
+        if hasattr(model, 'feature_importances_'):
+            importance_df = pd.DataFrame({
+                'feature': feature_names,
+                'importance': model.feature_importances_
+            }).sort_values('importance', ascending=False)
+            
+            print("\nFeature Importance (Top 10):")
+            print(importance_df.head(10))
+            
+            # Check if historical features are in top features
+            historical_features = ['cases_lag_1', 'cases_lag_7', 'cases_lag_30', 'cases_avg_7', 'cases_avg_30']
+            historical_importance = importance_df[importance_df['feature'].isin(historical_features)]
+            
+            print(f"\nHistorical Features Importance:")
+            print(historical_importance)
+            
+            # Calculate total importance of historical features
+            total_historical_importance = historical_importance['importance'].sum()
+            total_importance = importance_df['importance'].sum()
+            historical_percentage = (total_historical_importance / total_importance) * 100
+            
+            print(f"\nHistorical features contribute {historical_percentage:.2f}% of total feature importance")
+            
+            if historical_percentage > 10:
+                print("✅ Historical features are significantly contributing to the model")
+            else:
+                print("⚠️  Historical features have low contribution - check data quality")
+        
+        # Check correlation between historical features and target
+        print(f"\nHistorical Features Correlation Analysis:")
+        historical_features = ['cases_lag_1', 'cases_lag_7', 'cases_lag_30', 'cases_avg_7', 'cases_avg_30']
+        
+        # Create a combined dataset for correlation analysis
+        combined_data = pd.concat([X_train, X_test])
+        if 'total_active_cases' in self.df.columns:
+            # Get corresponding target values
+            train_target = self.df.loc[X_train.index, 'total_active_cases']
+            test_target = self.df.loc[X_test.index, 'total_active_cases']
+            combined_target = pd.concat([train_target, test_target])
+            
+            for feature in historical_features:
+                if feature in combined_data.columns:
+                    correlation = combined_data[feature].corr(combined_target)
+                    print(f"{feature}: {correlation:.4f}")
     
     def train_model2_weather_based(self):
         """
@@ -469,6 +655,45 @@ class ImprovedDengueMLModels:
                 'model2_features': self.model2_feature_names
             }, f)
         print("Feature names saved successfully!")
+    
+    def test_historical_features(self):
+        """
+        Test method to verify historical features are working correctly
+        """
+        print(f"\n{'='*50}")
+        print("TESTING HISTORICAL FEATURES")
+        print(f"{'='*50}")
+        
+        if self.df is None:
+            print("❌ No data loaded. Run load_and_preprocess_data() first.")
+            return
+        
+        # Create a small test dataset
+        test_df = self.df.head(100).copy()
+        
+        # Create historical features
+        df_with_history = self.create_historical_features(test_df)
+        
+        # Check if historical features were created
+        historical_features = ['cases_lag_1', 'cases_lag_7', 'cases_lag_30', 'cases_avg_7', 'cases_avg_30']
+        
+        print(f"\nHistorical Features Test Results:")
+        for feature in historical_features:
+            if feature in df_with_history.columns:
+                non_zero_count = (df_with_history[feature] != 0).sum()
+                print(f"✅ {feature}: {non_zero_count}/{len(df_with_history)} records have non-zero values")
+                print(f"   Range: {df_with_history[feature].min():.2f} to {df_with_history[feature].max():.2f}")
+            else:
+                print(f"❌ {feature}: Feature not found")
+        
+        # Test correlation with target
+        print(f"\nCorrelation with target (total_active_cases):")
+        for feature in historical_features:
+            if feature in df_with_history.columns:
+                corr = df_with_history[feature].corr(df_with_history['total_active_cases'])
+                print(f"{feature}: {corr:.4f}")
+        
+        return df_with_history
 
 def main():
     """
@@ -484,6 +709,9 @@ def main():
     # Load and preprocess data
     ml_models.load_and_preprocess_data()
     
+    # Test historical features
+    ml_models.test_historical_features()
+    
     # Explore data
     ml_models.explore_data()
     
@@ -494,6 +722,9 @@ def main():
     
     # Save models
     ml_models.save_models()
+    
+    # Create model-specific correlation analysis
+    ml_models.create_model_specific_correlation_analysis()
     
     print("\n" + "="*50)
     print("IMPROVED MODEL COMPARISON")

@@ -21,9 +21,24 @@ export function setAuthToken(token?: string) {
 // Prediction API functions
 export interface PredictionRequest {
   companyId?: string;
+  companyLocationId?: string;
   lat: number;
   lon: number;
   userId?: string;
+}
+
+export interface HistoricalDataItem {
+  date: string;
+  cases: number;
+}
+
+export interface EnhancedPredictionRequest {
+  lat: number;
+  lon: number;
+  userId?: string;
+  historicalData?: HistoricalDataItem[];
+  targetDate?: string;
+  useModel1Only?: boolean;
 }
 
 export interface PredictionResponse {
@@ -40,13 +55,53 @@ export interface PredictionResponse {
     createdAt?: string;
     timestamp?: string;
     cached?: boolean;
+    // Enhanced features
+    historicalFeatures?: {
+      cases_lag_1: number;
+      cases_lag_7: number;
+      cases_lag_30: number;
+      cases_avg_7: number;
+      cases_avg_30: number;
+    };
+    isHotspot?: number;
+    locationCluster?: number;
+    dataQuality?: {
+      has_historical_data: boolean;
+      data_points_available: number;
+      has_lag_1: boolean;
+      has_lag_7: boolean;
+      has_lag_30: boolean;
+    };
+    model?: string;
   };
+}
+
+export interface HistoricalDataResponse {
+  success: boolean;
+  historicalData: HistoricalDataItem[];
+  dataPoints: number;
+  daysBack: number;
+  location: {
+    latitude: number;
+    longitude: number;
+  };
+}
+
+export interface CompanyLocation {
+  id: string;
+  name: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  isActive?: boolean;
 }
 
 export interface CompanyPredictionsResponse {
   success: boolean;
   predictions: Array<{
     id: string;
+    companyLocationId: string;
+    companyLocation: CompanyLocation;
     latitude: number;
     longitude: number;
     riskScore: number;
@@ -69,6 +124,22 @@ export async function predictPublic(data: Omit<PredictionRequest, 'companyId'>):
   return response.data;
 }
 
+// Enhanced public prediction with historical data support
+export async function predictPublicEnhanced(data: EnhancedPredictionRequest): Promise<PredictionResponse> {
+  const response = await api.post('/api/predict/public/enhanced', data);
+  return response.data;
+}
+
+// Get historical data for a location
+export async function getHistoricalData(
+  lat: number, 
+  lon: number, 
+  daysBack: number = 30
+): Promise<HistoricalDataResponse> {
+  const response = await api.get(`/api/predict/historical-data?lat=${lat}&lon=${lon}&days_back=${daysBack}`);
+  return response.data;
+}
+
 // Get company predictions
 export async function getCompanyPredictions(
   companyId: string, 
@@ -76,6 +147,15 @@ export async function getCompanyPredictions(
   offset: number = 0
 ): Promise<CompanyPredictionsResponse> {
   const response = await api.get(`/api/predict/company/${companyId}?limit=${limit}&offset=${offset}`);
+  return response.data;
+}
+
+// Get company locations
+export async function getCompanyLocations(companyId: string): Promise<{
+  success: boolean;
+  locations: CompanyLocation[];
+}> {
+  const response = await api.get(`/api/predict/company/${companyId}/locations`);
   return response.data;
 }
 
@@ -90,5 +170,155 @@ export async function checkPredictionHealth(): Promise<{
   timestamp: string;
 }> {
   const response = await api.get('/api/predict/health');
+  return response.data;
+}
+
+// Dashboard API functions
+export interface DashboardStats {
+  riskPredictionsToday: number;
+  droneInsightsUploaded: number;
+  activeUsers: number;
+  totalUsers: number;
+  pendingUsers: number;
+  adminUsers: number;
+  totalRecords: number;
+  activeCases: number;
+  locationsCovered: number;
+  hotspotCount: number;
+  avgTemperature: number;
+  avgHumidity: number;
+  totalRainfall: number;
+}
+
+export interface RecentPrediction {
+  id: string;
+  area: string;
+  date: string;
+  riskLevel: 'Low' | 'Medium' | 'High';
+  riskScore: number;
+  latitude: number;
+  longitude: number;
+  createdAt: string;
+  companyLocation?: {
+    name: string;
+  };
+}
+
+// Reverse geocoding API types
+export interface ReverseGeocodeResponse {
+  display_name?: string;
+  address?: {
+    city?: string;
+    town?: string;
+    village?: string;
+    suburb?: string;
+    neighbourhood?: string;
+    state_district?: string;
+    state?: string;
+    county?: string;
+    postcode?: string;
+  };
+}
+
+export async function reverseGeocode(lat: number, lon: number): Promise<ReverseGeocodeResponse> {
+  const response = await api.get(`/geocode/reverse?lat=${lat}&lon=${lon}`);
+  return response.data;
+}
+
+// Get user summary for dashboard
+export async function getUserSummary(): Promise<{
+  total: number;
+  active: number;
+  pending: number;
+  admin: number;
+}> {
+  const response = await api.get('/users/summary/dashboard');
+  return response.data;
+}
+
+// Get dengue data summary
+export async function getDengueDataSummary(): Promise<{
+  totalRecords: number;
+  activeCases: number;
+  locationsCovered: number;
+  hotspotCount: number;
+}> {
+  const response = await api.get('/dengue-data/summary/dengue-data');
+  return response.data;
+}
+
+// Get weather summary
+export async function getWeatherSummary(): Promise<{
+  totalRecords: number;
+  avgTemperature: number;
+  avgHumidity: number;
+  totalRainfall: number;
+}> {
+  const response = await api.get('/weather/summary');
+  return response.data;
+}
+
+// Get recent predictions for dashboard
+export async function getRecentPredictions(companyId: string, limit: number = 6): Promise<{
+  success: boolean;
+  predictions: RecentPrediction[];
+}> {
+  const response = await api.get(`/api/predict/company/${companyId}?limit=${limit}&offset=0`);
+  return response.data;
+}
+
+// Get comprehensive dashboard stats
+export async function getDashboardStats(companyId: string): Promise<DashboardStats> {
+  try {
+    const [userSummary, dengueSummary, weatherSummary, recentPredictions] = await Promise.all([
+      getUserSummary(),
+      getDengueDataSummary(),
+      getWeatherSummary(),
+      getRecentPredictions(companyId, 6)
+    ]);
+
+    // Count predictions for today
+    const today = new Date().toISOString().split('T')[0];
+    const riskPredictionsToday = recentPredictions.predictions?.filter(p => 
+      p.createdAt.startsWith(today)
+    ).length || 0;
+
+    return {
+      riskPredictionsToday,
+      droneInsightsUploaded: 0, // This would need a separate endpoint for drone uploads
+      activeUsers: userSummary.active,
+      totalUsers: userSummary.total,
+      pendingUsers: userSummary.pending,
+      adminUsers: userSummary.admin,
+      totalRecords: dengueSummary.totalRecords,
+      activeCases: dengueSummary.activeCases,
+      locationsCovered: dengueSummary.locationsCovered,
+      hotspotCount: dengueSummary.hotspotCount,
+      avgTemperature: weatherSummary.avgTemperature,
+      avgHumidity: weatherSummary.avgHumidity,
+      totalRainfall: weatherSummary.totalRainfall,
+    };
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    throw error;
+  }
+}
+
+// Create new prediction
+export async function createPrediction(data: {
+  latitude: number;
+  longitude: number;
+  useModel1Only?: boolean;
+  targetDate?: string;
+  companyId?: string;
+}): Promise<PredictionResponse> {
+  const payload: EnhancedPredictionRequest & { companyId?: string } = {
+    lat: Number(data.latitude),
+    lon: Number(data.longitude),
+    useModel1Only: data.useModel1Only,
+    ...(data.targetDate ? { targetDate: data.targetDate } : {}),
+    ...(data.companyId ? { companyId: data.companyId } : {})
+  };
+  const response = await api.post('/api/predict/public/enhanced', payload);
   return response.data;
 } 

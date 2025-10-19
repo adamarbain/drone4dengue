@@ -3,62 +3,75 @@
 import AdminSidebar from "@/components/AdminSidebar"
 import AdminHeader from "@/components/AdminHeader"
 import PredictionMap from "@/components/PredictionMap"
-import { FiFilter, FiDownload, FiRefreshCw, FiEye, FiAlertTriangle, FiCheckCircle, FiClock } from "react-icons/fi"
+import { FiFilter, FiDownload, FiRefreshCw, FiEye, FiAlertTriangle, FiCheckCircle, FiClock, FiMapPin, FiTarget } from "react-icons/fi"
 import Image from "next/image"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { useAuth } from "@/context/AuthContext"
+import { getCompanyPredictions, PredictionResponse, predictPublicEnhanced, getHistoricalData, HistoricalDataItem, EnhancedPredictionRequest, CompanyLocation, reverseGeocode } from "@/lib/api"
+import { DateRangePicker } from "@/components/ui/date-range-picker"
+import { DateRange } from "react-day-picker"
 
-const riskAreas = [
-  { area: "Andher East, Mumbai", riskLevel: "High", confidence: 85, date: "April 20, 2025", color: "bg-red-500" },
-  {
-    area: "Koramangala, Bangalore",
-    riskLevel: "Medium",
-    confidence: 68,
-    date: "April 19, 2025",
-    color: "bg-yellow-500",
-  },
-  { area: "Adyar, Chennai", riskLevel: "High", confidence: 92, date: "April 20, 2025", color: "bg-red-500" },
-  { area: "Ernakulam, Kochi", riskLevel: "Low", confidence: 35, date: "April 18, 2025", color: "bg-green-500" },
-  {
-    area: "Banjara Hills, Hyderabad",
-    riskLevel: "Medium",
-    confidence: 74,
-    date: "April 19, 2025",
-    color: "bg-yellow-500",
-  },
-  { area: "Salt Lake, Kolkata", riskLevel: "High", confidence: 88, date: "April 20, 2025", color: "bg-red-500" },
-]
+interface PredictionData {
+  id: string
+  companyLocationId?: string
+  companyLocation?: CompanyLocation
+  latitude: number
+  longitude: number
+  riskScore: number
+  riskLevel: 'high' | 'medium' | 'low'
+  model1Score?: number
+  model2Score?: number
+  createdAt: string
+  // Enhanced features
+  historicalFeatures?: {
+    cases_lag_1: number;
+    cases_lag_7: number;
+    cases_lag_30: number;
+    cases_avg_7: number;
+    cases_avg_30: number;
+  };
+  isHotspot?: number;
+  locationCluster?: number;
+  dataQuality?: {
+    has_historical_data: boolean;
+    data_points_available: number;
+    has_lag_1: boolean;
+    has_lag_7: boolean;
+    has_lag_30: boolean;
+  };
+  model?: string;
+}
 
 const riskLevelStyles: Record<string, string> = {
-  High: "text-red-700 bg-red-100",
-  Medium: "text-yellow-800 bg-yellow-100",
-  Low: "text-green-700 bg-green-100",
+  high: "text-red-700 bg-red-100",
+  medium: "text-yellow-800 bg-yellow-100",
+  low: "text-green-700 bg-green-100",
 }
 
 const alertHistory = [
   {
-    title: "High Risk Alert - Andher East",
-    date: "April 20, 2025",
-    status: "Sent to 24 recipients",
+    title: "High Risk Alert - Location Detected",
+    date: new Date().toLocaleDateString(),
+    status: "Alert system active",
     icon: <FiAlertTriangle className="text-red-500" />,
   },
   {
-    title: "Medium Risk Alert - Koramangala",
-    date: "April 19, 2025",
-    status: "Sent to 18 recipients",
+    title: "Medium Risk Alert - Location Detected",
+    date: new Date(Date.now() - 86400000).toLocaleDateString(),
+    status: "Alert system active",
     icon: <FiClock className="text-yellow-500" />,
   },
   {
-    title: "Emergency Report",
-    date: "April 18, 2025",
-    status: "Sent to 35 recipients",
+    title: "System Status Report",
+    date: new Date(Date.now() - 172800000).toLocaleDateString(),
+    status: "All systems operational",
     icon: <FiCheckCircle className="text-green-500" />,
   },
 ]
 
-const allStates = ["All States", "Maharashtra", "Karnataka", "Tamil Nadu"]
-const allCities = ["All Cities", "Mumbai", "Bangalore", "Chennai"]
+const allStates = ["All States", "Malaysia", "Singapore", "Thailand"]
+const allCities = ["All Cities", "Kuala Lumpur", "Singapore", "Bangkok"]
 const allRiskLevels = ["All Levels", "High", "Medium", "Low"]
 
 const container = {
@@ -82,29 +95,90 @@ export default function PredictionAlertPage() {
   const [selectedState, setSelectedState] = useState("All States")
   const [selectedCity, setSelectedCity] = useState("All Cities")
   const [selectedRisk, setSelectedRisk] = useState("All Levels")
-  const [dateRange, setDateRange] = useState("")
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [modelAvailable, setModelAvailable] = useState(true) // Simulate model/data available
-  const [showDetails, setShowDetails] = useState<null | typeof riskAreas[0]>(null)
+  const [modelAvailable, setModelAvailable] = useState(true)
+  const [showDetails, setShowDetails] = useState<null | PredictionData>(null)
   const [alertRecipient, setAlertRecipient] = useState("All Health Officials")
   const [savingAlert, setSavingAlert] = useState(false)
   const [alertSaveError, setAlertSaveError] = useState("")
   const [alertSaveSuccess, setAlertSaveSuccess] = useState("")
-  const [predictions, setPredictions] = useState<any[]>([])
+  const [predictions, setPredictions] = useState<PredictionData[]>([])
+  const [refreshing, setRefreshing] = useState(false)
+  const [showEnhancedPrediction, setShowEnhancedPrediction] = useState(false)
+  const [historicalData, setHistoricalData] = useState<HistoricalDataItem[]>([])
+  const [loadingHistoricalData, setLoadingHistoricalData] = useState(false)
+  const [enhancedPredictionMode, setEnhancedPredictionMode] = useState<'combined' | 'model1'>('combined')
+  const [targetDate, setTargetDate] = useState('')
 
-  // Filter risk areas
-  const filteredAreas = riskAreas.filter((area) => {
-    let match = true
-    if (selectedRisk !== "All Levels" && area.riskLevel !== selectedRisk) match = false
-    if (selectedCity !== "All Cities" && !area.area.includes(selectedCity)) match = false
-    if (selectedState !== "All States") {
-      // Simulate state filter by area name (for demo)
-      if (selectedState === "Maharashtra" && !area.area.includes("Mumbai")) match = false
-      if (selectedState === "Karnataka" && !area.area.includes("Bangalore")) match = false
-      if (selectedState === "Tamil Nadu" && !area.area.includes("Chennai")) match = false
+  // Reverse geocoding cache and helpers
+  const reverseGeocodeCache = new Map<string, string>()
+  const getAreaName = async (lat: number, lon: number): Promise<string> => {
+    const key = `${lat.toFixed(5)},${lon.toFixed(5)}`
+    if (reverseGeocodeCache.has(key)) return reverseGeocodeCache.get(key) as string
+    try {
+      const data = await reverseGeocode(lat, lon)
+      const a = data.address || {}
+      const label = a.suburb || a.town || a.village || a.city || a.neighbourhood || a.state_district || a.state || a.county || data.display_name || 'Unknown'
+      reverseGeocodeCache.set(key, label)
+      return label
+    } catch {
+      return 'Unknown'
     }
-    // Date range filter not implemented (demo)
+  }
+
+  const AsyncAreaName = ({ lat, lon, fallback }: { lat: number; lon: number; fallback?: string }) => {
+    const [name, setName] = useState<string>(fallback || '')
+    useEffect(() => {
+      let mounted = true
+      const load = async () => {
+        if (fallback) { setName(fallback); return }
+        const label = await getAreaName(lat, lon)
+        if (mounted) setName(label)
+      }
+      load()
+      return () => { mounted = false }
+    }, [lat, lon, fallback])
+    return <>{name || 'Unknown'}</>
+  }
+
+  // Load predictions on component mount
+  useEffect(() => {
+    if (companyId) {
+      loadPredictions()
+    }
+  }, [companyId])
+
+  const loadPredictions = async () => {
+    if (!companyId) return
+    
+    try {
+      setRefreshing(true)
+      const response = await getCompanyPredictions(companyId, 50, 0)
+      if (response.success) {
+        setPredictions(response.predictions)
+      }
+    } catch (err) {
+      console.error('Failed to load predictions:', err)
+      setError('Failed to load predictions')
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
+  // Filter predictions based on selected criteria
+  const filteredPredictions = predictions.filter((prediction) => {
+    let match = true
+    
+    // Risk level filter
+    if (selectedRisk !== "All Levels" && prediction.riskLevel !== selectedRisk.toLowerCase()) {
+      match = false
+    }
+    
+    // Note: State and city filters would need geocoding to work properly
+    // For now, we'll keep them as placeholders
+    
     return match
   })
 
@@ -113,11 +187,106 @@ export default function PredictionAlertPage() {
   const handleExport = () => {
     setLoading(true)
     setError("")
+    
+    // Create CSV data
+    const csvData = filteredPredictions.map(prediction => ({
+      'Company Location': prediction.companyLocation?.name || 'Unknown Location',
+      'Location Address': prediction.companyLocation?.address || 'N/A',
+      'Latitude': prediction.latitude,
+      'Longitude': prediction.longitude,
+      'Risk Level': prediction.riskLevel.toUpperCase(),
+      'Risk Score': (prediction.riskScore * 100).toFixed(1) + '%',
+      'Model 1 Score': prediction.model1Score ? (prediction.model1Score * 100).toFixed(1) + '%' : 'N/A',
+      'Model 2 Score': prediction.model2Score ? (prediction.model2Score * 100).toFixed(1) + '%' : 'N/A',
+      'Date': new Date(prediction.createdAt).toLocaleDateString()
+    }))
+    
+    // Convert to CSV
+    const headers = Object.keys(csvData[0] || {})
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => headers.map(header => row[header as keyof typeof row]).join(','))
+    ].join('\n')
+    
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `dengue-predictions-${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+    
     setTimeout(() => {
       setLoading(false)
-      // Simulate export error
-      // setError("Export failed. Please try again.")
     }, 1000)
+  }
+
+  const handleUpdatePrediction = () => {
+    loadPredictions()
+  }
+
+  const loadHistoricalData = async (lat: number, lon: number, daysBack: number = 30) => {
+    try {
+      setLoadingHistoricalData(true)
+      const response = await getHistoricalData(lat, lon, daysBack)
+      if (response.success) {
+        setHistoricalData(response.historicalData)
+      }
+    } catch (err) {
+      console.error('Failed to load historical data:', err)
+      setError('Failed to load historical data')
+    } finally {
+      setLoadingHistoricalData(false)
+    }
+  }
+
+  const handleEnhancedPrediction = async (lat: number, lon: number) => {
+    try {
+      setLoading(true)
+      setError('')
+      
+      const requestData: EnhancedPredictionRequest = {
+        lat,
+        lon,
+        userId: companyId || undefined,
+        historicalData: historicalData.length > 0 ? historicalData : undefined,
+        targetDate: targetDate || undefined,
+        useModel1Only: enhancedPredictionMode === 'model1'
+      }
+
+      const response = await predictPublicEnhanced(requestData)
+      
+      if (response.success) {
+        // Convert to PredictionData format and add to predictions
+        const newPrediction: PredictionData = {
+          id: `enhanced_${Date.now()}`,
+          latitude: response.prediction.latitude,
+          longitude: response.prediction.longitude,
+          riskScore: response.prediction.riskScore,
+          riskLevel: response.prediction.riskLevel,
+          model1Score: response.prediction.model1Score,
+          model2Score: response.prediction.model2Score,
+          createdAt: response.prediction.timestamp || new Date().toISOString(),
+          historicalFeatures: response.prediction.historicalFeatures,
+          isHotspot: response.prediction.isHotspot,
+          locationCluster: response.prediction.locationCluster,
+          dataQuality: response.prediction.dataQuality,
+          model: response.prediction.model
+        }
+
+        setPredictions(prev => [newPrediction, ...prev])
+        // Note: onPredictionUpdate is passed as prop to this component
+        setShowEnhancedPrediction(false)
+      }
+    } catch (err) {
+      console.error('Enhanced prediction failed:', err)
+      setError('Enhanced prediction failed')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleSaveAlertRules = () => {
@@ -167,8 +336,11 @@ export default function PredictionAlertPage() {
                 <button className="bg-[#E5E7EB] text-black px-6 py-2 rounded-lg font-bold text-base hover:bg-[#F3EAD8] flex items-center gap-2" disabled>
                   <FiFilter /> Filter
                 </button>
-                <button className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2" onClick={handleUpdatePrediction} disabled={loading}>
-                  <FiRefreshCw /> {loading ? "Updating..." : "Update Prediction"}
+                {/* <button className="bg-[#E5E7EB] text-black px-6 py-2 rounded-lg font-bold text-base hover:bg-[#F3EAD8] flex items-center gap-2" onClick={() => setShowEnhancedPrediction(true)}>
+                  <FiTarget /> Enhanced Prediction
+                </button> */}
+                <button className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2" onClick={handleUpdatePrediction} disabled={refreshing}>
+                  <FiRefreshCw className={refreshing ? 'animate-spin' : ''} /> {refreshing ? "Refreshing..." : "Refresh Predictions"}
                 </button>
               </div>
             </div>
@@ -179,23 +351,25 @@ export default function PredictionAlertPage() {
               <div className="mb-4 text-red-600 font-semibold bg-red-100 rounded-lg px-4 py-2 border border-red-200">Prediction model unavailable. Please try again later.</div>
             )}
             {/* New Prediction Map Component */}
-            <PredictionMap onPredictionUpdate={setPredictions} />
+            <PredictionMap onPredictionUpdate={(newPredictions) => {
+              setPredictions(newPredictions)
+            }} />
 
             {/* Filters */}
-            <motion.div variants={item} className="mb-6">
+            <motion.div variants={item} className="my-6">
               <div className="flex gap-4 items-end">
-                <div className="flex flex-col gap-2">
+                {/* <div className="flex flex-col gap-2">
                   <label className="font-semibold text-black text-sm">State</label>
                   <select className="rounded-lg border border-gray-400 px-4 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-[#E2C275]" value={selectedState} onChange={e => setSelectedState(e.target.value)}>
                     {allStates.map(state => <option key={state}>{state}</option>)}
                   </select>
-                </div>
-                <div className="flex flex-col gap-2">
+                </div> */}
+                {/* <div className="flex flex-col gap-2">
                   <label className="font-semibold text-black text-sm">City</label>
                   <select className="rounded-lg border border-gray-400 px-4 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-[#E2C275]" value={selectedCity} onChange={e => setSelectedCity(e.target.value)}>
                     {allCities.map(city => <option key={city}>{city}</option>)}
                   </select>
-                </div>
+                </div> */}
                 <div className="flex flex-col gap-2">
                   <label className="font-semibold text-black text-sm">Risk Level</label>
                   <select className="rounded-lg border border-gray-400 px-4 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-[#E2C275]" value={selectedRisk} onChange={e => setSelectedRisk(e.target.value)}>
@@ -204,12 +378,11 @@ export default function PredictionAlertPage() {
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="font-semibold text-black text-sm">Date Range</label>
-                  <input
-                    type="text"
-                    placeholder="dd/mm/yyyy"
-                    className="rounded-lg border border-gray-400 px-4 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-[#E2C275]"
-                    value={dateRange}
-                    onChange={e => setDateRange(e.target.value)}
+                  <DateRangePicker
+                    dateRange={dateRange}
+                    onDateRangeChange={setDateRange}
+                    placeholder="Select date range"
+                    className="w-48"
                   />
                 </div>
               </div>
@@ -223,45 +396,107 @@ export default function PredictionAlertPage() {
               <table className="min-w-full bg-white rounded-xl">
                 <thead>
                   <tr className="text-left text-black font-semibold text-base bg-[#F3EAD8]">
-                    <th className="py-3 px-6">Area Name</th>
+                    <th className="py-3 px-6">Company Location</th>
+                    <th className="py-3 px-6">Coordinates</th>
                     <th className="py-3 px-6">Risk Level</th>
-                    <th className="py-3 px-6">Confidence Score</th>
+                    <th className="py-3 px-6">Risk Score</th>
+                    <th className="py-3 px-6">Model Scores</th>
+                    {/* <th className="py-3 px-6">Enhanced Features</th> */}
                     <th className="py-3 px-6">Prediction Date</th>
                     <th className="py-3 px-6">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredAreas.length === 0 ? (
+                  {filteredPredictions.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center py-8 text-gray-500">No areas match the selected filters.</td>
+                      <td colSpan={8} className="text-center py-8 text-gray-500">
+                        {predictions.length === 0 ? "No predictions yet. Use the map above to create predictions." : "No predictions match the selected filters."}
+                      </td>
                     </tr>
                   ) : (
-                    filteredAreas.map((area, idx) => (
-                      <tr key={area.area} className={idx % 2 === 0 ? "bg-[#F9F6F2]" : "bg-white"}>
-                        <td className="py-3 px-6 font-medium text-black">{area.area}</td>
+                    filteredPredictions.map((prediction, idx) => (
+                      <tr key={prediction.id} className={idx % 2 === 0 ? "bg-[#F9F6F2]" : "bg-white"}>
+                        <td className="py-3 px-6 font-medium text-black">
+                          <div className="flex items-center gap-2">
+                            <FiMapPin className="text-gray-400" />
+                            <div>
+                              <div className="text-sm font-semibold">
+                                {prediction.companyLocation?.name ? (
+                                  prediction.companyLocation.name
+                                ) : (
+                                  <AsyncAreaName lat={prediction.latitude} lon={prediction.longitude} />
+                                )}
+                              </div>
+                              {prediction.companyLocation?.address && (
+                                <div className="text-xs text-gray-500">
+                                  {prediction.companyLocation.address}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-6 font-medium text-black">
+                          <div className="flex items-center gap-2">
+                            <FiMapPin className="text-gray-400" />
+                            <div>
+                              <div className="text-sm">{prediction.latitude.toFixed(4)}, {prediction.longitude.toFixed(4)}</div>
+                            </div>
+                          </div>
+                        </td>
                         <td className="py-3 px-6">
                           <span
-                            className={`px-3 py-1 rounded-full text-sm font-semibold ${riskLevelStyles[area.riskLevel]} flex items-center gap-2 w-fit`}
+                            className={`px-3 py-1 rounded-full text-sm font-semibold ${riskLevelStyles[prediction.riskLevel]} flex items-center gap-2 w-fit`}
                           >
-                            <div className={`w-2 h-2 rounded-full ${area.color}`}></div>
-                            {area.riskLevel}
+                            <div className={`w-2 h-2 rounded-full ${
+                              prediction.riskLevel === 'high' ? 'bg-red-500' : 
+                              prediction.riskLevel === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
+                            }`}></div>
+                            {prediction.riskLevel.toUpperCase()}
                           </span>
                         </td>
                         <td className="py-3 px-6">
                           <div className="flex items-center gap-2">
-                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                            {/* <div className="w-16 bg-gray-200 rounded-full h-2">
                               <div
-                                className={`h-2 rounded-full ${area.color}`}
-                                style={{ width: `${area.confidence}%` }}
+                                className={`h-2 rounded-full ${
+                                  prediction.riskLevel === 'high' ? 'bg-red-500' : 
+                                  prediction.riskLevel === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
+                                }`}
+                                style={{ width: `${prediction.riskScore * 100}%` }}
                               ></div>
-                            </div>
-                            <span className="text-sm font-medium">{area.confidence}%</span>
+                            </div> */}
+                            <span className="text-sm font-medium">{prediction.riskScore.toFixed(3)}</span>
                           </div>
                         </td>
-                        <td className="py-3 px-6 text-black">{area.date}</td>
+                        <td className="py-3 px-6 text-sm">
+                          <div className="space-y-1">
+                            <div>Model 1: {prediction.model1Score ? prediction.model1Score.toFixed(3) : 'N/A'}</div>
+                            <div>Model 2: {prediction.model2Score ? prediction.model2Score.toFixed(3) : 'N/A'}</div>
+                          </div>
+                        </td>
+                        {/* <td className="py-3 px-6 text-sm">
+                          <div className="space-y-1">
+                            {prediction.isHotspot !== undefined && (
+                              <div className={`px-2 py-1 rounded text-xs ${prediction.isHotspot ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
+                                {prediction.isHotspot ? 'Hotspot' : 'Normal'}
+                              </div>
+                            )}
+                            {prediction.dataQuality && (
+                              <div className="text-xs text-gray-600">
+                                Data: {prediction.dataQuality.data_points_available} pts
+                              </div>
+                            )}
+                            {prediction.model && (
+                              <div className="text-xs text-blue-600">
+                                {prediction.model}
+                              </div>
+                            )}
+                          </div>
+                        </td> */}
+                        <td className="py-3 px-6 text-black">{new Date(prediction.createdAt).toLocaleDateString()}</td>
                         <td className="py-3 px-6">
                           <div className="flex gap-2">
-                            <button className="text-[#A21C1C] hover:bg-[#F3EAD8] p-2 rounded-lg" onClick={() => setShowDetails(area)}>
+                            <button className="text-[#A21C1C] hover:bg-[#F3EAD8] p-2 rounded-lg" onClick={() => setShowDetails(prediction)}>
                               <FiEye />
                             </button>
                             <button className="text-[#A21C1C] hover:bg-[#F3EAD8] p-2 rounded-lg" onClick={handleExport} disabled={loading}>
@@ -275,7 +510,7 @@ export default function PredictionAlertPage() {
                 </tbody>
               </table>
             </div>
-            <div className="text-sm text-gray-500 mt-2">Showing {filteredAreas.length} of {riskAreas.length} areas</div>
+            <div className="text-sm text-gray-500 mt-2">Showing {filteredPredictions.length} of {predictions.length} predictions</div>
           </motion.div>
 
           {/* View Details Modal */}
@@ -283,13 +518,221 @@ export default function PredictionAlertPage() {
             <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
               <div className="bg-white rounded-xl p-8 shadow-lg w-full max-w-md relative">
                 <button className="absolute top-2 right-2 text-gray-400 hover:text-black" onClick={() => setShowDetails(null)}>&times;</button>
-                <h2 className="text-xl font-bold mb-4">Area Details</h2>
-                <div className="mb-2"><span className="font-semibold">Area:</span> {showDetails.area}</div>
-                <div className="mb-2"><span className="font-semibold">Risk Level:</span> {showDetails.riskLevel}</div>
-                <div className="mb-2"><span className="font-semibold">Confidence:</span> {showDetails.confidence}%</div>
-                <div className="mb-2"><span className="font-semibold">Prediction Date:</span> {showDetails.date}</div>
-                <div className="mt-4">
+                <h2 className="text-xl font-bold mb-4">Prediction Details</h2>
+                <div className="space-y-3">
+                  {showDetails.companyLocation ? (
+                    <div className="flex items-center gap-2">
+                      <FiMapPin className="text-gray-400" />
+                      <div>
+                        <span className="font-semibold">Company Location:</span>
+                        <div className="text-sm font-semibold">{showDetails.companyLocation.name}</div>
+                        {showDetails.companyLocation.address && (
+                          <div className="text-xs text-gray-500">{showDetails.companyLocation.address}</div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <FiMapPin className="text-gray-400" />
+                      <div>
+                        <span className="font-semibold">Nearest Area:</span>
+                        <div className="text-sm font-semibold">
+                          <AsyncAreaName lat={showDetails.latitude} lon={showDetails.longitude} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <FiMapPin className="text-gray-400" />
+                    <div>
+                      <span className="font-semibold">Coordinates:</span>
+                      <div className="text-sm">{showDetails.latitude.toFixed(6)}, {showDetails.longitude.toFixed(6)}</div>
+                    </div>
+                  </div>
+                  <div><span className="font-semibold">Risk Level:</span> 
+                    <span className={`ml-2 px-2 py-1 rounded-full text-xs font-semibold ${riskLevelStyles[showDetails.riskLevel]}`}>
+                      {showDetails.riskLevel.toUpperCase()}
+                    </span>
+                  </div>
+                  <div><span className="font-semibold">Risk Score:</span> {showDetails.riskScore.toFixed(3)}</div>
+                  <div><span className="font-semibold">Model 1 Score:</span> {showDetails.model1Score ? showDetails.model1Score.toFixed(3) : 'N/A'}</div>
+                  <div><span className="font-semibold">Model 2 Score:</span> {showDetails.model2Score ? showDetails.model2Score.toFixed(3) : 'N/A'}</div>
+                  {showDetails.isHotspot !== undefined && (
+                    <div><span className="font-semibold">Hotspot Status:</span> 
+                      <span className={`ml-2 px-2 py-1 rounded text-xs ${showDetails.isHotspot ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
+                        {showDetails.isHotspot ? 'Hotspot Area' : 'Normal Area'}
+                      </span>
+                    </div>
+                  )}
+                  {showDetails.locationCluster !== undefined && (
+                    <div><span className="font-semibold">Location Cluster:</span> {showDetails.locationCluster}</div>
+                  )}
+                  {showDetails.historicalFeatures && (
+                    <div>
+                      <span className="font-semibold">Historical Features:</span>
+                      <div className="ml-4 mt-1 text-sm space-y-1">
+                        <div>Lag 1: {showDetails.historicalFeatures.cases_lag_1.toFixed(1)}</div>
+                        <div>Lag 7: {showDetails.historicalFeatures.cases_lag_7.toFixed(1)}</div>
+                        <div>Avg 7: {showDetails.historicalFeatures.cases_avg_7.toFixed(1)}</div>
+                      </div>
+                    </div>
+                  )}
+                  {showDetails.dataQuality && (
+                    <div>
+                      <span className="font-semibold">Data Quality:</span>
+                      <div className="ml-4 mt-1 text-sm">
+                        <div>Data Points: {showDetails.dataQuality.data_points_available}</div>
+                        <div>Has Lag 1: {showDetails.dataQuality.has_lag_1 ? 'Yes' : 'No'}</div>
+                        <div>Has Lag 7: {showDetails.dataQuality.has_lag_7 ? 'Yes' : 'No'}</div>
+                      </div>
+                    </div>
+                  )}
+                  <div><span className="font-semibold">Prediction Date:</span> {new Date(showDetails.createdAt).toLocaleString()}</div>
+                </div>
+                <div className="mt-6">
                   <button className="bg-[#A21C1C] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#7C1D1D]" onClick={() => setShowDetails(null)}>Close</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Enhanced Prediction Modal */}
+          {showEnhancedPrediction && (
+            <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+              <div className="bg-white rounded-xl p-8 shadow-lg w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
+                <button className="absolute top-2 right-2 text-gray-400 hover:text-black text-2xl" onClick={() => setShowEnhancedPrediction(false)}>&times;</button>
+                <h2 className="text-2xl font-bold mb-6">Enhanced Prediction</h2>
+                
+                <div className="space-y-6">
+                  {/* Coordinates Input */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">Latitude</label>
+                      <input
+                        type="number"
+                        step="0.000001"
+                        placeholder="3.1390"
+                        className="w-full rounded-lg border border-gray-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#E2C275]"
+                        id="enhanced-lat"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">Longitude</label>
+                      <input
+                        type="number"
+                        step="0.000001"
+                        placeholder="101.6869"
+                        className="w-full rounded-lg border border-gray-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#E2C275]"
+                        id="enhanced-lon"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Prediction Mode */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Prediction Mode</label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="predictionMode"
+                          value="combined"
+                          checked={enhancedPredictionMode === 'combined'}
+                          onChange={(e) => setEnhancedPredictionMode(e.target.value as 'combined' | 'model1')}
+                          className="accent-[#A21C1C]"
+                        />
+                        <span>Combined Models (Historical + Weather)</span>
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="predictionMode"
+                          value="model1"
+                          checked={enhancedPredictionMode === 'model1'}
+                          onChange={(e) => setEnhancedPredictionMode(e.target.value as 'combined' | 'model1')}
+                          className="accent-[#A21C1C]"
+                        />
+                        <span>Model 1 Only (Historical)</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Target Date */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Target Date (Optional)</label>
+                    <input
+                      type="date"
+                      value={targetDate}
+                      onChange={(e) => setTargetDate(e.target.value)}
+                      className="w-full rounded-lg border border-gray-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#E2C275]"
+                    />
+                  </div>
+
+                  {/* Historical Data Section */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold">Historical Data</label>
+                      <button
+                        onClick={() => {
+                          const lat = (document.getElementById('enhanced-lat') as HTMLInputElement)?.value;
+                          const lon = (document.getElementById('enhanced-lon') as HTMLInputElement)?.value;
+                          if (lat && lon) {
+                            loadHistoricalData(parseFloat(lat), parseFloat(lon));
+                          }
+                        }}
+                        disabled={loadingHistoricalData}
+                        className="text-sm bg-[#E2C275] text-black px-3 py-1 rounded hover:bg-[#D4B85A] disabled:opacity-50"
+                      >
+                        {loadingHistoricalData ? 'Loading...' : 'Load Historical Data'}
+                      </button>
+                    </div>
+                    
+                    {historicalData.length > 0 ? (
+                      <div className="bg-gray-50 rounded-lg p-4 max-h-32 overflow-y-auto">
+                        <div className="text-sm text-gray-600 mb-2">Found {historicalData.length} data points</div>
+                        <div className="space-y-1 text-xs">
+                          {historicalData.slice(0, 5).map((item, idx) => (
+                            <div key={idx} className="flex justify-between">
+                              <span>{item.date}</span>
+                              <span>{item.cases} cases</span>
+                            </div>
+                          ))}
+                          {historicalData.length > 5 && (
+                            <div className="text-gray-500">... and {historicalData.length - 5} more</div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-4 text-center text-gray-500 text-sm">
+                        No historical data loaded. Click "Load Historical Data" to fetch data for the coordinates.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-4 pt-4">
+                    <button
+                      onClick={() => {
+                        const lat = (document.getElementById('enhanced-lat') as HTMLInputElement)?.value;
+                        const lon = (document.getElementById('enhanced-lon') as HTMLInputElement)?.value;
+                        if (lat && lon) {
+                          handleEnhancedPrediction(parseFloat(lat), parseFloat(lon));
+                        } else {
+                          setError('Please enter valid coordinates');
+                        }
+                      }}
+                      disabled={loading}
+                      className="flex-1 bg-[#A21C1C] text-white px-6 py-3 rounded-lg font-bold hover:bg-[#7C1D1D] disabled:opacity-50"
+                    >
+                      {loading ? 'Predicting...' : 'Make Enhanced Prediction'}
+                    </button>
+                    <button
+                      onClick={() => setShowEnhancedPrediction(false)}
+                      className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-400"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -311,7 +754,7 @@ export default function PredictionAlertPage() {
                   <span className="text-sm">High Risk</span>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span className="text-sm">≥ 75%</span>
+                    <span className="text-sm">≥ 3</span>
                   </div>
                 </div>
 
@@ -319,7 +762,7 @@ export default function PredictionAlertPage() {
                   <span className="text-sm">Medium Risk</span>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                    <span className="text-sm">≥ 50%</span>
+                    <span className="text-sm">≥ 1</span>
                   </div>
                 </div>
 
@@ -327,7 +770,7 @@ export default function PredictionAlertPage() {
                   <span className="text-sm">Low Risk</span>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-sm">≥ 25%</span>
+                    <span className="text-sm">≥ 0</span>
                   </div>
                 </div>
 
@@ -451,14 +894,14 @@ export default function PredictionAlertPage() {
           </motion.div>
 
           {/* Bottom Actions */}
-          <motion.div variants={item} className="flex justify-end gap-4">
+          {/* <motion.div variants={item} className="flex justify-end gap-4">
             <button className="bg-[#E5E7EB] text-black px-8 py-2 rounded-lg font-bold text-base hover:bg-[#F3EAD8]">
               Reset to Defaults
             </button>
             <button className="bg-[#A21C1C] text-white px-8 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D]">
               Save All Settings
             </button>
-          </motion.div>
+          </motion.div> */}
         </motion.section>
       </main>
     </div>

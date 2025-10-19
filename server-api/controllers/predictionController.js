@@ -9,7 +9,6 @@ let redisClient = null;
 let redisConnected = false;
 
 // Uncomment the following block to enable Redis
-/*
 try {
   redisClient = redis.createClient({
     host: process.env.REDIS_HOST || 'localhost',
@@ -36,9 +35,6 @@ try {
   console.error('Failed to create Redis client:', error);
   redisConnected = false;
 }
-*/
-
-console.log('Redis is disabled - caching will not be available');
 
 // ML Service configuration
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:5001';
@@ -48,22 +44,103 @@ const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:5001';
  * @param {number} latitude - Latitude coordinate
  * @param {number} longitude - Longitude coordinate
  * @param {Object} weatherData - Optional weather data
+ * @param {Array} historicalData - Optional historical cases data
+ * @param {string} targetDate - Optional target date (YYYY-MM-DD)
  * @returns {Promise<Object>} Prediction result
  */
-async function getMLPrediction(latitude, longitude, weatherData = null) {
+async function getMLPrediction(latitude, longitude, weatherData = null, historicalData = null, targetDate = null) {
   try {
-    const response = await axios.post(`${ML_SERVICE_URL}/predict`, {
+    const payload = {
       latitude,
-      longitude,
-      weather_data: weatherData
-    }, {
-      timeout: 10000 // 10 second timeout
+      longitude
+    };
+
+    // Add optional parameters if provided
+    if (weatherData) {
+      payload.weather_data = weatherData;
+    }
+    if (historicalData) {
+      payload.historical_cases_data = historicalData;
+    }
+    if (targetDate) {
+      payload.target_date = targetDate;
+    }
+
+    const response = await axios.post(`${ML_SERVICE_URL}/predict`, payload, {
+      timeout: 30000 // 30 second timeout
     });
 
     return response.data;
   } catch (error) {
     console.error('ML Service Error:', error.message);
-    throw new Error('Prediction service unavailable');
+    if (error.code === 'ECONNREFUSED') {
+      throw new Error('ML service is not running or not accessible');
+    } else if (error.code === 'ETIMEDOUT') {
+      throw new Error('ML service request timed out - service may be overloaded');
+    } else if (error.response) {
+      throw new Error(`ML service returned error: ${error.response.status} - ${error.response.data?.error || 'Unknown error'}`);
+    } else {
+      throw new Error('Prediction service unavailable');
+    }
+  }
+}
+
+/**
+ * Get Model 1 prediction with historical data from ML service
+ * @param {number} latitude - Latitude coordinate
+ * @param {number} longitude - Longitude coordinate
+ * @param {Array} historicalData - Optional historical cases data
+ * @param {string} targetDate - Optional target date (YYYY-MM-DD)
+ * @returns {Promise<Object>} Model 1 prediction result
+ */
+async function getMLModel1Prediction(latitude, longitude, historicalData = null, targetDate = null) {
+  try {
+    const payload = {
+      latitude,
+      longitude
+    };
+
+    // Add optional parameters if provided
+    if (historicalData) {
+      payload.historical_cases_data = historicalData;
+    }
+    if (targetDate) {
+      payload.target_date = targetDate;
+    }
+
+    const response = await axios.post(`${ML_SERVICE_URL}/predict/model1`, payload, {
+      timeout: 30000 // 30 second timeout
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('ML Service Model 1 Error:', error.message);
+    throw new Error('Model 1 prediction service unavailable');
+  }
+}
+
+/**
+ * Get historical data for a location from ML service
+ * @param {number} latitude - Latitude coordinate
+ * @param {number} longitude - Longitude coordinate
+ * @param {number} daysBack - Number of days to look back (default: 30)
+ * @returns {Promise<Object>} Historical data result
+ */
+async function getHistoricalData(latitude, longitude, daysBack = 30) {
+  try {
+    const response = await axios.get(`${ML_SERVICE_URL}/historical-data`, {
+      params: {
+        latitude,
+        longitude,
+        days_back: daysBack
+      },
+      timeout: 30000 // 30 second timeout
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('ML Service Historical Data Error:', error.message);
+    throw new Error('Historical data service unavailable');
   }
 }
 
@@ -143,11 +220,15 @@ function validateCoordinates(latitude, longitude) {
  */
 async function predictCompany(req, res) {
   try {
-    const { companyId, lat, lon } = req.body;
+    const { companyId, companyLocationId, lat, lon } = req.body;
 
     // Validate input
     if (!companyId) {
       return res.status(400).json({ error: 'Company ID is required' });
+    }
+
+    if (!companyLocationId) {
+      return res.status(400).json({ error: 'Company Location ID is required' });
     }
 
     validateCoordinates(lat, lon);
@@ -159,6 +240,19 @@ async function predictCompany(req, res) {
 
     if (!company) {
       return res.status(404).json({ error: 'Company not found' });
+    }
+
+    // Verify company location exists and belongs to the company
+    const companyLocation = await prisma.companyLocation.findFirst({
+      where: { 
+        id: companyLocationId,
+        companyId: companyId,
+        isActive: true
+      }
+    });
+
+    if (!companyLocation) {
+      return res.status(404).json({ error: 'Company location not found or does not belong to the specified company' });
     }
 
     // Get prediction from ML service
@@ -174,11 +268,23 @@ async function predictCompany(req, res) {
     const companyPrediction = await prisma.companyPrediction.create({
       data: {
         companyId,
+        companyLocationId,
         latitude: lat,
         longitude: lon,
         riskScore: prediction.combined_score,
         model1Score: prediction.model1_score,
         model2Score: prediction.model2_score
+      },
+      include: {
+        companyLocation: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+            latitude: true,
+            longitude: true
+          }
+        }
       }
     });
 
@@ -187,6 +293,8 @@ async function predictCompany(req, res) {
       prediction: {
         id: companyPrediction.id,
         companyId,
+        companyLocationId,
+        companyLocation: companyPrediction.companyLocation,
         latitude: lat,
         longitude: lon,
         riskScore: prediction.combined_score,
@@ -280,7 +388,7 @@ async function predictPublic(req, res) {
 async function getCompanyPredictions(req, res) {
   try {
     const { companyId } = req.params;
-    const { limit = 10, offset = 0 } = req.query;
+    const { limit = 10, offset = 0, companyLocationId } = req.query;
 
     // Verify company exists
     const company = await prisma.company.findUnique({
@@ -291,9 +399,26 @@ async function getCompanyPredictions(req, res) {
       return res.status(404).json({ error: 'Company not found' });
     }
 
-    // Get predictions
+    // Build where clause
+    const whereClause = { companyId };
+    if (companyLocationId) {
+      whereClause.companyLocationId = companyLocationId;
+    }
+
+    // Get predictions with company location data
     const predictions = await prisma.companyPrediction.findMany({
-      where: { companyId },
+      where: whereClause,
+      include: {
+        companyLocation: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+            latitude: true,
+            longitude: true
+          }
+        }
+      },
       orderBy: { createdAt: 'desc' },
       take: parseInt(limit),
       skip: parseInt(offset)
@@ -303,10 +428,12 @@ async function getCompanyPredictions(req, res) {
       success: true,
       predictions: predictions.map(p => ({
         id: p.id,
+        companyLocationId: p.companyLocationId,
+        companyLocation: p.companyLocation,
         latitude: p.latitude,
         longitude: p.longitude,
         riskScore: p.riskScore,
-        riskLevel: p.riskScore >= 0.7 ? 'high' : p.riskScore >= 0.4 ? 'medium' : 'low',
+        riskLevel: p.riskScore >= 3 ? 'high' : p.riskScore >= 1 ? 'medium' : 'low',
         model1Score: p.model1Score,
         model2Score: p.model2Score,
         createdAt: p.createdAt
@@ -315,6 +442,209 @@ async function getCompanyPredictions(req, res) {
 
   } catch (error) {
     console.error('Get company predictions error:', error);
+    res.status(500).json({ 
+      error: error.message || 'Internal server error' 
+    });
+  }
+}
+
+/**
+ * Enhanced public prediction with historical data support
+ * POST /api/predict/public/enhanced
+ */
+async function predictPublicEnhanced(req, res) {
+  try {
+    const { lat, lon, userId, historicalData, targetDate, useModel1Only, companyId } = req.body;
+
+    validateCoordinates(lat, lon);
+
+    let prediction;
+    
+    if (useModel1Only) {
+      // Use Model 1 with historical data
+      const mlResult = await getMLModel1Prediction(lat, lon, historicalData, targetDate);
+      
+      if (!mlResult.success) {
+        return res.status(500).json({ error: 'Model 1 prediction failed' });
+      }
+
+      prediction = {
+        latitude: lat,
+        longitude: lon,
+        riskScore: mlResult.prediction.predicted_cases,
+        riskLevel: mlResult.prediction.risk_level,
+        model: 'Model 1 (Historical Cases)',
+        historicalFeatures: mlResult.prediction.historical_features_used,
+        isHotspot: mlResult.prediction.is_hotspot,
+        locationCluster: mlResult.prediction.location_cluster,
+        dataQuality: mlResult.prediction.data_quality,
+        timestamp: new Date().toISOString()
+      };
+    } else {
+      // Use combined models
+      const mlResult = await getMLPrediction(lat, lon, null, historicalData, targetDate);
+      
+      if (!mlResult.success) {
+        return res.status(500).json({ error: 'Prediction failed' });
+      }
+
+      prediction = {
+        latitude: lat,
+        longitude: lon,
+        riskScore: mlResult.prediction.combined_score,
+        riskLevel: mlResult.prediction.risk_level,
+        model1Score: mlResult.prediction.model1_score,
+        model2Score: mlResult.prediction.model2_score,
+        historicalFeatures: mlResult.prediction.historical_features_used,
+        isHotspot: mlResult.prediction.is_hotspot,
+        locationCluster: mlResult.prediction.location_cluster,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    // Store prediction in CompanyPrediction table if companyId is provided
+    let companyPrediction = null;
+    if (companyId) {
+      try {
+        // Verify company exists
+        const company = await prisma.company.findUnique({
+          where: { id: companyId }
+        });
+
+        if (company) {
+          companyPrediction = await prisma.companyPrediction.create({
+            data: {
+              companyId,
+              companyLocationId: null, // Optional as per schema
+              latitude: lat,
+              longitude: lon,
+              riskScore: prediction.riskScore,
+              model1Score: prediction.model1Score || null,
+              model2Score: prediction.model2Score || null
+            }
+          });
+        }
+      } catch (dbError) {
+        console.error('Error saving to CompanyPrediction:', dbError);
+        // Don't fail the request if database save fails
+      }
+    }
+
+    // Log the prediction request
+    try {
+      await prisma.predictionLog.create({
+        data: {
+          latitude: lat,
+          longitude: lon,
+          userId: userId || null,
+          riskScore: prediction.riskScore
+        }
+      });
+    } catch (logError) {
+      console.error('Logging error:', logError);
+    }
+
+    res.json({
+      success: true,
+      prediction: {
+        ...prediction,
+        id: companyPrediction?.id,
+        companyId: companyPrediction?.companyId
+      }
+    });
+
+  } catch (error) {
+    console.error('Enhanced public prediction error:', error);
+    res.status(500).json({ 
+      error: error.message || 'Internal server error' 
+    });
+  }
+}
+
+/**
+ * Get historical data for a location
+ * GET /api/predict/historical-data
+ */
+async function getHistoricalDataEndpoint(req, res) {
+  try {
+    const { lat, lon, days_back = 30 } = req.query;
+
+    if (!lat || !lon) {
+      return res.status(400).json({ 
+        error: 'Latitude and longitude are required' 
+      });
+    }
+
+    validateCoordinates(parseFloat(lat), parseFloat(lon));
+
+    const result = await getHistoricalData(
+      parseFloat(lat), 
+      parseFloat(lon), 
+      parseInt(days_back)
+    );
+
+    if (!result.success) {
+      return res.status(500).json({ error: 'Failed to get historical data' });
+    }
+
+    res.json({
+      success: true,
+      historicalData: result.historical_data,
+      dataPoints: result.data_points,
+      daysBack: result.days_back,
+      location: result.location
+    });
+
+  } catch (error) {
+    console.error('Get historical data error:', error);
+    res.status(500).json({ 
+      error: error.message || 'Internal server error' 
+    });
+  }
+}
+
+/**
+ * Get company locations
+ * GET /api/predict/company/:companyId/locations
+ */
+async function getCompanyLocations(req, res) {
+  try {
+    const { companyId } = req.params;
+
+    // Verify company exists
+    const company = await prisma.company.findUnique({
+      where: { id: companyId }
+    });
+
+    if (!company) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
+
+    // Get active company locations
+    const locations = await prisma.companyLocation.findMany({
+      where: { 
+        companyId: companyId,
+        isActive: true
+      },
+      select: {
+        id: true,
+        name: true,
+        address: true,
+        latitude: true,
+        longitude: true,
+        isActive: true,
+        createdAt: true
+      },
+      orderBy: { name: 'asc' }
+    });
+
+    res.json({
+      success: true,
+      locations
+    });
+
+  } catch (error) {
+    console.error('Get company locations error:', error);
     res.status(500).json({ 
       error: error.message || 'Internal server error' 
     });
@@ -347,7 +677,7 @@ async function healthCheck(req, res) {
       success: true,
       services: {
         ml_service: mlHealth.data.status,
-        redis: redisHealth === 'PONG' ? 'healthy' : 'unhealthy',
+        redis: redisHealth,
         database: 'healthy' // Prisma connection is checked on startup
       },
       timestamp: new Date().toISOString()
@@ -364,6 +694,9 @@ async function healthCheck(req, res) {
 module.exports = {
   predictCompany,
   predictPublic,
+  predictPublicEnhanced,
   getCompanyPredictions,
+  getCompanyLocations,
+  getHistoricalDataEndpoint,
   healthCheck
 };

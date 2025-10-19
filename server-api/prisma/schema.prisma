@@ -46,6 +46,7 @@ model CompanyLocation {
 
   // Relations
   weather     Weather[]
+  predictions CompanyPrediction[]
 
   @@unique([name, companyId])
 }
@@ -161,18 +162,21 @@ model Recommendation {
 }
 
 model CompanyPrediction {
-  id          String   @id @default(uuid())
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id])
-  latitude    Float
-  longitude   Float
-  riskScore   Float
-  model1Score Float?   // Historical cases model score
-  model2Score Float?   // Weather-based model score
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String           @id @default(uuid())
+  companyId         String
+  company           Company          @relation(fields: [companyId], references: [id])
+  companyLocationId String?
+  companyLocation   CompanyLocation? @relation(fields: [companyLocationId], references: [id])
+  latitude          Float
+  longitude         Float
+  riskScore         Float
+  model1Score       Float?          // Historical cases model score
+  model2Score       Float?          // Weather-based model score
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
   @@index([companyId])
+  @@index([companyLocationId])
   @@index([createdAt])
 }
 

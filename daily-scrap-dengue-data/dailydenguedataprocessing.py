@@ -31,29 +31,28 @@ import re
 
 def fetch_weather_data(latitude, longitude, date, timezone="Asia/Singapore", max_retries=3):
     """
-    Fetch weather data from Open Meteo Forecast API for a specific location and date
+    Fetch current weather data from Open Meteo Forecast API for a specific location
     
     Args:
         latitude (float): Latitude coordinate
         longitude (float): Longitude coordinate
-        date (str): Date in format 'DD/MM/YYYY'
+        date (str): Date in format 'DD/MM/YYYY' (not used in current implementation)
         timezone (str): Timezone for the API request
         max_retries (int): Maximum number of retry attempts
         
     Returns:
         dict: Weather data containing humidity, temperature, and rainfall
     """
-    # Always use forecast API to avoid date range restrictions
-    return fetch_weather_data_forecast(latitude, longitude, date, timezone, max_retries)
+    # Use simplified forecast API for current weather data
+    return fetch_weather_data_simplified(latitude, longitude, timezone, max_retries)
 
-def fetch_weather_data_forecast(latitude, longitude, date, timezone="Asia/Singapore", max_retries=3):
+def fetch_weather_data_simplified(latitude, longitude, timezone="Asia/Singapore", max_retries=3):
     """
-    Fetch weather data from Open Meteo Forecast API for any date (historical or future)
+    Fetch current weather data from Open Meteo Forecast API using simplified endpoint
     
     Args:
         latitude (float): Latitude coordinate
         longitude (float): Longitude coordinate
-        date (str): Date in format 'DD/MM/YYYY'
         timezone (str): Timezone for the API request
         max_retries (int): Maximum number of retry attempts
         
@@ -62,29 +61,14 @@ def fetch_weather_data_forecast(latitude, longitude, date, timezone="Asia/Singap
     """
     for attempt in range(max_retries):
         try:
-            # Convert date from DD/MM/YYYY to YYYY-MM-DD format
-            date_obj = datetime.strptime(date, '%d/%m/%Y')
-            formatted_date = date_obj.strftime('%Y-%m-%d')
-            
-            # Check if date is today or in the future
-            today = datetime.now().date()
-            if date_obj.date() == today:
-                print(f"Info: Date {date} is today. Using forecast API.")
-            elif date_obj.date() > today:
-                print(f"Info: Date {date} is in the future. Using forecast API.")
-            else:
-                print(f"Info: Date {date} is historical. Using forecast API.")
-            
-            # Construct Forecast API URL - always use forecast API
+            # Use simplified forecast API URL with all daily parameters
             base_url = "https://api.open-meteo.com/v1/forecast"
             params = {
                 'latitude': latitude,
                 'longitude': longitude,
-                'daily': 'precipitation_sum,temperature_2m_max,temperature_2m_min',
-                'hourly': 'relative_humidity_2m',
+                'daily': 'temperature_2m_mean,relative_humidity_2m_mean,precipitation_sum',
                 'timezone': timezone,
-                'start_date': formatted_date,
-                'end_date': formatted_date
+                'forecast_days': 1
             }
             
             # Make API request with timeout
@@ -100,108 +84,50 @@ def fetch_weather_data_forecast(latitude, longitude, date, timezone="Asia/Singap
                 'rainfall': None
             }
             
-            # Calculate average humidity from hourly data
-            if 'hourly' in data and 'relative_humidity_2m' in data['hourly']:
-                humidity_values = data['hourly']['relative_humidity_2m']
-                if humidity_values and all(v is not None for v in humidity_values):
-                    weather_data['humidity'] = sum(humidity_values) / len(humidity_values)
-            
-            # Extract daily temperature (average of max and min) and rainfall
+            # Extract all weather data from daily section
             if 'daily' in data:
-                if 'temperature_2m_max' in data['daily'] and 'temperature_2m_min' in data['daily']:
-                    temp_max = data['daily']['temperature_2m_max'][0] if data['daily']['temperature_2m_max'] else None
-                    temp_min = data['daily']['temperature_2m_min'][0] if data['daily']['temperature_2m_min'] else None
-                    if temp_max is not None and temp_min is not None:
-                        weather_data['temperature'] = (temp_max + temp_min) / 2
+                daily = data['daily']
                 
-                if 'precipitation_sum' in data['daily'] and data['daily']['precipitation_sum']:
-                    weather_data['rainfall'] = data['daily']['precipitation_sum'][0]
+                # Extract temperature mean
+                if 'temperature_2m_mean' in daily and daily['temperature_2m_mean']:
+                    temp_values = daily['temperature_2m_mean']
+                    if temp_values and len(temp_values) > 0 and temp_values[0] is not None:
+                        weather_data['temperature'] = temp_values[0]
+                
+                # Extract humidity mean
+                if 'relative_humidity_2m_mean' in daily and daily['relative_humidity_2m_mean']:
+                    humidity_values = daily['relative_humidity_2m_mean']
+                    if humidity_values and len(humidity_values) > 0 and humidity_values[0] is not None:
+                        weather_data['humidity'] = humidity_values[0]
+                
+                # Extract precipitation sum
+                if 'precipitation_sum' in daily and daily['precipitation_sum']:
+                    precip_values = daily['precipitation_sum']
+                    if precip_values and len(precip_values) > 0 and precip_values[0] is not None:
+                        weather_data['rainfall'] = precip_values[0]
+            
+            print(f"Weather data for {latitude}, {longitude}: "
+                  f"Temp={weather_data['temperature']}°C, "
+                  f"Humidity={weather_data['humidity']}%, "
+                  f"Rainfall={weather_data['rainfall']}mm")
             
             return weather_data
             
         except requests.exceptions.Timeout as e:
-            print(f"Forecast API timeout on attempt {attempt + 1}/{max_retries} for lat={latitude}, lon={longitude}, date={date}")
+            print(f"Forecast API timeout on attempt {attempt + 1}/{max_retries} for lat={latitude}, lon={longitude}")
             if attempt < max_retries - 1:
                 time.sleep(2 ** attempt)  # Exponential backoff
                 continue
             else:
-                print(f"All forecast retry attempts failed for lat={latitude}, lon={longitude}, date={date}")
+                print(f"All forecast retry attempts failed for lat={latitude}, lon={longitude}")
                 return {'humidity': None, 'temperature': None, 'rainfall': None}
         except requests.exceptions.RequestException as e:
-            print(f"Forecast API request failed for lat={latitude}, lon={longitude}, date={date}: {str(e)}")
+            print(f"Forecast API request failed for lat={latitude}, lon={longitude}: {str(e)}")
             return {'humidity': None, 'temperature': None, 'rainfall': None}
         except Exception as e:
-            print(f"Error processing forecast weather data for lat={latitude}, lon={longitude}, date={date}: {str(e)}")
+            print(f"Error processing forecast weather data for lat={latitude}, lon={longitude}: {str(e)}")
             return {'humidity': None, 'temperature': None, 'rainfall': None}
 
-def fetch_weather_data_archive(latitude, longitude, date, timezone="Asia/Singapore", max_retries=3):
-    """
-    Fetch historical weather from Open-Meteo Archive API for a specific date and location.
-    Uses hourly humidity to compute daily average humidity, and daily precipitation_sum.
-    For temperature, prefers daily temperature_2m_mean, else average of max/min.
-    """
-    for attempt in range(max_retries):
-        try:
-            date_obj = datetime.strptime(date, '%d/%m/%Y')
-            formatted_date = date_obj.strftime('%Y-%m-%d')
-
-            base_url = "https://archive-api.open-meteo.com/v1/archive"
-            params = {
-                'latitude': latitude,
-                'longitude': longitude,
-                'start_date': formatted_date,
-                'end_date': formatted_date,
-                'timezone': timezone,
-                'daily': 'precipitation_sum,temperature_2m_mean,temperature_2m_max,temperature_2m_min',
-                'hourly': 'relative_humidity_2m'
-            }
-
-            response = requests.get(base_url, params=params, timeout=60)
-            response.raise_for_status()
-            data = response.json()
-
-            weather_data = {
-                'humidity': None,
-                'temperature': None,
-                'rainfall': None
-            }
-
-            # Humidity from hourly average
-            if 'hourly' in data and 'relative_humidity_2m' in data['hourly']:
-                humidity_values = data['hourly']['relative_humidity_2m']
-                if humidity_values and all(v is not None for v in humidity_values):
-                    weather_data['humidity'] = sum(humidity_values) / len(humidity_values)
-
-            # Temperature from daily mean if available, else avg of max/min
-            if 'daily' in data:
-                daily = data['daily']
-                temp_mean = daily.get('temperature_2m_mean')
-                if temp_mean and len(temp_mean) > 0 and temp_mean[0] is not None:
-                    weather_data['temperature'] = temp_mean[0]
-                else:
-                    tmax = daily.get('temperature_2m_max')
-                    tmin = daily.get('temperature_2m_min')
-                    if tmax and tmin and len(tmax) > 0 and len(tmin) > 0 and tmax[0] is not None and tmin[0] is not None:
-                        weather_data['temperature'] = (tmax[0] + tmin[0]) / 2
-
-                precip = daily.get('precipitation_sum')
-                if precip and len(precip) > 0:
-                    weather_data['rainfall'] = precip[0]
-
-            return weather_data
-
-        except requests.exceptions.Timeout:
-            print(f"Archive API timeout on attempt {attempt + 1}/{max_retries} for lat={latitude}, lon={longitude}, date={date}")
-            if attempt < max_retries - 1:
-                time.sleep(2 ** attempt)
-                continue
-            return {'humidity': None, 'temperature': None, 'rainfall': None}
-        except requests.exceptions.RequestException as e:
-            print(f"Archive API request failed for lat={latitude}, lon={longitude}, date={date}: {str(e)}")
-            return {'humidity': None, 'temperature': None, 'rainfall': None}
-        except Exception as e:
-            print(f"Error processing archive weather data for lat={latitude}, lon={longitude}, date={date}: {str(e)}")
-            return {'humidity': None, 'temperature': None, 'rainfall': None}
 
 """Updating Files in GitHub Repository
 
@@ -397,8 +323,8 @@ def process_api_2(response_json, x_target=101.653045, y_target=3.122496, toleran
         if (x_target - tolerance <= feature["geometry"]["x"] <= x_target + tolerance) and \
            (y_target - tolerance <= feature["geometry"]["y"] <= y_target + tolerance):
             
-            # Fetch weather data for this location and date
-            print(f"Fetching weather data for hotspot: {area}")
+            # Fetch current weather data for this location
+            print(f"Fetching current weather data for hotspot: {area}")
             weather_data = fetch_weather_data(feature["geometry"]["y"], feature["geometry"]["x"], current_date)
             
             # Ensure weather data has valid values
@@ -487,8 +413,8 @@ def process_api_3(response_json, x_target=101.653045, y_target=3.122496, toleran
 
         if (x_target - tolerance <= centroid_x <= x_target + tolerance) and (y_target - tolerance <= centroid_y <= y_target + tolerance):
             
-            # Fetch weather data for this location and date
-            print(f"Fetching weather data for active area: {location}")
+            # Fetch current weather data for this location
+            print(f"Fetching current weather data for active area: {location}")
             weather_data = fetch_weather_data(centroid_y, centroid_x, current_date)
             
             # Ensure weather data has valid values
@@ -706,8 +632,8 @@ def backfill_weather_for_csv(file_path, lon_col="x", lat_col="y", date_col="date
         if key in weather_cache:
             weather = weather_cache[key]
         else:
-            # Use archive API for past dates backfill
-            weather = fetch_weather_data_archive(lat_val, lon_val, date_str)
+            # Use simplified forecast API for current weather data
+            weather = fetch_weather_data_simplified(lat_val, lon_val)
             weather_cache[key] = weather
             time.sleep(sleep_seconds)
 

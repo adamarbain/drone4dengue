@@ -13,41 +13,39 @@ import {
   FiActivity,
   FiUsers,
   FiCamera,
+  FiRefreshCw,
 } from "react-icons/fi"
 import { motion } from "framer-motion"
+import { useEffect, useState } from "react"
+import { useAuth } from "@/context/AuthContext"
+import { getDashboardStats, getRecentPredictions, createPrediction, reverseGeocode, DashboardStats, RecentPrediction } from "@/lib/api"
+import PredictionModal, { PredictionFormData } from "@/components/PredictionModal"
 
-const stats = [
-  {
-    label: "Risk Prediction Today",
-    value: 8,
-    icon: <FiActivity className="text-[#A21C1C]" />,
-    change: 2,
-    isIncrease: true,
-  },
-  {
-    label: "Drone Insights Uploaded",
-    value: 7,
-    icon: <FiCamera className="text-[#A21C1C]" />,
-    change: 3,
-    isIncrease: true,
-  },
-  {
-    label: "Active Users",
-    value: 20,
-    icon: <FiUsers className="text-[#A21C1C]" />,
-    change: 5,
-    isIncrease: false,
-  },
-]
+// Helper function to format date
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+};
 
-const predictions = [
-  { area: "Kuala Lumpur", date: "13/05/2022", status: "Low" },
-  { area: "Bangsar", date: "22/05/2022", status: "Low" },
-  { area: "Universiti Malaya", date: "15/06/2022", status: "Medium" },
-  { area: "Petaling Jaya", date: "06/09/2022", status: "Medium" },
-  { area: "Vista Angkasa", date: "25/09/2022", status: "High" },
-  { area: "Damansara Perdana", date: "04/10/2022", status: "High" },
-]
+// Helper: reverse geocode with simple in-memory cache per session
+const reverseGeocodeCache = new Map<string, string>();
+const getAreaName = async (lat: number, lon: number): Promise<string> => {
+  const key = `${lat.toFixed(5)},${lon.toFixed(5)}`;
+  if (reverseGeocodeCache.has(key)) return reverseGeocodeCache.get(key) as string;
+  try {
+    const data = await reverseGeocode(lat, lon);
+    const a = data.address || {};
+    const label = a.suburb || a.town || a.village || a.city || a.neighbourhood || a.state_district || a.state || a.county || data.display_name || 'Unknown';
+    reverseGeocodeCache.set(key, label);
+    return label;
+  } catch {
+    return 'Unknown';
+  }
+};
 
 const statusColors: Record<string, string> = {
   Low: "bg-green-100 text-green-700 border-green-200",
@@ -73,6 +71,129 @@ const item = {
 }
 
 export default function DashboardPage() {
+  const { user, company, companyId } = useAuth();
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [recentPredictions, setRecentPredictions] = useState<RecentPrediction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isPredictionModalOpen, setIsPredictionModalOpen] = useState(false);
+  const [isCreatingPrediction, setIsCreatingPrediction] = useState(false);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!companyId) return;
+      
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const [stats, predictions] = await Promise.all([
+          getDashboardStats(companyId),
+          getRecentPredictions(companyId, 6)
+        ]);
+        
+        setDashboardStats(stats);
+        setRecentPredictions(predictions.predictions || []);
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        setError('Failed to load dashboard data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [companyId]);
+
+  const handleRefresh = async () => {
+    if (!companyId) return;
+    
+    setIsLoading(true);
+    try {
+      const [stats, predictions] = await Promise.all([
+        getDashboardStats(companyId),
+        getRecentPredictions(companyId, 6)
+      ]);
+      
+      setDashboardStats(stats);
+      setRecentPredictions(predictions.predictions || []);
+    } catch (err) {
+      console.error('Error refreshing dashboard data:', err);
+      setError('Failed to refresh dashboard data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreatePrediction = async (data: PredictionFormData) => {
+    setIsCreatingPrediction(true);
+    try {
+      const result = await createPrediction({
+        ...data,
+        companyId: companyId || undefined
+      });
+      
+      if (result.success) {
+        // Refresh the dashboard data to show the new prediction
+        await handleRefresh();
+        setIsPredictionModalOpen(false);
+        
+        // Show success message (you could add a toast notification here)
+        console.log('Prediction created successfully:', result.prediction);
+      } else {
+        throw new Error('Failed to create prediction');
+      }
+    } catch (err) {
+      console.error('Error creating prediction:', err);
+      setError('Failed to create prediction. Please try again.');
+    } finally {
+      setIsCreatingPrediction(false);
+    }
+  };
+
+  // Create stats array from dashboard data
+  const stats = dashboardStats ? [
+    {
+      label: "Risk Prediction Today",
+      value: dashboardStats.riskPredictionsToday,
+      icon: <FiActivity className="text-[#A21C1C]" />,
+      change: 0, // This would need historical data to calculate
+      isIncrease: true,
+    },
+    {
+      label: "Drone Insights Uploaded",
+      value: dashboardStats.droneInsightsUploaded,
+      icon: <FiCamera className="text-[#A21C1C]" />,
+      change: 0, // This would need historical data to calculate
+      isIncrease: true,
+    },
+    {
+      label: "Active Users",
+      value: dashboardStats.activeUsers,
+      icon: <FiUsers className="text-[#A21C1C]" />,
+      change: 0, // This would need historical data to calculate
+      isIncrease: false,
+    },
+  ] : [];
+
+  // Show loading state if companyId is not available
+  if (!companyId) {
+    return (
+      <div className="min-h-screen bg-[#FFF7E3] flex flex-row border-[8px] border-[#E2C275] overflow-hidden">
+        <AdminSidebar current="Dashboard" />
+        <main className="flex-1 flex flex-col">
+          <AdminHeader />
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-8 h-8 border-4 border-[#A21C1C] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading dashboard...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#FFF7E3] flex flex-row border-[8px] border-[#E2C275] overflow-hidden">
       <AdminSidebar current="Dashboard" />
@@ -82,44 +203,89 @@ export default function DashboardPage() {
         {/* Welcome & Stats */}
         <motion.section className="px-10 py-8" variants={container} initial="hidden" animate="show">
           <motion.div variants={item} className="mb-8">
-            <h1 className="text-3xl font-bold text-black mb-1">Welcome Back, Alex</h1>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#A21C1C]"></div>
-              <div className="text-lg text-gray-600">Organisation: University Malaya</div>
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-3xl font-bold text-black mb-1">
+                  Welcome Back, {user?.name || 'Admin'}
+                </h1>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[#A21C1C]"></div>
+                  <div className="text-lg text-gray-600">
+                    Organisation: {company?.name || user?.organization || 'University Malaya'}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={handleRefresh}
+                disabled={isLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-[#A21C1C] text-[#A21C1C] rounded-lg hover:bg-[#FFF7E3] transition-colors disabled:opacity-50"
+              >
+                <FiRefreshCw className={isLoading ? 'animate-spin' : ''} />
+                Refresh
+              </button>
             </div>
           </motion.div>
 
+          {error && (
+            <motion.div variants={item} className="mb-6 p-4 bg-red-100 border border-red-300 rounded-lg text-red-700">
+              {error}
+            </motion.div>
+          )}
+
           <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {stats.map((stat, idx) => (
-              <motion.div
-                key={stat.label}
-                className="bg-white rounded-xl shadow-md overflow-hidden border border-[#E2C275]/30"
-                whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(226, 194, 117, 0.2)" }}
-                transition={{ type: "spring", stiffness: 300 }}
-              >
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="p-3 bg-[#FFF7E3] rounded-lg">{stat.icon}</div>
-                    <div
-                      className={`flex items-center gap-1 text-sm ${stat.isIncrease ? "text-green-600" : "text-red-600"}`}
-                    >
-                      {stat.isIncrease ? <FiArrowUp size={14} /> : <FiArrowDown size={14} />}
-                      <span>{stat.change} from last week</span>
+            {isLoading ? (
+              // Loading skeleton
+              Array.from({ length: 3 }).map((_, idx) => (
+                <motion.div
+                  key={idx}
+                  className="bg-white rounded-xl shadow-md overflow-hidden border border-[#E2C275]/30"
+                >
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="p-3 bg-[#FFF7E3] rounded-lg w-12 h-12 animate-pulse"></div>
+                      <div className="w-20 h-4 bg-gray-200 rounded animate-pulse"></div>
                     </div>
+                    <div className="w-16 h-10 bg-gray-200 rounded animate-pulse mb-2"></div>
+                    <div className="w-24 h-4 bg-gray-200 rounded animate-pulse"></div>
                   </div>
-                  <div className="text-4xl font-bold mb-1">{stat.value}</div>
-                  <div className="text-gray-500">{stat.label}</div>
-                </div>
-                <div className={`h-1 ${idx === 0 ? "bg-red-500" : idx === 1 ? "bg-yellow-500" : "bg-green-500"}`}></div>
-              </motion.div>
-            ))}
+                  <div className="h-1 bg-gray-200"></div>
+                </motion.div>
+              ))
+            ) : (
+              stats.map((stat, idx) => (
+                <motion.div
+                  key={stat.label}
+                  className="bg-white rounded-xl shadow-md overflow-hidden border border-[#E2C275]/30"
+                  whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(226, 194, 117, 0.2)" }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                >
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="p-3 bg-[#FFF7E3] rounded-lg">{stat.icon}</div>
+                      <div
+                        className={`flex items-center gap-1 text-sm ${stat.isIncrease ? "text-green-600" : "text-red-600"}`}
+                      >
+                        {stat.isIncrease ? <FiArrowUp size={14} /> : <FiArrowDown size={14} />}
+                        <span>{stat.change} from last week</span>
+                      </div>
+                    </div>
+                    <div className="text-4xl font-bold mb-1">{stat.value}</div>
+                    <div className="text-gray-500">{stat.label}</div>
+                  </div>
+                  <div className={`h-1 ${idx === 0 ? "bg-red-500" : idx === 1 ? "bg-yellow-500" : "bg-green-500"}`}></div>
+                </motion.div>
+              ))
+            )}
           </motion.div>
 
           {/* Quick Action */}
           <motion.div variants={item} className="mb-10">
             <div className="font-bold text-xl mb-4">Quick Action</div>
             <div className="flex gap-4">
-              <button className="bg-[#A21C1C] text-white px-6 py-3 rounded-lg font-bold text-base hover:bg-[#7C1D1D] transition-all flex items-center gap-2 shadow-md hover:shadow-lg">
+              <button 
+                onClick={() => setIsPredictionModalOpen(true)}
+                className="bg-[#A21C1C] text-white px-6 py-3 rounded-lg font-bold text-base hover:bg-[#7C1D1D] transition-all flex items-center gap-2 shadow-md hover:shadow-lg"
+              >
                 <FiPlus />
                 New Risk Prediction
               </button>
@@ -145,39 +311,80 @@ export default function DashboardPage() {
                     <th className="py-4 px-6">Area</th>
                     <th className="py-4 px-6">Date</th>
                     <th className="py-4 px-6">Status</th>
+                    <th className="py-4 px-6">Risk Score</th>
                     <th className="py-4 px-6">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {predictions.map((row, idx) => (
-                    <tr
-                      key={row.area + row.date}
-                      className={`border-b border-gray-100 last:border-0 hover:bg-[#FFF7E3]/50 transition-colors ${idx % 2 === 0 ? "bg-white" : "bg-[#F9F6F2]"}`}
-                    >
-                      <td className="py-4 px-6 font-medium text-black">{row.area}</td>
-                      <td className="py-4 px-6 text-gray-600">{row.date}</td>
-                      <td className="py-4 px-6">
-                        <span
-                          className={`px-3 py-1 rounded-full text-sm font-semibold border ${statusColors[row.status]}`}
-                        >
+                  {isLoading ? (
+                    // Loading skeleton for table
+                    Array.from({ length: 3 }).map((_, idx) => (
+                      <tr key={idx} className={`border-b border-gray-100 last:border-0 ${idx % 2 === 0 ? "bg-white" : "bg-[#F9F6F2]"}`}>
+                        <td className="py-4 px-6">
+                          <div className="w-24 h-4 bg-gray-200 rounded animate-pulse"></div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="w-20 h-4 bg-gray-200 rounded animate-pulse"></div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="w-16 h-6 bg-gray-200 rounded-full animate-pulse"></div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="w-12 h-4 bg-gray-200 rounded animate-pulse"></div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex gap-2">
+                            <div className="w-8 h-8 bg-gray-200 rounded-lg animate-pulse"></div>
+                            <div className="w-8 h-8 bg-gray-200 rounded-lg animate-pulse"></div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : recentPredictions.length > 0 ? (
+                    recentPredictions.map((row, idx) => (
+                      <tr
+                        key={row.id}
+                        className={`border-b border-gray-100 last:border-0 hover:bg-[#FFF7E3]/50 transition-colors ${idx % 2 === 0 ? "bg-white" : "bg-[#F9F6F2]"}`}
+                      >
+                        <td className="py-4 px-6 font-medium text-black">
+                          {/* Show cached or async resolved area name */}
+                          <AsyncAreaName lat={row.latitude} lon={row.longitude} fallback={row.companyLocation?.name} />
+                        </td>
+                        <td className="py-4 px-6 text-gray-600">
+                          {formatDate(row.createdAt)}
+                        </td>
+                        <td className="py-4 px-6">
                           <span
-                            className={`inline-block w-2 h-2 rounded-full mr-1.5 ${row.status === "Low" ? "bg-green-500" : row.status === "Medium" ? "bg-yellow-500" : "bg-red-500"}`}
-                          ></span>
-                          {row.status}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="flex gap-2">
-                          <button className="p-2 rounded-lg hover:bg-[#FFF7E3] text-[#A21C1C]">
-                            <FiEye size={18} />
-                          </button>
-                          <button className="p-2 rounded-lg hover:bg-[#FFF7E3] text-[#A21C1C]">
-                            <FiDownload size={18} />
-                          </button>
-                        </div>
+                            className={`px-3 py-1 rounded-full text-sm font-semibold border ${statusColors[row.riskLevel?.toLowerCase() || '']}`}
+                          >
+                            <span
+                              className={`inline-block w-2 h-2 rounded-full mr-1.5 ${row.riskLevel.toLowerCase() === "low" ? "bg-green-500" : row.riskLevel?.toLowerCase() === "medium" ? "bg-yellow-500" : "bg-red-500"}`}
+                            ></span>
+                            {row.riskLevel?.toUpperCase() || 'N/A'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-gray-600">
+                          {row.riskScore.toFixed(2)}
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex gap-2">
+                            <button className="p-2 rounded-lg hover:bg-[#FFF7E3] text-[#A21C1C]">
+                              <FiEye size={18} />
+                            </button>
+                            <button className="p-2 rounded-lg hover:bg-[#FFF7E3] text-[#A21C1C]">
+                              <FiDownload size={18} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="py-8 px-6 text-center text-gray-500">
+                        No recent predictions found
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -213,6 +420,30 @@ export default function DashboardPage() {
           </motion.div>
         </motion.section>
       </main>
+
+      {/* Prediction Modal */}
+      <PredictionModal
+        isOpen={isPredictionModalOpen}
+        onClose={() => setIsPredictionModalOpen(false)}
+        onSubmit={handleCreatePrediction}
+        isLoading={isCreatingPrediction}
+      />
     </div>
   )
+}
+
+// Small helper component to render area name via reverse geocoding
+function AsyncAreaName({ lat, lon, fallback }: { lat: number; lon: number; fallback?: string }) {
+  const [name, setName] = useState<string>(fallback || '');
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      if (fallback) { setName(fallback); return; }
+      const label = await getAreaName(lat, lon);
+      if (mounted) setName(label);
+    };
+    load();
+    return () => { mounted = false; };
+  }, [lat, lon, fallback]);
+  return <>{name || 'Unknown'}</>;
 }
