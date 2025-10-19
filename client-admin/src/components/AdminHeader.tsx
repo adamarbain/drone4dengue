@@ -15,7 +15,7 @@ export default function AdminHeader() {
   const [profileError, setProfileError] = useState('');
   const [profileSuccess, setProfileSuccess] = useState('');
 
-  const API_URL = 'http://localhost:4000';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
   // Fetch user and company data on mount or when user/token/companyId changes
   useEffect(() => {

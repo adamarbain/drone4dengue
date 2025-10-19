@@ -26,7 +26,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 
 // If you see TypeScript errors for leaflet, run: npm install --save-dev @types/leaflet
 
-const API_URL = "http://localhost:4000"
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
 const statusStyles: Record<string, string> = {
   Completed: "text-green-700 bg-green-100 border-green-200",

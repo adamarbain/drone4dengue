@@ -27,7 +27,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useEffect, useState } from "react"
 import type { JSX } from "react"
 
-const API_URL = "http://localhost:4000"
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
 const statusStyles: Record<string, string> = {
   "In Progress": "text-blue-600 bg-blue-100 border-blue-200",
