@@ -20,6 +20,24 @@ prisma.$use(async (params, next) => {
     params.args.data.userId = newUserId;
   }
 
+  if (params.model === 'Drone' && params.action === 'create') {
+    const lastDrone = await prisma.drone.findFirst({
+      orderBy: { droneId: 'desc' },
+      select: { droneId: true },
+    });
+
+    let nextId = 1;
+    if (lastDrone?.droneId) {
+      const match = lastDrone.droneId.match(/DRN-(\d+)/);
+      if (match) {
+        nextId = parseInt(match[1]) + 1;
+      }
+    }
+
+    const newDroneId = `DRN-${nextId.toString().padStart(3, '0')}`;
+    params.args.data.droneId = newDroneId;
+  }
+
   return next(params);
 });
 

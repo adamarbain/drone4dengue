@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { 
   predictCompany, 
+  predictCompanyThreeModels,
+  detectBreedingAreas,
   predictPublic, 
   predictPublicEnhanced,
   getCompanyPredictions, 
@@ -99,6 +101,83 @@ const validateEnhancedPredictionInput = (req, res, next) => {
   });
 };
 
+// Three-model company prediction input validation
+const validateThreeModelPredictionInput = (req, res, next) => {
+  const { companyId, companyLocationId, lat, lon, imageIds } = req.body;
+  
+  if (!companyId) {
+    return res.status(400).json({ 
+      error: 'Company ID is required' 
+    });
+  }
+
+  if (!companyLocationId) {
+    return res.status(400).json({ 
+      error: 'Company Location ID is required' 
+    });
+  }
+  
+  // Validate coordinates
+  validatePredictionInput(req, res, (err) => {
+    if (err) return;
+    
+    // Validate imageIds if provided
+    if (imageIds && !Array.isArray(imageIds)) {
+      return res.status(400).json({ 
+        error: 'Image IDs must be an array' 
+      });
+    }
+    
+    // Validate imageIds items
+    if (imageIds) {
+      for (let i = 0; i < imageIds.length; i++) {
+        if (typeof imageIds[i] !== 'string') {
+          return res.status(400).json({ 
+            error: `Image ID ${i} must be a string` 
+          });
+        }
+      }
+    }
+    
+    next();
+  });
+};
+
+// Breeding area detection input validation
+const validateBreedingAreaDetectionInput = (req, res, next) => {
+  const { imageIds, companyId, companyLocationId } = req.body;
+  
+  if (!imageIds || !Array.isArray(imageIds) || imageIds.length === 0) {
+    return res.status(400).json({ 
+      error: 'Image IDs array is required and cannot be empty' 
+    });
+  }
+  
+  if (!companyId) {
+    return res.status(400).json({ 
+      error: 'Company ID is required' 
+    });
+  }
+  
+  // Validate imageIds items
+  for (let i = 0; i < imageIds.length; i++) {
+    if (typeof imageIds[i] !== 'string') {
+      return res.status(400).json({ 
+        error: `Image ID ${i} must be a string` 
+      });
+    }
+  }
+  
+  // Validate companyLocationId if provided
+  if (companyLocationId && typeof companyLocationId !== 'string') {
+    return res.status(400).json({ 
+      error: 'Company Location ID must be a string' 
+    });
+  }
+  
+  next();
+};
+
 // Historical data query validation
 const validateHistoricalDataQuery = (req, res, next) => {
   const { lat, lon, days_back } = req.query;
@@ -148,6 +227,17 @@ router.get('/historical-data', validateHistoricalDataQuery, getHistoricalDataEnd
 // Model 1: Uses only lat, lon  
 // Model 2: Uses lat, lon + fetches weather data automatically
 router.post('/company', checkToken, validateCompanyPredictionInput, predictCompany);
+
+// Three-model company prediction endpoint (require authentication)
+// Input: { companyId: string, companyLocationId: string, lat: number, lon: number, imageIds?: string[] }
+// Uses all three models: Historical + Weather + Breeding Area Detection
+router.post('/company/three-models', checkToken, validateThreeModelPredictionInput, predictCompanyThreeModels);
+
+// Breeding area detection endpoint (require authentication)
+// Input: { imageIds: string[], companyId: string, companyLocationId?: string }
+// Model 3 only: Breeding Area Detection from drone images
+router.post('/detect-breeding-areas', checkToken, validateBreedingAreaDetectionInput, detectBreedingAreas);
+
 router.get('/company/:companyId', checkToken, getCompanyPredictions);
 router.get('/company/:companyId/locations', checkToken, getCompanyLocations);
 

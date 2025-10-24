@@ -9,6 +9,7 @@ import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { useAuth } from "@/context/AuthContext"
 import { getCompanyPredictions, PredictionResponse, predictPublicEnhanced, getHistoricalData, HistoricalDataItem, EnhancedPredictionRequest, CompanyLocation, reverseGeocode } from "@/lib/api"
+import { getLocationImages, checkSystemHealth } from "@/lib/threeModelPredictionApi"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
 
@@ -22,6 +23,8 @@ interface PredictionData {
   riskLevel: 'high' | 'medium' | 'low'
   model1Score?: number
   model2Score?: number
+  model3Score?: number  // NEW: Breeding area detection score
+  combinedScore?: number  // NEW: Combined score from all three models
   createdAt: string
   // Enhanced features
   historicalFeatures?: {
@@ -41,6 +44,13 @@ interface PredictionData {
     has_lag_30: boolean;
   };
   model?: string;
+  // Three-model specific fields
+  breedingAreaDetections?: any[];  // NEW: Breeding area detection results
+  model3RiskLevel?: string;  // NEW: Model 3 risk level
+  imagesProcessed?: number;  // NEW: Number of images processed
+  modelsUsed?: string[];  // NEW: Which models were used
+  predictionStatus?: 'pending' | 'processing' | 'completed' | 'error';  // NEW: Prediction status
+  predictionError?: string;  // NEW: Error message if prediction failed
 }
 
 const riskLevelStyles: Record<string, string> = {
@@ -111,6 +121,9 @@ export default function PredictionAlertPage() {
   const [loadingHistoricalData, setLoadingHistoricalData] = useState(false)
   const [enhancedPredictionMode, setEnhancedPredictionMode] = useState<'combined' | 'model1'>('combined')
   const [targetDate, setTargetDate] = useState('')
+  
+  // System health state
+  const [systemHealth, setSystemHealth] = useState<any>(null)
 
   // Reverse geocoding cache and helpers
   const reverseGeocodeCache = new Map<string, string>()
@@ -147,8 +160,20 @@ export default function PredictionAlertPage() {
   useEffect(() => {
     if (companyId) {
       loadPredictions()
+      checkSystemHealthStatus()
     }
   }, [companyId])
+
+  // Check system health
+  const checkSystemHealthStatus = async () => {
+    try {
+      const health = await checkSystemHealth()
+      setSystemHealth(health)
+    } catch (error) {
+      console.error('Health check failed:', error)
+    }
+  }
+
 
   const loadPredictions = async () => {
     if (!companyId) return
@@ -195,9 +220,13 @@ export default function PredictionAlertPage() {
       'Latitude': prediction.latitude,
       'Longitude': prediction.longitude,
       'Risk Level': prediction.riskLevel.toUpperCase(),
-      'Risk Score': (prediction.riskScore * 100).toFixed(1) + '%',
-      'Model 1 Score': prediction.model1Score ? (prediction.model1Score * 100).toFixed(1) + '%' : 'N/A',
-      'Model 2 Score': prediction.model2Score ? (prediction.model2Score * 100).toFixed(1) + '%' : 'N/A',
+      'Risk Score': prediction.riskScore.toFixed(3),
+      'Model 1 Score': prediction.model1Score ? prediction.model1Score.toFixed(3) : 'N/A',
+      'Model 2 Score': prediction.model2Score ? prediction.model2Score.toFixed(3) : 'N/A',
+      'Model 3 Score': prediction.model3Score ? prediction.model3Score.toFixed(3) : 'N/A',
+      'Combined Score': prediction.combinedScore ? prediction.combinedScore.toFixed(3) : 'N/A',
+      'Images Processed': prediction.imagesProcessed || 0,
+      'Models Used': prediction.modelsUsed ? prediction.modelsUsed.join(', ') : 'Standard',
       'Date': new Date(prediction.createdAt).toLocaleDateString()
     }))
     
@@ -402,6 +431,7 @@ export default function PredictionAlertPage() {
                     <th className="py-3 px-6">Risk Score</th>
                     <th className="py-3 px-6">Model Scores</th>
                     {/* <th className="py-3 px-6">Enhanced Features</th> */}
+                    <th className="py-3 px-6">Status</th>
                     <th className="py-3 px-6">Prediction Date</th>
                     <th className="py-3 px-6">Actions</th>
                   </tr>
@@ -409,7 +439,7 @@ export default function PredictionAlertPage() {
                 <tbody>
                   {filteredPredictions.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="text-center py-8 text-gray-500">
+                      <td colSpan={9} className="text-center py-8 text-gray-500">
                         {predictions.length === 0 ? "No predictions yet. Use the map above to create predictions." : "No predictions match the selected filters."}
                       </td>
                     </tr>
@@ -472,27 +502,37 @@ export default function PredictionAlertPage() {
                           <div className="space-y-1">
                             <div>Model 1: {prediction.model1Score ? prediction.model1Score.toFixed(3) : 'N/A'}</div>
                             <div>Model 2: {prediction.model2Score ? prediction.model2Score.toFixed(3) : 'N/A'}</div>
+                            {prediction.model3Score !== undefined && (
+                              <div>Model 3: {prediction.model3Score.toFixed(3)}</div>
+                            )}
+                            {prediction.combinedScore !== undefined && (
+                              <div className="font-semibold text-blue-600">Combined: {prediction.combinedScore.toFixed(3)}</div>
+                            )}
                           </div>
                         </td>
-                        {/* <td className="py-3 px-6 text-sm">
-                          <div className="space-y-1">
-                            {prediction.isHotspot !== undefined && (
-                              <div className={`px-2 py-1 rounded text-xs ${prediction.isHotspot ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
-                                {prediction.isHotspot ? 'Hotspot' : 'Normal'}
-                              </div>
-                            )}
-                            {prediction.dataQuality && (
-                              <div className="text-xs text-gray-600">
-                                Data: {prediction.dataQuality.data_points_available} pts
-                              </div>
-                            )}
-                            {prediction.model && (
-                              <div className="text-xs text-blue-600">
-                                {prediction.model}
-                              </div>
-                            )}
-                          </div>
-                        </td> */}
+                        <td className="py-3 px-6">
+                          {prediction.predictionStatus ? (
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                              prediction.predictionStatus === 'completed' ? 'bg-green-100 text-green-700' :
+                              prediction.predictionStatus === 'processing' ? 'bg-blue-100 text-blue-700' :
+                              prediction.predictionStatus === 'error' ? 'bg-red-100 text-red-700' :
+                              'bg-yellow-100 text-yellow-700'
+                            }`}>
+                              {prediction.predictionStatus === 'processing' ? 'Processing...' : 
+                               prediction.predictionStatus === 'completed' ? 'Completed' :
+                               prediction.predictionStatus === 'error' ? 'Error' : 'Pending'}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+                              Completed
+                            </span>
+                          )}
+                          {prediction.predictionError && (
+                            <div className="text-xs text-red-600 mt-1">
+                              {prediction.predictionError}
+                            </div>
+                          )}
+                        </td>
                         <td className="py-3 px-6 text-black">{new Date(prediction.createdAt).toLocaleDateString()}</td>
                         <td className="py-3 px-6">
                           <div className="flex gap-2">
@@ -557,6 +597,29 @@ export default function PredictionAlertPage() {
                   <div><span className="font-semibold">Risk Score:</span> {showDetails.riskScore.toFixed(3)}</div>
                   <div><span className="font-semibold">Model 1 Score:</span> {showDetails.model1Score ? showDetails.model1Score.toFixed(3) : 'N/A'}</div>
                   <div><span className="font-semibold">Model 2 Score:</span> {showDetails.model2Score ? showDetails.model2Score.toFixed(3) : 'N/A'}</div>
+                  {showDetails.model3Score !== undefined && (
+                    <div><span className="font-semibold">Model 3 Score:</span> {showDetails.model3Score.toFixed(3)}</div>
+                  )}
+                  {showDetails.combinedScore !== undefined && (
+                    <div><span className="font-semibold">Combined Score:</span> {showDetails.combinedScore.toFixed(3)}</div>
+                  )}
+                  {showDetails.imagesProcessed !== undefined && (
+                    <div><span className="font-semibold">Images Processed:</span> {showDetails.imagesProcessed}</div>
+                  )}
+                  {showDetails.modelsUsed && (
+                    <div><span className="font-semibold">Models Used:</span> {showDetails.modelsUsed.join(', ')}</div>
+                  )}
+                  {showDetails.breedingAreaDetections && showDetails.breedingAreaDetections.length > 0 && (
+                    <div>
+                      <span className="font-semibold">Breeding Areas Detected:</span>
+                      <div className="ml-4 mt-1 text-sm">
+                        <div>Count: {showDetails.breedingAreaDetections.length}</div>
+                        {showDetails.model3RiskLevel && (
+                          <div>Risk Level: {showDetails.model3RiskLevel}</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   {showDetails.isHotspot !== undefined && (
                     <div><span className="font-semibold">Hotspot Status:</span> 
                       <span className={`ml-2 px-2 py-1 rounded text-xs ${showDetails.isHotspot ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
@@ -737,6 +800,7 @@ export default function PredictionAlertPage() {
               </div>
             </div>
           )}
+
 
           {/* Notification Settings */}
           <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">

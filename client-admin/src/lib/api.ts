@@ -118,6 +118,30 @@ export async function predictCompany(data: PredictionRequest): Promise<Predictio
   return response.data;
 }
 
+// Three-model prediction for company (requires authentication)
+export async function predictCompanyThreeModels(data: PredictionRequest & { imageIds?: string[] }): Promise<PredictionResponse> {
+  const response = await api.post('/api/predict/company/three-models', data, {
+    timeout: 10 * 60 * 1000 // 10 minutes timeout for object detection
+  });
+  return response.data;
+}
+
+// Get images for a company location
+export async function getLocationImages(companyId: string, companyLocationId: string): Promise<{
+  success: boolean;
+  images: Array<{
+    id: string;
+    filename: string;
+    url: string;
+    createdAt: string;
+    companyId: string;
+    companyLocationId: string;
+  }>;
+}> {
+  const response = await api.get(`/drones/locations/${companyLocationId}/images`);
+  return response.data;
+}
+
 // Public prediction (no authentication required)
 export async function predictPublic(data: Omit<PredictionRequest, 'companyId'>): Promise<PredictionResponse> {
   const response = await api.post('/api/predict/public', data);

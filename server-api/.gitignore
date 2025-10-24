@@ -7,3 +7,4 @@ node_modules
 /prisma/generated
 /node_modules
 package-lock.json
+uploads
