@@ -57,6 +57,86 @@ try {
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:5001';
 
 /**
+ * Get dengue risk prediction from ML service using all three models
+ * @param {number} latitude - Latitude coordinate
+ * @param {number} longitude - Longitude coordinate
+ * @param {Object} weatherData - Optional weather data
+ * @param {Array} historicalData - Optional historical cases data
+ * @param {string} targetDate - Optional target date (YYYY-MM-DD)
+ * @param {Array} imageUrls - Optional array of drone image URLs for breeding area detection
+ * @returns {Promise<Object>} Three-model prediction result
+ */
+async function getMLThreeModelPrediction(latitude, longitude, weatherData = null, historicalData = null, targetDate = null, imageUrls = null) {
+  try {
+    const payload = {
+      latitude,
+      longitude
+    };
+
+    // Add optional parameters if provided
+    if (weatherData) {
+      payload.weather_data = weatherData;
+    }
+    if (historicalData) {
+      payload.historical_cases_data = historicalData;
+    }
+    if (targetDate) {
+      payload.target_date = targetDate;
+    }
+    if (imageUrls && imageUrls.length > 0) {
+      payload.image_urls = imageUrls;
+    }
+
+    const response = await axios.post(`${ML_SERVICE_URL}/predict/three-models`, payload, {
+      timeout: 60000 // 60 second timeout for image processing
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('ML Three-Model Service Error:', error.message);
+    if (error.code === 'ECONNREFUSED') {
+      throw new Error('ML service is not running or not accessible');
+    } else if (error.code === 'ETIMEDOUT') {
+      throw new Error('ML service request timed out - service may be overloaded');
+    } else if (error.response) {
+      throw new Error(`ML service returned error: ${error.response.status} - ${error.response.data?.error || 'Unknown error'}`);
+    } else {
+      throw new Error('Three-model prediction service unavailable');
+    }
+  }
+}
+
+/**
+ * Get breeding area detection from ML service
+ * @param {Array} imageUrls - Array of drone image URLs
+ * @returns {Promise<Object>} Breeding area detection result
+ */
+async function getMLBreedingAreaDetection(imageUrls) {
+  try {
+    const payload = {
+      image_urls: imageUrls
+    };
+
+    const response = await axios.post(`${ML_SERVICE_URL}/detect-breeding-areas`, payload, {
+      timeout: 60000 // 60 second timeout for image processing
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('ML Breeding Area Detection Error:', error.message);
+    if (error.code === 'ECONNREFUSED') {
+      throw new Error('ML service is not running or not accessible');
+    } else if (error.code === 'ETIMEDOUT') {
+      throw new Error('ML service request timed out - service may be overloaded');
+    } else if (error.response) {
+      throw new Error(`ML service returned error: ${error.response.status} - ${error.response.data?.error || 'Unknown error'}`);
+    } else {
+      throw new Error('Breeding area detection service unavailable');
+    }
+  }
+}
+
+/**
  * Get dengue risk prediction from ML service
  * @param {number} latitude - Latitude coordinate
  * @param {number} longitude - Longitude coordinate
@@ -228,6 +308,283 @@ function validateCoordinates(latitude, longitude) {
   
   if (longitude < -180 || longitude > 180) {
     throw new Error('Longitude must be between -180 and 180');
+  }
+}
+
+/**
+ * Three-model company prediction endpoint
+ * POST /api/predict/company/three-models
+ */
+async function predictCompanyThreeModels(req, res) {
+  try {
+    const { companyId, companyLocationId, lat, lon, imageIds } = req.body;
+
+    // Validate input
+    if (!companyId) {
+      return res.status(400).json({ error: 'Company ID is required' });
+    }
+
+    if (!companyLocationId) {
+      return res.status(400).json({ error: 'Company Location ID is required' });
+    }
+
+    validateCoordinates(lat, lon);
+
+    // Verify company exists
+    const company = await prisma.company.findUnique({
+      where: { id: companyId }
+    });
+
+    if (!company) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
+
+    // Verify company location exists and belongs to the company
+    const companyLocation = await prisma.companyLocation.findFirst({
+      where: { 
+        id: companyLocationId,
+        companyId: companyId,
+        isActive: true
+      }
+    });
+
+    if (!companyLocation) {
+      return res.status(404).json({ error: 'Company location not found or does not belong to the specified company' });
+    }
+
+    // Get drone images for this location if imageIds are provided
+    let imageUrls = [];
+    if (imageIds && imageIds.length > 0) {
+      const images = await prisma.image.findMany({
+        where: {
+          id: { in: imageIds },
+          companyId: companyId,
+          companyLocationId: companyLocationId
+        },
+        select: {
+          id: true,
+          url: true,
+          filename: true
+        }
+      });
+
+      // Convert relative URLs to absolute URLs (or use Firebase URLs as-is)
+      imageUrls = images.map(img => {
+        // If URL is already a Firebase URL (absolute), use it directly
+        if (img.url && (img.url.startsWith('http://') || img.url.startsWith('https://'))) {
+          return img.url;
+        }
+        // Otherwise, assume it's a relative URL and prepend API base URL
+        const baseUrl = process.env.API_BASE_URL || 'http://localhost:4000';
+        return `${baseUrl}${img.url}`;
+      });
+    }
+
+    // Get three-model prediction from ML service
+    const mlResult = await getMLThreeModelPrediction(lat, lon, null, null, null, imageUrls);
+    
+    if (!mlResult.success) {
+      return res.status(500).json({ error: 'Three-model prediction failed' });
+    }
+
+    const prediction = mlResult.prediction;
+
+    // Store prediction in database
+    const companyPrediction = await prisma.companyPrediction.create({
+      data: {
+        companyId,
+        companyLocationId,
+        latitude: lat,
+        longitude: lon,
+        riskScore: prediction.combined_score,
+        model1Score: prediction.model1_score,
+        model2Score: prediction.model2_score,
+        model3Score: prediction.model3_score,
+        combinedScore: prediction.combined_score
+      },
+      include: {
+        companyLocation: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+            latitude: true,
+            longitude: true
+          }
+        }
+      }
+    });
+
+    // Store breeding area detection results if available
+    let breedingAreaDetections = [];
+    if (prediction.breeding_area_detections && prediction.breeding_area_detections.length > 0) {
+      // Get the images that were processed
+      const processedImages = await prisma.image.findMany({
+        where: {
+          id: { in: imageIds },
+          companyId: companyId,
+          companyLocationId: companyLocationId
+        }
+      });
+
+      // Create breeding area detection records
+      for (const image of processedImages) {
+        const detection = await prisma.breedingAreaDetection.create({
+          data: {
+            imageId: image.id,
+            companyId: companyId,
+            companyLocationId: companyLocationId,
+            breedingAreaScore: prediction.model3_score,
+            detectedObjects: prediction.breeding_area_detections,
+            boundingBoxes: prediction.breeding_area_detections.map(d => d.bbox),
+            riskLevel: prediction.model3_risk_level,
+            processingStatus: 'completed',
+            processedAt: new Date()
+          }
+        });
+        breedingAreaDetections.push(detection);
+      }
+    }
+
+    res.json({
+      success: true,
+      prediction: {
+        id: companyPrediction.id,
+        companyId,
+        companyLocationId,
+        companyLocation: companyPrediction.companyLocation,
+        latitude: lat,
+        longitude: lon,
+        riskScore: prediction.combined_score,
+        riskLevel: prediction.risk_level,
+        model1Score: prediction.model1_score,
+        model2Score: prediction.model2_score,
+        model3Score: prediction.model3_score,
+        combinedScore: prediction.combined_score,
+        
+        // Additional three-model details
+        breedingAreaDetections: prediction.breeding_area_detections,
+        model3RiskLevel: prediction.model3_risk_level,
+        imagesProcessed: prediction.images_processed,
+        modelsUsed: prediction.models_used,
+        
+        // Breeding area detection records
+        breedingAreaDetectionRecords: breedingAreaDetections,
+        
+        createdAt: companyPrediction.createdAt
+      }
+    });
+
+  } catch (error) {
+    console.error('Three-model company prediction error:', error);
+    res.status(500).json({ 
+      error: error.message || 'Internal server error' 
+    });
+  }
+}
+
+/**
+ * Breeding area detection endpoint
+ * POST /api/predict/detect-breeding-areas
+ */
+async function detectBreedingAreas(req, res) {
+  try {
+    const { imageIds, companyId, companyLocationId } = req.body;
+
+    if (!imageIds || imageIds.length === 0) {
+      return res.status(400).json({ error: 'Image IDs are required' });
+    }
+
+    if (!companyId) {
+      return res.status(400).json({ error: 'Company ID is required' });
+    }
+
+    // Verify company exists
+    const company = await prisma.company.findUnique({
+      where: { id: companyId }
+    });
+
+    if (!company) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
+
+    // Get images
+    const images = await prisma.image.findMany({
+      where: {
+        id: { in: imageIds },
+        companyId: companyId,
+        ...(companyLocationId && { companyLocationId: companyLocationId })
+      },
+      select: {
+        id: true,
+        url: true,
+        filename: true,
+        companyLocationId: true
+      }
+    });
+
+    if (images.length === 0) {
+      return res.status(404).json({ error: 'No images found for the specified criteria' });
+    }
+
+    // Convert relative URLs to absolute URLs (or use Firebase URLs as-is)
+    const imageUrls = images.map(img => {
+      // If URL is already a Firebase URL (absolute), use it directly
+      if (img.url && (img.url.startsWith('http://') || img.url.startsWith('https://'))) {
+        return img.url;
+      }
+      // Otherwise, assume it's a relative URL and prepend API base URL
+      const baseUrl = process.env.API_BASE_URL || 'http://localhost:4000';
+      return `${baseUrl}${img.url}`;
+    });
+
+    // Get breeding area detection from ML service
+    const mlResult = await getMLBreedingAreaDetection(imageUrls);
+    
+    if (!mlResult.success) {
+      return res.status(500).json({ error: 'Breeding area detection failed' });
+    }
+
+    // Store detection results in database
+    const breedingAreaDetections = [];
+    for (const image of images) {
+      const detection = await prisma.breedingAreaDetection.create({
+        data: {
+          imageId: image.id,
+          companyId: companyId,
+          companyLocationId: image.companyLocationId,
+          breedingAreaScore: mlResult.breeding_area_score,
+          detectedObjects: mlResult.detections,
+          boundingBoxes: mlResult.detections.map(d => d.bbox),
+          riskLevel: mlResult.risk_level,
+          processingStatus: 'completed',
+          processedAt: new Date()
+        }
+      });
+      breedingAreaDetections.push(detection);
+    }
+
+    res.json({
+      success: true,
+      detection: {
+        breedingAreaScore: mlResult.breeding_area_score,
+        riskLevel: mlResult.risk_level,
+        detections: mlResult.detections,
+        detectionCount: mlResult.detection_count,
+        imagesProcessed: mlResult.images_processed,
+        totalImages: mlResult.total_images,
+        recommendations: mlResult.recommendations,
+        errors: mlResult.errors,
+        breedingAreaDetectionRecords: breedingAreaDetections,
+        timestamp: mlResult.timestamp
+      }
+    });
+
+  } catch (error) {
+    console.error('Breeding area detection error:', error);
+    res.status(500).json({ 
+      error: error.message || 'Internal server error' 
+    });
   }
 }
 
@@ -453,6 +810,7 @@ async function getCompanyPredictions(req, res) {
         riskLevel: p.riskScore >= 3 ? 'high' : p.riskScore >= 1 ? 'medium' : 'low',
         model1Score: p.model1Score,
         model2Score: p.model2Score,
+        model3Score: p.model3Score,
         createdAt: p.createdAt
       }))
     });
@@ -710,6 +1068,8 @@ async function healthCheck(req, res) {
 
 module.exports = {
   predictCompany,
+  predictCompanyThreeModels,
+  detectBreedingAreas,
   predictPublic,
   predictPublicEnhanced,
   getCompanyPredictions,

@@ -26,8 +26,10 @@ model Company {
   users       User[]
   locations   CompanyLocation[]
   drones      Drone[]
+  images      Image[]
   reports     Report[]
   predictions CompanyPrediction[]
+  breedingAreaDetections BreedingAreaDetection[]
   // alerts      Alert[]
   // recommendations Recommendation[]
 }
@@ -47,6 +49,9 @@ model CompanyLocation {
   // Relations
   weather     Weather[]
   predictions CompanyPrediction[]
+  drones      Drone[]
+  images      Image[]
+  breedingAreaDetections BreedingAreaDetection[]
 
   @@unique([name, companyId])
 }
@@ -79,23 +84,58 @@ model User {
 }
 
 model Drone {
-  id        String   @id @default(uuid())
-  name      String
-  serial    String   @unique
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id])
-  companyId String
-  company   Company  @relation(fields: [companyId], references: [id])
-  images    Image[]
-  createdAt DateTime @default(now())
+  id              String   @id @default(uuid())
+  droneId         String   @unique // Display ID like DRN-001
+  name            String
+  model           String   // Drone model (e.g., DJI Phantom 4 Pro)
+  serial          String   @unique
+  operationalArea String   // Operational area/location
+  status          String   @default("Operational") // Operational, Maintenance, Inactive
+  registrationDate DateTime @default(now())
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id])
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id])
+  companyLocationId String?
+  companyLocation CompanyLocation? @relation(fields: [companyLocationId], references: [id])
+  images          Image[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([status])
+  @@index([droneId])
+  @@index([companyLocationId])
 }
 
 model Image {
-  id        String   @id @default(uuid())
-  url       String
-  droneId   String
-  drone     Drone    @relation(fields: [droneId], references: [id])
-  createdAt DateTime @default(now())
+  id                String           @id @default(uuid())
+  url               String
+  filename          String           // Original filename
+  fileSize          Int              // File size in bytes
+  mimeType          String           // MIME type (image/jpeg, image/png, etc.)
+  width             Int?             // Image width in pixels
+  height            Int?             // Image height in pixels
+  description       String?          // Optional description
+  isProcessed       Boolean          @default(false) // Whether image has been processed for analysis
+  sourceType        String           @default("upload") // "upload" or "video_frame"
+  droneId           String
+  drone             Drone            @relation(fields: [droneId], references: [id])
+  companyId         String
+  company           Company          @relation(fields: [companyId], references: [id])
+  companyLocationId String?
+  companyLocation   CompanyLocation? @relation(fields: [companyLocationId], references: [id])
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  // Relations
+  breedingAreaDetections BreedingAreaDetection[]
+
+  @@index([droneId])
+  @@index([companyId])
+  @@index([companyLocationId])
+  @@index([isProcessed])
+  @@index([sourceType])
 }
 
 model Weather {
@@ -172,6 +212,8 @@ model CompanyPrediction {
   riskScore         Float
   model1Score       Float?          // Historical cases model score
   model2Score       Float?          // Weather-based model score
+  model3Score       Float?          // Breeding area detection model score
+  combinedScore     Float?          // Combined score from all three models
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
@@ -190,4 +232,33 @@ model PredictionLog {
 
   @@index([requestedAt])
   @@index([userId])
+}
+
+model BreedingAreaDetection {
+  id                String           @id @default(uuid())
+  imageId           String
+  image             Image            @relation(fields: [imageId], references: [id])
+  companyId         String
+  company           Company          @relation(fields: [companyId], references: [id])
+  companyLocationId String?
+  companyLocation   CompanyLocation? @relation(fields: [companyLocationId], references: [id])
+  
+  // Detection results from Roboflow API
+  breedingAreaScore Float            // Confidence score for breeding area detection (0-1)
+  detectedObjects   Json?            // Full detection results from Roboflow API
+  boundingBoxes     Json?            // Bounding boxes of detected breeding areas
+  riskLevel         String           // "high", "medium", "low" based on detection score
+  
+  // Processing metadata
+  processingStatus  String           @default("pending") // "pending", "processing", "completed", "failed"
+  errorMessage      String?
+  processedAt       DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([imageId])
+  @@index([companyId])
+  @@index([companyLocationId])
+  @@index([processingStatus])
+  @@index([riskLevel])
 }

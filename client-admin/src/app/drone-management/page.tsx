@@ -13,22 +13,24 @@ import {
   FiSettings,
   FiEye,
   FiChevronRight,
+  FiPlus,
+  FiDownload,
+  FiMap,
+  FiX,
+  FiSave,
+  FiUpload,
+  FiVideo,
+  FiClock,
+  FiCheckCircle,
+  FiAlertCircle,
 } from "react-icons/fi"
 import Image from "next/image"
 import { motion } from "framer-motion"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type { JSX } from "react"
 import { useAuth } from "@/context/AuthContext"
 
-const drones = [
-  { id: "DRN-001", date: "13/05/2022", area: "FSKTM UM", status: "Operational" },
-  { id: "DRN-002", date: "22/05/2022", area: "Dewan Tuanku Canselor", status: "Operational" },
-  { id: "DRN-003", date: "15/06/2022", area: "Menara Axis, Petaling Jaya", status: "Maintenance" },
-  { id: "DRN-004", date: "06/09/2022", area: "One Utama, Damansara Perdana", status: "Maintenance" },
-  { id: "DRN-005", date: "25/09/2022", area: "Vista Angkasa", status: "Inactive" },
-  { id: "DRN-006", date: "04/10/2022", area: "Pantai Hillpark", status: "Operational" },
-  { id: "DRN-007", date: "17/10/2022", area: "Jalan Telawi, Bangsar", status: "Operational" },
-]
+const drones: any[] = []
 
 const statusStyles: Record<string, string> = {
   Operational: "text-green-700 bg-green-100 border-green-200",
@@ -42,7 +44,20 @@ const statusIcons: Record<string, JSX.Element> = {
   Inactive: <span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-2"></span>,
 }
 
-const droneImages = ["/images/drone1.jpg", "/images/drone2.jpg", "/images/drone3.jpg"]
+// Remove hardcoded empty array - will use state instead
+
+// Helper: get token
+const getToken = () => {
+  const TOKEN = typeof window !== "undefined" ? localStorage.getItem("token") : null
+  console.log("TOKEN: ", TOKEN)
+  return TOKEN
+}
+
+const examplePhotos = [
+  { src: "/images/drone1.jpg", title: "Clear aerial view", description: "High resolution overhead shot" },
+  { src: "/images/drone2.jpg", title: "Detailed inspection", description: "Close-up monitoring" },
+  { src: "/images/drone3.jpg", title: "Wide area coverage", description: "Comprehensive surveillance" },
+]
 
 const container = {
   hidden: { opacity: 0 },
@@ -62,13 +77,393 @@ const item = {
 export default function DroneManagementPage() {
   const { companyId } = useAuth()
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedDrone, setSelectedDrone] = useState("DRN-001")
+  const [selectedDrone, setSelectedDrone] = useState("")
+  const [showAddDroneModal, setShowAddDroneModal] = useState(false)
+  const [showMapModal, setShowMapModal] = useState(false)
+  const [editingDrone, setEditingDrone] = useState<any>(null)
+  const [showImageModal, setShowImageModal] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [droneList, setDroneList] = useState(drones)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [detailsDrone, setDetailsDrone] = useState<any>(null)
+  const [editArea, setEditArea] = useState("")
+  const [showAddImagesModal, setShowAddImagesModal] = useState(false)
+  const [selectedDroneForImages, setSelectedDroneForImages] = useState<any>(null)
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [dragActive, setDragActive] = useState(false)
+  const [isProcessingVideo, setIsProcessingVideo] = useState(false)
+  const [processingProgress, setProcessingProgress] = useState(0)
+  const [extractedFrames, setExtractedFrames] = useState<string[]>([])
+  const [companyLocations, setCompanyLocations] = useState<any[]>([])
+  const [showNewLocationModal, setShowNewLocationModal] = useState(false)
+  const [newLocation, setNewLocation] = useState({ name: '', address: '', latitude: '', longitude: '' })
+  const [droneFormData, setDroneFormData] = useState({
+    name: '',
+    model: '',
+    serial: '',
+    operationalArea: '',
+    status: 'Operational',
+    companyLocationId: ''
+  })
+  const [loadingLocations, setLoadingLocations] = useState(false)
+  const [isCreatingDrone, setIsCreatingDrone] = useState(false)
+  const [droneImages, setDroneImages] = useState<any[]>([])
+  const [loadingImages, setLoadingImages] = useState(false)
 
-  const filteredDrones = drones.filter(
+  // Helper function to get image URL (handles both Firebase URLs and legacy local paths)
+  const getImageUrl = (image: any): string => {
+    if (image.url) {
+      // If URL is already absolute (Firebase URL), use it directly
+      if (image.url.startsWith('http://') || image.url.startsWith('https://')) {
+        return image.url
+      }
+      // Legacy local path - construct absolute URL
+      return `http://localhost:4000${image.url}`
+    }
+    // Fallback: construct from filename (legacy support)
+    return `http://localhost:4000/uploads/drones/${image.filename}`
+  }
+
+  const filteredDrones = droneList.filter(
     (drone) =>
       drone.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       drone.area.toLowerCase().includes(searchTerm.toLowerCase()),
   )
+
+  // Fetch company locations and drones on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        await Promise.all([
+          fetchCompanyLocations(),
+          fetchAllDrones().then(drones => {
+            const mappedDrones = drones.map((drone: any) => ({
+              id: drone.id,
+              name: drone.name,
+              model: drone.model,
+              serial: drone.serial,
+              area: drone.operationalArea,
+              date: new Date(drone.createdAt).toLocaleDateString(),
+              status: drone.status
+            }))
+            setDroneList(mappedDrones)
+            
+            // Set the first drone as selected if none is selected
+            if (mappedDrones.length > 0 && !selectedDrone) {
+              setSelectedDrone(mappedDrones[0].id)
+            }
+          })
+        ])
+      } catch (error) {
+        console.error('Failed to load data:', error)
+      }
+    }
+    loadData()
+  }, [])
+
+  // Fetch images when selected drone changes
+  useEffect(() => {
+    if (selectedDrone && droneList.length > 0) {
+      const loadImages = async () => {
+        const images = await fetchDroneImages(selectedDrone)
+        setDroneImages(images)
+      }
+      loadImages()
+    }
+  }, [selectedDrone, droneList])
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true)
+    } else if (e.type === "dragleave") {
+      setDragActive(false)
+    }
+  }
+
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0]
+      if (file.type.startsWith('image/')) {
+        setUploadedFile(file)
+      } else if (file.type.startsWith('video/')) {
+        setUploadedFile(file)
+      } else {
+        alert('Please upload an image or video file')
+      }
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0]
+      if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+        setUploadedFile(file)
+      } else {
+        alert('Please upload an image or video file')
+      }
+    }
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // Video processing utilities
+  const extractFramesFromVideo = async (videoFile: File, fps: number = 1): Promise<string[]> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video')
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      const frames: string[] = []
+      
+      if (!ctx) {
+        reject(new Error('Canvas context not available'))
+        return
+      }
+
+      video.onloadedmetadata = () => {
+        canvas.width = video.videoWidth
+        canvas.height = video.videoHeight
+        
+        const duration = video.duration
+        const frameInterval = 1 / fps // Extract 1 frame per second
+        let currentTime = 0
+        let frameCount = 0
+        
+        const extractFrame = () => {
+          if (currentTime >= duration) {
+            resolve(frames)
+            return
+          }
+          
+          video.currentTime = currentTime
+          
+          video.onseeked = () => {
+            try {
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+              const frameData = canvas.toDataURL('image/jpeg', 0.8)
+              frames.push(frameData)
+              frameCount++
+              
+              // Update progress
+              const progress = Math.round((currentTime / duration) * 100)
+              setProcessingProgress(progress)
+              
+              currentTime += frameInterval
+              setTimeout(extractFrame, 100) // Small delay to prevent overwhelming
+            } catch (error) {
+              reject(error)
+            }
+          }
+          
+          video.onerror = () => {
+            reject(new Error('Error seeking video'))
+          }
+        }
+        
+        extractFrame()
+      }
+      
+      video.onerror = () => {
+        reject(new Error('Error loading video'))
+      }
+      
+      video.src = URL.createObjectURL(videoFile)
+      video.load()
+    })
+  }
+
+  const uploadVideoFrames = async (frames: string[], droneId: string) => {
+    try {
+      const response = await fetch(`http://localhost:4000/drones/${droneId}/upload-frames`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getToken()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ frames })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to upload frames')
+      }
+
+      const result = await response.json()
+      return result
+    } catch (error) {
+      console.error('Upload error:', error)
+      throw error
+    }
+  }
+
+  const uploadImages = async (files: File[], droneId: string) => {
+    try {
+      const formData = new FormData()
+      files.forEach(file => {
+        formData.append('images', file)
+      })
+
+      const response = await fetch(`http://localhost:4000/drones/${droneId}/upload-images`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getToken()}`
+        },
+        body: formData
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to upload images')
+      }
+
+      const result = await response.json()
+      return result
+    } catch (error) {
+      console.error('Upload error:', error)
+      throw error
+    }
+  }
+
+  // Company location functions
+  const fetchCompanyLocations = async () => {
+    try {
+      setLoadingLocations(true)
+      console.log('Fetching company locations...')
+      
+      const response = await fetch('http://localhost:4000/drones/locations', {
+        headers: {
+          'Authorization': `Bearer ${getToken()}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const locations = await response.json()
+      console.log('Fetched locations:', locations)
+      setCompanyLocations(locations)
+      return locations
+    } catch (error) {
+      console.error('Fetch locations error:', error)
+      alert('Failed to fetch company locations. Please check your connection.')
+      throw error
+    } finally {
+      setLoadingLocations(false)
+    }
+  }
+
+  const createNewLocation = async (locationData: any) => {
+    try {
+      const response = await fetch('http://localhost:4000/drones/locations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getToken()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(locationData)
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create location')
+      }
+
+      const result = await response.json()
+      setCompanyLocations(prev => [...prev, result.location])
+      return result.location
+    } catch (error) {
+      console.error('Create location error:', error)
+      throw error
+    }
+  }
+
+  // Create new drone function
+  const createNewDrone = async (droneData: any) => {
+    try {
+      const response = await fetch('http://localhost:4000/drones/register', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getToken()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(droneData)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create drone')
+      }
+
+      const result = await response.json()
+      return result.drone
+    } catch (error) {
+      console.error('Create drone error:', error)
+      throw error
+    }
+  }
+
+  // Fetch all drones function
+  const fetchAllDrones = async () => {
+    try {
+      const response = await fetch('http://localhost:4000/drones', {
+        headers: {
+          'Authorization': `Bearer ${getToken()}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch drones')
+      }
+
+      const data = await response.json()
+      return data.drones || [] // Extract drones array from response
+    } catch (error) {
+      console.error('Fetch drones error:', error)
+      throw error
+    }
+  }
+
+  // Fetch drone images function
+  const fetchDroneImages = async (droneId: string) => {
+    try {
+      setLoadingImages(true)
+      console.log('Fetching drone images for drone:', droneId)
+      const response = await fetch(`http://localhost:4000/drones/${droneId}/images`, {
+        headers: {
+          'Authorization': `Bearer ${getToken()}`
+        }
+      })
+
+      if (!response.ok) {
+        console.error('Response not ok:', response.status, response.statusText)
+        throw new Error('Failed to fetch drone images')
+      }
+
+      const data = await response.json()
+      return data.images || []
+    } catch (error) {
+      console.error('Fetch drone images error:', error)
+      return []
+    } finally {
+      setLoadingImages(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#FFF7E3] flex flex-row  border-[8px] border-[#E2C275] overflow-hidden">
@@ -88,20 +483,20 @@ export default function DroneManagementPage() {
           {/* Drone Stats */}
           <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             {[
-              { label: "Total Drones", value: drones.length, icon: <FiCamera />, color: "bg-blue-500" },
+              { label: "Total Drones", value: droneList.length, icon: <FiCamera />, color: "bg-blue-500" },
               {
                 label: "Operational",
-                value: drones.filter((d) => d.status === "Operational").length,
+                value: droneList.filter((d) => d.status === "Operational").length,
                 icon: <FiActivity />,
                 color: "bg-green-500",
               },
               {
                 label: "Maintenance",
-                value: drones.filter((d) => d.status === "Maintenance").length,
+                value: droneList.filter((d) => d.status === "Maintenance").length,
                 icon: <FiSettings />,
                 color: "bg-yellow-500",
               },
-              { label: "Coverage Areas", value: "12", icon: <FiMapPin />, color: "bg-purple-500" },
+              { label: "Coverage Areas", value: "0", icon: <FiMapPin />, color: "bg-purple-500" },
             ].map((stat, idx) => (
               <motion.div
                 key={stat.label}
@@ -127,16 +522,32 @@ export default function DroneManagementPage() {
               <div className="bg-[#A21C1C] px-6 py-4 flex items-center gap-4">
                 <div className="font-bold text-lg text-white">Drone Fleet</div>
                 <div className="flex-1" />
-                <div className="relative">
-                  <div className="flex items-center bg-white/10 rounded-lg">
-                    <FiSearch className="ml-3 text-white" />
-                    <input
-                      type="text"
-                      placeholder="Search drones..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="bg-transparent border-none text-white placeholder-white/70 px-3 py-2 w-64 focus:outline-none"
-                    />
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={async () => {
+                      setShowAddDroneModal(true)
+                      try {
+                        await fetchCompanyLocations()
+                      } catch (error) {
+                        console.error('Failed to fetch company locations:', error)
+                      }
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors"
+                  >
+                    <FiPlus size={18} />
+                    Add Drone
+                  </button>
+                  <div className="relative">
+                    <div className="flex items-center bg-white/10 rounded-lg">
+                      <FiSearch className="ml-3 text-white" />
+                      <input
+                        type="text"
+                        placeholder="Search drones..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="bg-transparent border-none text-white placeholder-white/70 px-3 py-2 w-64 focus:outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -145,10 +556,10 @@ export default function DroneManagementPage() {
                 <table className="min-w-full">
                   <thead>
                     <tr className="text-left text-black font-semibold text-base border-b border-gray-200 bg-[#F3EAD8]">
-                      <th className="py-4 px-6">Drone ID</th>
-                      <th className="py-4 px-6">Registration Date</th>
-                      <th className="py-4 px-6">Operational Area</th>
-                      <th className="py-4 px-6">Status</th>
+                      <th className="py-4 px-6">Drone Name</th>
+                      <th className="py-4 px-6">Model</th>
+                      <th className="py-4 px-6">Registration Date <br /> Operational Area</th>
+                      <th className="py-4 px-6">Add Drone Images</th>
                       <th className="py-4 px-6">Actions</th>
                     </tr>
                   </thead>
@@ -162,37 +573,70 @@ export default function DroneManagementPage() {
                         transition={{ delay: idx * 0.1 }}
                         onClick={() => setSelectedDrone(drone.id)}
                       >
-                        <td className="py-4 px-6 font-medium flex items-center gap-3">
-                          <div className="w-10 h-10 bg-[#A21C1C]/10 rounded-lg flex items-center justify-center">
-                            <FiCamera className="text-[#A21C1C]" />
-                          </div>
-                          {drone.id}
+                        <td className="py-4 px-6 font-medium text-black">
+                          {drone.name}
                         </td>
-                        <td className="py-4 px-6 flex items-center gap-2">
-                          <FiCalendar className="text-[#A21C1C]" size={16} />
-                          {drone.date}
-                        </td>
-                        <td className="py-4 px-6 flex items-center gap-2">
-                          <FiMapPin className="text-[#A21C1C]" size={16} />
-                          {drone.area}
+                        <td className="py-4 px-6 font-medium text-gray-700">
+                          {drone.model}
                         </td>
                         <td className="py-4 px-6">
-                          <span
-                            className={`px-3 py-1 rounded-full text-sm font-medium border flex items-center w-fit ${statusStyles[drone.status]}`}
+                          <div className="flex items-center gap-2 mb-1">
+                            <FiCalendar className="text-[#A21C1C]" size={16} />
+                            <span className="text-sm">{drone.date}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <FiMapPin className="text-[#A21C1C]" size={16} />
+                            <span className="text-sm text-gray-600">{drone.area}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <button 
+                            className="flex items-center gap-2 px-4 py-2 bg-[#A21C1C] text-white rounded-lg hover:bg-[#7C1D1D] transition-colors text-sm font-medium"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedDroneForImages(drone)
+                              setShowAddImagesModal(true)
+                            }}
                           >
-                            {statusIcons[drone.status]}
-                            {drone.status}
-                          </span>
+                            <FiPlus size={16} />
+                            Add Images
+                          </button>
                         </td>
                         <td className="py-4 px-6">
                           <div className="flex gap-2">
-                            <button className="p-2 rounded-lg hover:bg-[#FFF7E3] text-[#A21C1C] transition-colors">
+                            <button 
+                              className="p-2 rounded-lg hover:bg-[#FFF7E3] text-[#A21C1C] transition-colors"
+                              title="View Details"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setDetailsDrone(drone)
+                                setShowDetailsModal(true)
+                              }}
+                            >
                               <FiEye size={18} />
                             </button>
-                            <button className="p-2 rounded-lg hover:bg-[#FFF7E3] text-[#A21C1C] transition-colors">
+                            <button 
+                              className="p-2 rounded-lg hover:bg-[#FFF7E3] text-[#A21C1C] transition-colors"
+                              title="Edit Drone"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setEditingDrone(drone)
+                                setEditArea(drone.area)
+                              }}
+                            >
                               <FiEdit2 size={18} />
                             </button>
-                            <button className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-colors">
+                            <button 
+                              className="p-2 rounded-lg hover:bg-blue-50 text-blue-500 transition-colors"
+                              title="Assign Zone"
+                              onClick={() => setShowMapModal(true)}
+                            >
+                              <FiMap size={18} />
+                            </button>
+                            <button 
+                              className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+                              title="Delete Drone"
+                            >
                               <FiTrash2 size={18} />
                             </button>
                           </div>
@@ -220,9 +664,9 @@ export default function DroneManagementPage() {
                       onChange={(e) => setSelectedDrone(e.target.value)}
                       className="px-4 py-2 bg-[#A21C1C] text-white rounded-lg font-medium text-sm"
                     >
-                      {drones.map((drone) => (
+                      {droneList.map((drone) => (
                         <option key={drone.id} value={drone.id}>
-                          {drone.id} - {drone.area}
+                          {drone.name} - {drone.area}
                         </option>
                       ))}
                     </select>
@@ -231,60 +675,876 @@ export default function DroneManagementPage() {
               </div>
 
               <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {droneImages.map((src, idx) => (
-                    <motion.div
-                      key={idx}
-                      className="group relative rounded-xl overflow-hidden shadow-md bg-gray-100"
-                      whileHover={{ y: -5 }}
-                      transition={{ type: "spring", stiffness: 300 }}
-                    >
-                      <div className="relative h-48">
-                        <Image
-                          src={src || "/placeholder.svg"}
-                          alt={`Drone capture ${idx + 1}`}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-medium">
-                          {new Date().toLocaleDateString()}
-                        </div>
-                        <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium">
-                          Capture #{idx + 1}
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button className="bg-white/90 backdrop-blur-sm p-3 rounded-full hover:bg-white transition-colors">
-                            <FiEye className="text-[#A21C1C]" size={20} />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="p-4">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <div className="font-medium text-sm">Image {idx + 1}</div>
-                            <div className="text-xs text-gray-500">Resolution: 4K</div>
+                {loadingImages ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#A21C1C] mx-auto mb-4"></div>
+                    <p className="text-gray-500">Loading images...</p>
+                  </div>
+                ) : droneImages.length > 0 ? (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {droneImages.map((image, idx) => (
+                        <motion.div
+                          key={image.id}
+                          className="group relative rounded-xl overflow-hidden shadow-md bg-gray-100"
+                          whileHover={{ y: -5 }}
+                          transition={{ type: "spring", stiffness: 300 }}
+                        >
+                          <div className="relative h-48">
+                            <Image
+                              src={getImageUrl(image) || "/placeholder.svg"}
+                              alt={`Drone capture ${idx + 1}`}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-medium">
+                              {new Date(image.createdAt).toLocaleDateString()}
+                            </div>
+                            <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium">
+                              {image.sourceType === 'video_frame' ? 'Video Frame' : 'Image'} #{idx + 1}
+                              {image.companyLocation && (
+                                <div className="text-xs text-gray-600 mt-1">
+                                  📍 {image.companyLocation.name}
+                                </div>
+                              )}
+                            </div>
+                            <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button 
+                                className="bg-white/90 backdrop-blur-sm p-3 rounded-full hover:bg-white transition-colors"
+                                onClick={() => {
+                                  setSelectedImage(getImageUrl(image))
+                                  setShowImageModal(true)
+                                }}
+                              >
+                                <FiEye className="text-[#A21C1C]" size={20} />
+                              </button>
+                              <button className="bg-white/90 backdrop-blur-sm p-3 rounded-full hover:bg-white transition-colors">
+                                <FiDownload className="text-green-600" size={20} />
+                              </button>
+                              <button className="bg-white/90 backdrop-blur-sm p-3 rounded-full hover:bg-white transition-colors">
+                                <FiTrash2 className="text-red-600" size={20} />
+                              </button>
+                            </div>
                           </div>
-                          <button className="text-[#A21C1C] hover:bg-[#FFF7E3] p-2 rounded-lg transition-colors">
-                            <FiChevronRight size={16} />
-                          </button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
+                          <div className="p-4">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <div className="font-medium text-sm">{image.filename}</div>
+                                <div className="text-xs text-gray-500">
+                                  {image.sourceType === 'video_frame' ? 'Extracted from video' : 'Direct upload'}
+                                </div>
+                                {image.companyLocation && (
+                                  <div className="text-xs text-blue-600 mt-1">
+                                    📍 {image.companyLocation.name}
+                                    {image.companyLocation.address && ` - ${image.companyLocation.address}`}
+                                  </div>
+                                )}
+                                {image.company && (
+                                  <div className="text-xs text-gray-400 mt-1">
+                                    🏢 {image.company.name}
+                                  </div>
+                                )}
+                              </div>
+                              <button className="text-[#A21C1C] hover:bg-[#FFF7E3] p-2 rounded-lg transition-colors">
+                                <FiChevronRight size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
 
-                <div className="flex justify-center mt-6">
-                  <button className="flex items-center gap-2 px-6 py-3 bg-[#A21C1C] text-white rounded-lg font-medium hover:bg-[#7C1D1D] transition-colors">
-                    Load More Images
-                    <FiChevronRight />
-                  </button>
-                </div>
+                    <div className="flex justify-center mt-6">
+                      <button className="flex items-center gap-2 px-6 py-3 bg-[#A21C1C] text-white rounded-lg font-medium hover:bg-[#7C1D1D] transition-colors">
+                        Load More Images
+                        <FiChevronRight />
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-12">
+                    <FiCamera className="text-gray-400 mx-auto mb-4" size={48} />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Images Available</h3>
+                    <p className="text-gray-500 mb-4">No drone images have been uploaded yet.</p>
+                    <p className="text-sm text-gray-400">Use the "Add Images" button above to upload drone footage or images.</p>
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>
         </motion.section>
       </main>
+
+      {/* Drone Details Modal */}
+      {showDetailsModal && detailsDrone && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="bg-[#A21C1C] px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Drone Details</h2>
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-[#F9F6F2] p-4 rounded-lg">
+                  <div className="text-sm text-gray-500">Drone ID</div>
+                  <div className="font-semibold">{detailsDrone.id}</div>
+                </div>
+                <div className="bg-[#F9F6F2] p-4 rounded-lg">
+                  <div className="text-sm text-gray-500">Model</div>
+                  <div className="font-semibold">{detailsDrone.model}</div>
+                </div>
+                <div className="bg-[#F9F6F2] p-4 rounded-lg">
+                  <div className="text-sm text-gray-500">Registration Date</div>
+                  <div className="font-semibold">{detailsDrone.date}</div>
+                </div>
+                <div className="bg-[#F9F6F2] p-4 rounded-lg">
+                  <div className="text-sm text-gray-500">Operational Area</div>
+                  <div className="font-semibold">{detailsDrone.area}</div>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                  <FiCamera className="text-[#A21C1C]" /> Images for {detailsDrone.id}
+                </h3>
+                {droneImages.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {droneImages.map((image, idx) => (
+                      <div key={image.id} className="relative h-36 rounded-lg overflow-hidden bg-gray-100 group">
+                        <Image 
+                          src={getImageUrl(image)} 
+                          alt={`Image ${idx + 1}`} 
+                          fill 
+                          className="object-cover" 
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white p-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="font-medium">{image.filename}</div>
+                          {image.companyLocation && (
+                            <div className="text-blue-300">📍 {image.companyLocation.name}</div>
+                          )}
+                          <div className="text-gray-300">
+                            {image.sourceType === 'video_frame' ? 'Video Frame' : 'Direct Upload'}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <FiCamera className="text-gray-400 mx-auto mb-2" size={32} />
+                    <p className="text-gray-500">No images available for this drone</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Edit Drone Modal */}
+      {editingDrone && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4"
+          >
+            <div className="bg-[#A21C1C] px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Edit Drone</h2>
+              <button
+                onClick={() => setEditingDrone(null)}
+                className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Drone ID</label>
+                <input
+                  disabled
+                  value={editingDrone.id}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-600"
+                />
+              </div>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Operational Area</label>
+                <input
+                  value={editArea}
+                  onChange={(e) => setEditArea(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                  placeholder="Enter operational area"
+                />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setEditingDrone(null)}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setDroneList((prev) => prev.map((d) => d.id === editingDrone.id ? { ...d, area: editArea } : d))
+                    setEditingDrone(null)
+                  }}
+                  className="flex items-center gap-2 px-6 py-2 bg-[#A21C1C] text-white rounded-lg hover:bg-[#7C1D1D] transition-colors"
+                >
+                  <FiSave size={18} />
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+      {/* Add Drone Modal */}
+      {showAddDroneModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="bg-[#A21C1C] px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Add New Drone</h2>
+              <button
+                onClick={() => setShowAddDroneModal(false)}
+                className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+            <div className="p-6">
+              <form 
+                className="space-y-4"
+                onSubmit={async (e) => {
+                  e.preventDefault()
+                  
+                  // Validate required fields
+                  if (!droneFormData.name || !droneFormData.model || !droneFormData.serial || !droneFormData.operationalArea) {
+                    alert('Please fill in all required fields')
+                    return
+                  }
+                  
+                  setIsCreatingDrone(true)
+                  
+                  try {
+                    const newDrone = await createNewDrone(droneFormData)
+                    
+                    // Add the new drone to the list
+                    setDroneList(prev => [...prev, {
+                      id: newDrone.id,
+                      name: newDrone.name,
+                      model: newDrone.model,
+                      serial: newDrone.serial,
+                      area: newDrone.operationalArea,
+                      date: new Date(newDrone.createdAt).toLocaleDateString(),
+                      status: newDrone.status
+                    }])
+                    
+                    // Reset form and close modal
+                    setDroneFormData({
+                      name: '',
+                      model: '',
+                      serial: '',
+                      operationalArea: '',
+                      status: 'Operational',
+                      companyLocationId: ''
+                    })
+                    setShowAddDroneModal(false)
+                    
+                    alert('Drone created successfully!')
+                  } catch (error: any) {
+                    alert(`Failed to create drone: ${error.message}`)
+                  } finally {
+                    setIsCreatingDrone(false)
+                  }
+                }}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Drone Name</label>
+                    <input
+                      type="text"
+                      value={droneFormData.name}
+                      onChange={(e) => setDroneFormData(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                      placeholder="e.g., Drone Alpha"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Model</label>
+                    <select 
+                      value={droneFormData.model}
+                      onChange={(e) => setDroneFormData(prev => ({ ...prev, model: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                    >
+                      <option value="">Select Model</option>
+                      <option value="DJI Phantom 4 Pro">DJI Phantom 4 Pro</option>
+                      <option value="DJI Mavic Air 2">DJI Mavic Air 2</option>
+                      <option value="DJI Mini 3 Pro">DJI Mini 3 Pro</option>
+                      <option value="DJI Air 2S">DJI Air 2S</option>
+                      <option value="DJI Mavic 3">DJI Mavic 3</option>
+                      <option value="DJI Mini 2">DJI Mini 2</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Serial Number</label>
+                    <input
+                      type="text"
+                      value={droneFormData.serial}
+                      onChange={(e) => setDroneFormData(prev => ({ ...prev, serial: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                      placeholder="e.g., SN123456789"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <select 
+                      value={droneFormData.status}
+                      onChange={(e) => setDroneFormData(prev => ({ ...prev, status: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                    >
+                      <option value="Operational">Operational</option>
+                      <option value="Maintenance">Maintenance</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Operational Area</label>
+                  <input
+                    type="text"
+                    value={droneFormData.operationalArea}
+                    onChange={(e) => setDroneFormData(prev => ({ ...prev, operationalArea: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                    placeholder="e.g., Kuala Lumpur City Center"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Company Location (Optional)</label>
+                  <div className="flex gap-2">
+                    <select 
+                      value={droneFormData.companyLocationId}
+                      onChange={(e) => setDroneFormData(prev => ({ ...prev, companyLocationId: e.target.value }))}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                      disabled={loadingLocations}
+                    >
+                      <option value="">No specific location</option>
+                      {loadingLocations ? (
+                        <option value="" disabled>Loading locations...</option>
+                      ) : companyLocations.length === 0 ? (
+                        <option value="" disabled>No locations available</option>
+                      ) : (
+                        companyLocations.map((location) => (
+                          <option key={location.id} value={location.id}>
+                            {location.name} {location.address && `- ${location.address}`}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setShowNewLocationModal(true)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      disabled={loadingLocations}
+                    >
+                      <FiPlus size={16} />
+                    </button>
+                  </div>
+                  {companyLocations.length === 0 && !loadingLocations && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      No company locations found. Click the + button to create one.
+                    </p>
+                  )}
+                </div>
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddDroneModal(false)}
+                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isCreatingDrone}
+                    className={`flex items-center gap-2 px-6 py-2 bg-[#A21C1C] text-white rounded-lg hover:bg-[#7C1D1D] transition-colors ${isCreatingDrone ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <FiSave size={18} />
+                    {isCreatingDrone ? 'Creating...' : 'Add Drone'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Map Assignment Modal */}
+      {showMapModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="bg-[#A21C1C] px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Assign Drone to Monitoring Zone</h2>
+              <button
+                onClick={() => setShowMapModal(false)}
+                className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="mb-4">
+                <p className="text-gray-600 mb-4">Select a monitoring zone on the map to assign the drone:</p>
+                <div className="bg-gray-100 rounded-lg h-96 flex items-center justify-center">
+                  <div className="text-center">
+                    <FiMap className="text-gray-400 mx-auto mb-2" size={48} />
+                    <p className="text-gray-500">Interactive Map Component</p>
+                    <p className="text-sm text-gray-400">Map integration will be implemented here</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowMapModal(false)}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button className="flex items-center gap-2 px-6 py-2 bg-[#A21C1C] text-white rounded-lg hover:bg-[#7C1D1D] transition-colors">
+                  <FiSave size={18} />
+                  Assign Zone
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Image View Modal */}
+      {showImageModal && selectedImage && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative max-w-4xl max-h-[90vh] mx-4"
+          >
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute top-4 right-4 bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-colors z-10"
+            >
+              <FiX size={24} />
+            </button>
+            <div className="flex gap-2 absolute top-4 left-4 z-10">
+              <button className="bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-colors">
+                <FiDownload size={20} />
+              </button>
+              <button className="bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-colors">
+                <FiTrash2 size={20} />
+              </button>
+            </div>
+            <Image
+              src={selectedImage}
+              alt="Drone capture"
+              width={800}
+              height={600}
+              className="rounded-lg object-contain max-h-[80vh]"
+            />
+          </motion.div>
+        </div>
+      )}
+
+      {/* Add Images Modal */}
+      {showAddImagesModal && selectedDroneForImages && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="bg-[#A21C1C] px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Add Drone Images - {selectedDroneForImages.id}</h2>
+              <button
+                onClick={() => {
+                  setShowAddImagesModal(false)
+                  setSelectedDroneForImages(null)
+                  setUploadedFile(null)
+                }}
+                className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* Media Requirements */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                  <FiAlertCircle className="text-blue-600" />
+                  Media Requirements
+                </h3>
+                <div className="space-y-2 text-sm text-blue-800">
+                  <div className="flex items-center gap-2">
+                    <FiVideo className="text-blue-600" />
+                    <span>Videos: Must not be longer than 5 minutes (50MB max)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FiCamera className="text-blue-600" />
+                    <span>Images: Direct upload (JPEG, PNG, GIF supported)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FiClock className="text-blue-600" />
+                    <span>Video processing: Extracts 1 frame per second automatically</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FiCheckCircle className="text-blue-600" />
+                    <span>Supported formats: MP4, MOV, AVI, MKV, JPEG, PNG, GIF</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Upload Area */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Upload Drone Media</h3>
+                <div
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                    dragActive 
+                      ? 'border-[#A21C1C] bg-[#A21C1C]/5' 
+                      : 'border-gray-300 hover:border-[#A21C1C]/50'
+                  }`}
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                >
+                  {uploadedFile ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-center">
+                        {uploadedFile.type.startsWith('video/') ? (
+                          <FiVideo className="text-[#A21C1C]" size={48} />
+                        ) : (
+                          <FiCamera className="text-[#A21C1C]" size={48} />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{uploadedFile.name}</p>
+                        <p className="text-sm text-gray-500">
+                          {formatFileSize(uploadedFile.size)} • {uploadedFile.type.startsWith('video/') ? 'Video file' : 'Image file'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setUploadedFile(null)
+                          setExtractedFrames([])
+                          setProcessingProgress(0)
+                        }}
+                        className="text-red-600 hover:text-red-700 text-sm font-medium"
+                      >
+                        Remove file
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-center">
+                        <FiUpload className="text-gray-400" size={48} />
+                      </div>
+                      <div>
+                        <p className="text-lg font-medium text-gray-900">Drop your drone media here</p>
+                        <p className="text-sm text-gray-500">Images or videos • Click to browse files</p>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*,video/*"
+                        onChange={handleFileInput}
+                        className="hidden"
+                        id="media-upload"
+                      />
+                      <label
+                        htmlFor="media-upload"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#A21C1C] text-white rounded-lg hover:bg-[#7C1D1D] transition-colors cursor-pointer"
+                      >
+                        <FiUpload size={16} />
+                        Choose Media File
+                      </label>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Video Processing Section */}
+              {uploadedFile && uploadedFile.type.startsWith('video/') && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-blue-900 mb-3">Video Processing</h4>
+                  {isProcessingVideo ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-full bg-blue-200 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${processingProgress}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-sm text-blue-700 font-medium">{processingProgress}%</span>
+                      </div>
+                      <p className="text-sm text-blue-700">Extracting frames from video...</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-sm text-blue-700">
+                        Click "Process Video" to extract frames at 1 frame per second
+                      </p>
+                      <button
+                        onClick={async () => {
+                          if (!uploadedFile || !selectedDroneForImages) return
+                          
+                          setIsProcessingVideo(true)
+                          setProcessingProgress(0)
+                          
+                          try {
+                            const frames = await extractFramesFromVideo(uploadedFile, 1)
+                            setExtractedFrames(frames)
+                            
+                            // Upload frames to backend
+                            await uploadVideoFrames(frames, selectedDroneForImages.id)
+                            
+                            // Refresh images for the selected drone
+                            const updatedImages = await fetchDroneImages(selectedDroneForImages.id)
+                            setDroneImages(updatedImages)
+                            
+                            alert(`Successfully processed ${frames.length} frames from video!`)
+                            setUploadedFile(null)
+                            setExtractedFrames([])
+                          } catch (error) {
+                            console.error('Video processing error:', error)
+                            alert('Failed to process video. Please try again.')
+                          } finally {
+                            setIsProcessingVideo(false)
+                            setProcessingProgress(0)
+                          }
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <FiVideo size={16} />
+                        Process Video
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Image Upload Section */}
+              {uploadedFile && uploadedFile.type.startsWith('image/') && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-green-900 mb-3">Image Upload</h4>
+                  <p className="text-sm text-green-700 mb-3">
+                    Ready to upload this image directly to the drone
+                  </p>
+                  <button
+                    onClick={async () => {
+                      if (!uploadedFile || !selectedDroneForImages) return
+                      
+                      try {
+                        await uploadImages([uploadedFile], selectedDroneForImages.id)
+                        
+                        // Refresh images for the selected drone
+                        const updatedImages = await fetchDroneImages(selectedDroneForImages.id)
+                        setDroneImages(updatedImages)
+                        
+                        alert('Image uploaded successfully!')
+                        setUploadedFile(null)
+                      } catch (error) {
+                        console.error('Image upload error:', error)
+                        alert('Failed to upload image. Please try again.')
+                      }
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <FiCamera size={16} />
+                    Upload Image
+                  </button>
+                </div>
+              )}
+
+              {/* Example Photos */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Example Photos (What to expect)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {examplePhotos.map((photo, idx) => (
+                    <div key={idx} className="bg-gray-50 rounded-lg overflow-hidden">
+                      <div className="relative h-32">
+                        <Image
+                          src={photo.src}
+                          alt={photo.title}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="p-3">
+                        <h4 className="font-medium text-sm text-gray-900">{photo.title}</h4>
+                        <p className="text-xs text-gray-500">{photo.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Processing Info */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-medium text-gray-900 mb-2">Processing Information</h4>
+                <div className="text-sm text-gray-600 space-y-1">
+                  <p>• Videos are processed client-side using HTML5 Canvas</p>
+                  <p>• Frames are extracted at 1 frame per second for optimal analysis</p>
+                  <p>• Only extracted frames are uploaded to the server (lightweight)</p>
+                  <p>• Processing happens instantly in your browser</p>
+                  <p>• Images will be analyzed for dengue surveillance patterns</p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button
+                  onClick={() => {
+                    setShowAddImagesModal(false)
+                    setSelectedDroneForImages(null)
+                    setUploadedFile(null)
+                    setExtractedFrames([])
+                    setProcessingProgress(0)
+                    setIsProcessingVideo(false)
+                  }}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* New Location Modal */}
+      {showNewLocationModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4"
+          >
+            <div className="bg-[#A21C1C] px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Add New Location</h2>
+              <button
+                onClick={() => {
+                  setShowNewLocationModal(false)
+                  setNewLocation({ name: '', address: '', latitude: '', longitude: '' })
+                }}
+                className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+            <div className="p-6">
+              <form className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Location Name</label>
+                  <input
+                    type="text"
+                    value={newLocation.name}
+                    onChange={(e) => setNewLocation(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                    placeholder="e.g., KLCC Office"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Address (Optional)</label>
+                  <input
+                    type="text"
+                    value={newLocation.address}
+                    onChange={(e) => setNewLocation(prev => ({ ...prev, address: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                    placeholder="e.g., Jalan Ampang, Kuala Lumpur"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Latitude</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={newLocation.latitude}
+                      onChange={(e) => setNewLocation(prev => ({ ...prev, latitude: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                      placeholder="e.g., 3.1579"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Longitude</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={newLocation.longitude}
+                      onChange={(e) => setNewLocation(prev => ({ ...prev, longitude: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                      placeholder="e.g., 101.7116"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowNewLocationModal(false)
+                      setNewLocation({ name: '', address: '', latitude: '', longitude: '' })
+                    }}
+                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!newLocation.name || !newLocation.latitude || !newLocation.longitude) {
+                        alert('Please fill in all required fields')
+                        return
+                      }
+                      
+                      try {
+                        const location = await createNewLocation(newLocation)
+                        setDroneFormData(prev => ({ ...prev, companyLocationId: location.id }))
+                        setShowNewLocationModal(false)
+                        setNewLocation({ name: '', address: '', latitude: '', longitude: '' })
+                        alert('Location created successfully!')
+                      } catch (error) {
+                        alert('Failed to create location. Please try again.')
+                      }
+                    }}
+                    className="flex items-center gap-2 px-6 py-2 bg-[#A21C1C] text-white rounded-lg hover:bg-[#7C1D1D] transition-colors"
+                  >
+                    <FiSave size={18} />
+                    Create Location
+                  </button>
+                </div>
+              </form>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

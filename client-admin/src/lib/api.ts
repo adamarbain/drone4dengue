@@ -52,6 +52,9 @@ export interface PredictionResponse {
     riskLevel: 'high' | 'medium' | 'low';
     model1Score?: number;
     model2Score?: number;
+    model3Score?: number;  // Breeding area detection score (0-1 range)
+    combinedScore?: number;  // Combined score from all three models (0-5 range)
+    combinedScoreNormalized?: number;  // Combined score in 0-1 range for reference
     createdAt?: string;
     timestamp?: string;
     cached?: boolean;
@@ -73,6 +76,11 @@ export interface PredictionResponse {
       has_lag_30: boolean;
     };
     model?: string;
+    // Three-model specific fields
+    breedingAreaDetections?: any[];  // Breeding area detection results
+    model3RiskLevel?: string;  // Model 3 risk level
+    imagesProcessed?: number;  // Number of images processed
+    modelsUsed?: string[];  // Which models were used
   };
 }
 
@@ -115,6 +123,30 @@ export interface CompanyPredictionsResponse {
 // Company prediction (requires authentication)
 export async function predictCompany(data: PredictionRequest): Promise<PredictionResponse> {
   const response = await api.post('/api/predict/company', data);
+  return response.data;
+}
+
+// Three-model prediction for company (requires authentication)
+export async function predictCompanyThreeModels(data: PredictionRequest & { imageIds?: string[] }): Promise<PredictionResponse> {
+  const response = await api.post('/api/predict/company/three-models', data, {
+    timeout: 10 * 60 * 1000 // 10 minutes timeout for object detection
+  });
+  return response.data;
+}
+
+// Get images for a company location
+export async function getLocationImages(companyId: string, companyLocationId: string): Promise<{
+  success: boolean;
+  images: Array<{
+    id: string;
+    filename: string;
+    url: string;
+    createdAt: string;
+    companyId: string;
+    companyLocationId: string;
+  }>;
+}> {
+  const response = await api.get(`/drones/locations/${companyLocationId}/images`);
   return response.data;
 }
 

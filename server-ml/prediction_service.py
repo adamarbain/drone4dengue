@@ -22,6 +22,9 @@ from typing import Dict, List, Optional, Tuple
 import requests
 import math
 
+# Import the breeding area detection service
+from breeding_area_detection_service import BreedingAreaDetectionService
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -71,6 +74,9 @@ class DenguePredictionService:
         self.scaler1 = None
         self.scaler2 = None
         self.model_features = None
+        
+        # Initialize Model 3 (Breeding Area Detection)
+        self.breeding_area_service = BreedingAreaDetectionService()
         
         # Load models and scalers
         self._load_models()
@@ -495,6 +501,185 @@ class DenguePredictionService:
         
         return np.array(model1_features), np.array(model2_features)
     
+    def predict_risk_with_breeding_areas(self, latitude: float, longitude: float, 
+                                        weather_data: Optional[Dict] = None, 
+                                        historical_cases_data: Optional[List[Dict]] = None, 
+                                        target_date: Optional[datetime] = None,
+                                        image_urls: Optional[List[str]] = None) -> Dict[str, float]:
+        """
+        Predict dengue risk using all three models (Historical, Weather, and Breeding Area Detection)
+        
+        Args:
+            latitude (float): Latitude coordinate
+            longitude (float): Longitude coordinate
+            weather_data (Optional[Dict]): Weather data dictionary
+            historical_cases_data (Optional[List[Dict]]): Historical cases data for Model 1
+            target_date (Optional[datetime]): Target date for prediction
+            image_urls (Optional[List[str]]): List of drone image URLs for breeding area detection
+            
+        Returns:
+            Dict containing prediction results from all three models
+        """
+        try:
+            # Validate coordinates
+            if not (-90 <= latitude <= 90) or not (-180 <= longitude <= 180):
+                raise ValueError("Invalid coordinates")
+            
+            # Get predictions from Models 1 and 2
+            model1_model2_result = self.predict_risk(latitude, longitude, weather_data, historical_cases_data, target_date)
+            
+            # Initialize Model 3 results
+            model3_score = 0.0
+            model3_risk_level = "low"
+            breeding_area_detections = []
+            model3_error = None
+            
+            # Process breeding area detection if image URLs are provided
+            if image_urls and len(image_urls) > 0:
+                try:
+                    logger.info(f"Processing {len(image_urls)} images for breeding area detection")
+                    
+                    all_detections = []
+                    total_score = 0.0
+                    processed_images = 0
+                    
+                    for image_url in image_urls:
+                        try:
+                            detection_result = self.breeding_area_service.detect_breeding_areas_from_url(image_url)
+                            
+                            if detection_result.get('success', False):
+                                all_detections.extend(detection_result.get('detections', []))
+                                total_score += detection_result.get('breeding_area_score', 0.0)
+                                processed_images += 1
+                                
+                                logger.info(f"Processed image {image_url}: Score {detection_result.get('breeding_area_score', 0.0)}")
+                            else:
+                                logger.warning(f"Failed to process image {image_url}: {detection_result.get('error', 'Unknown error')}")
+                                
+                        except Exception as e:
+                            logger.error(f"Error processing image {image_url}: {str(e)}")
+                            continue
+                    
+                    # Calculate average Model 3 score
+                    if processed_images > 0:
+                        model3_score = total_score / processed_images
+                        
+                        # Determine risk level based on Model 3 score
+                        if model3_score >= 0.7:
+                            model3_risk_level = "high"
+                        elif model3_score >= 0.4:
+                            model3_risk_level = "medium"
+                        else:
+                            model3_risk_level = "low"
+                        
+                        breeding_area_detections = all_detections
+                        
+                        logger.info(f"Model 3 completed: {processed_images} images processed, average score: {model3_score:.3f}")
+                    else:
+                        logger.warning("No images were successfully processed for Model 3")
+                        model3_error = "No images could be processed"
+                        
+                except Exception as e:
+                    logger.error(f"Model 3 processing failed: {str(e)}")
+                    model3_error = str(e)
+            else:
+                logger.info("No image URLs provided for Model 3")
+                model3_error = "No images provided"
+            
+            # Calculate combined score from all three models
+            # Model scores from different scales:
+            # - Model 1 (Historical cases): 0-5 range
+            # - Model 2 (Weather-based): 0-5 range  
+            # - Model 3 (Breeding area detection): 0-1 range (probability)
+            
+            model1_score = model1_model2_result.get('model1_score', 0.0)
+            model2_score = model1_model2_result.get('model2_score', 0.0)
+            
+            # Normalize Model 1 and Model 2 to 0-1 range (max score is 5)
+            # Clamp to ensure values stay in [0, 1] range
+            model1_normalized = min(max(model1_score / 5.0, 0.0), 1.0)
+            model2_normalized = min(max(model2_score / 5.0, 0.0), 1.0)
+            model3_normalized = min(max(model3_score, 0.0), 1.0)  # Already 0-1, but ensure clamped
+            
+            # Weighted combination strategy:
+            # - Model 1 (40%): Historical data is most reliable predictor (based on actual case trends)
+            # - Model 2 (35%): Weather conditions are important for dengue risk but can change rapidly
+            # - Model 3 (25%): Visual breeding area detection is strong evidence but requires images
+            # 
+            # Rationale: Historical patterns (Model 1) are most predictive, but weather (Model 2) 
+            # and immediate visual evidence (Model 3) provide important context for current risk.
+            combined_score_normalized = (
+                0.35 * model1_normalized + 
+                0.30 * model2_normalized + 
+                0.35 * model3_normalized
+            )
+            
+            # Scale back to 0-5 range for consistency with two-model prediction output
+            # This maintains compatibility with existing frontend/API expectations
+            combined_score = combined_score_normalized * 5.0
+            
+            # Determine overall risk level (based on 0-5 scale)
+            # Thresholds: High >= 3.5 (0.7 normalized), Medium >= 2.0 (0.4 normalized)
+            if combined_score >= 3.5:  # >= 0.7 normalized * 5
+                overall_risk_level = "high"
+            elif combined_score >= 2.0:  # >= 0.4 normalized * 5
+                overall_risk_level = "medium"
+            else:
+                overall_risk_level = "low"
+            
+            # Prepare comprehensive result
+            result = {
+                "success": True,
+                "prediction": {
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "combined_score": round(combined_score, 5),  # Score in 0-5 range
+                    "combined_score_normalized": round(combined_score_normalized, 3),  # Score in 0-1 range for reference
+                    "risk_level": overall_risk_level,
+                    
+                    # Individual model scores
+                    "model1_score": model1_score,
+                    "model2_score": model2_score,
+                    "model3_score": model3_score,
+                    
+                    # Model 1 & 2 details
+                    "historical_features_used": model1_model2_result.get('historical_features_used'),
+                    "is_hotspot": model1_model2_result.get('is_hotspot'),
+                    "location_cluster": model1_model2_result.get('location_cluster'),
+                    
+                    # Model 3 details
+                    "breeding_area_detections": breeding_area_detections,
+                    "model3_risk_level": model3_risk_level,
+                    "model3_error": model3_error,
+                    "images_processed": len(image_urls) if image_urls else 0,
+                    
+                    # Metadata
+                    "timestamp": datetime.now().isoformat(),
+                    "models_used": ["model1_historical", "model2_weather", "model3_breeding_area"]
+                }
+            }
+            
+            logger.info(f"Three-model prediction completed: Combined score {combined_score:.3f}, Risk level: {overall_risk_level}")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Three-model prediction failed: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e),
+                "prediction": {
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "combined_score": 0.0,
+                    "risk_level": "unknown",
+                    "model1_score": 0.0,
+                    "model2_score": 0.0,
+                    "model3_score": 0.0,
+                    "timestamp": datetime.now().isoformat()
+                }
+            }
+    
     def predict_risk(self, latitude: float, longitude: float, weather_data: Optional[Dict] = None, 
                     historical_cases_data: Optional[List[Dict]] = None, target_date: Optional[datetime] = None) -> Dict[str, float]:
         """
@@ -630,6 +815,163 @@ def health_check():
         "models": status,
         "timestamp": datetime.now().isoformat()
     })
+
+@app.route('/detect-breeding-areas', methods=['POST'])
+def detect_breeding_areas():
+    """
+    Breeding area detection endpoint (Model 3 only)
+    
+    Expected JSON payload:
+    {
+        "image_urls": [
+            "https://example.com/image1.jpg",
+            "https://example.com/image2.jpg"
+        ]
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+        
+        image_urls = data.get('image_urls', [])
+        
+        if not image_urls or len(image_urls) == 0:
+            return jsonify({"error": "image_urls array is required and cannot be empty"}), 400
+        
+        # Process all images
+        all_detections = []
+        total_score = 0.0
+        processed_images = 0
+        errors = []
+        
+        for i, image_url in enumerate(image_urls):
+            try:
+                detection_result = prediction_service.breeding_area_service.detect_breeding_areas_from_url(image_url)
+                
+                if detection_result.get('success', False):
+                    all_detections.extend(detection_result.get('detections', []))
+                    total_score += detection_result.get('breeding_area_score', 0.0)
+                    processed_images += 1
+                else:
+                    errors.append(f"Image {i+1}: {detection_result.get('error', 'Unknown error')}")
+                    
+            except Exception as e:
+                errors.append(f"Image {i+1}: {str(e)}")
+                continue
+        
+        # Calculate average score
+        average_score = total_score / processed_images if processed_images > 0 else 0.0
+        
+        # Determine risk level
+        if average_score >= 0.7:
+            risk_level = "high"
+        elif average_score >= 0.4:
+            risk_level = "medium"
+        else:
+            risk_level = "low"
+        
+        # Get recommendations
+        recommendations = prediction_service.breeding_area_service.get_risk_recommendations(
+            risk_level, len(all_detections)
+        )
+        
+        result = {
+            "success": True,
+            "breeding_area_score": round(average_score, 3),
+            "risk_level": risk_level,
+            "detections": all_detections,
+            "detection_count": len(all_detections),
+            "images_processed": processed_images,
+            "total_images": len(image_urls),
+            "recommendations": recommendations,
+            "errors": errors if errors else None,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Breeding area detection endpoint error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@app.route('/predict/three-models', methods=['POST'])
+def predict_three_models():
+    """
+    Three-model prediction endpoint (Historical + Weather + Breeding Area Detection)
+    
+    Expected JSON payload:
+    {
+        "latitude": float,
+        "longitude": float,
+        "weather_data": {
+            "temperature": float,
+            "humidity": float,
+            "rainfall": float
+        } (optional - will fetch automatically if not provided),
+        "historical_cases_data": [
+            {
+                "date": "YYYY-MM-DD",
+                "cases": float
+            }
+        ] (optional - for Model 1 historical features),
+        "target_date": "YYYY-MM-DD" (optional - defaults to current date),
+        "image_urls": [
+            "https://example.com/image1.jpg",
+            "https://example.com/image2.jpg"
+        ] (optional - for Model 3 breeding area detection)
+    }
+    
+    Model 1: Historical cases prediction
+    Model 2: Weather-based prediction  
+    Model 3: Breeding area detection from drone images
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+        
+        latitude = data.get('latitude')
+        longitude = data.get('longitude')
+        weather_data = data.get('weather_data')
+        historical_cases_data = data.get('historical_cases_data')
+        target_date_str = data.get('target_date')
+        image_urls = data.get('image_urls', [])
+        
+        if latitude is None or longitude is None:
+            return jsonify({"error": "latitude and longitude are required"}), 400
+        
+        # Parse target date if provided
+        target_date = None
+        if target_date_str:
+            try:
+                target_date = datetime.strptime(target_date_str, '%Y-%m-%d')
+            except ValueError:
+                return jsonify({"error": "Invalid target_date format. Use YYYY-MM-DD"}), 400
+        
+        # Perform three-model prediction
+        result = prediction_service.predict_risk_with_breeding_areas(
+            latitude=latitude,
+            longitude=longitude,
+            weather_data=weather_data,
+            historical_cases_data=historical_cases_data,
+            target_date=target_date,
+            image_urls=image_urls
+        )
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Three-model prediction endpoint error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 @app.route('/predict', methods=['POST'])
 def predict():

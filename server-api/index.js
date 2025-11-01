@@ -5,11 +5,15 @@ const cors = require('cors');
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Increase limit for video frame uploads
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads'));
 
 // Routers (to be implemented in separate files)
 app.use('/auth', require('./routes/authRoutes'));
 app.use('/users', require('./routes/userRoutes'));
+app.use('/drones', require('./routes/droneRoutes'));
 app.use('/weather', require('./routes/admin/weatherRoutes'));
 app.use('/recommendations', require('./routes/recommendationRoutes'));
 app.use('/dengue-data', require('./routes/admin/dengueDataRoutes'));

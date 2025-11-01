@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from 'react'
-import { predictCompany, getCompanyPredictions, getCompanyLocations, checkPredictionHealth, PredictionResponse, CompanyLocation, reverseGeocode } from '@/lib/api'
+import { predictCompany, getCompanyPredictions, getCompanyLocations, checkPredictionHealth, PredictionResponse, CompanyLocation, reverseGeocode, predictCompanyThreeModels, getLocationImages } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { FiRefreshCw, FiAlertTriangle, FiCheckCircle, FiClock, FiMapPin, FiTarget } from 'react-icons/fi'
 import { ProgressModal } from '@/components/ui/progress-modal'
@@ -51,6 +51,10 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
   const [errorCount, setErrorCount] = useState(0)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
   const cancelRef = useRef(false)
+  
+  // Prediction status tracking
+  const [predictionStatuses, setPredictionStatuses] = useState<Map<string, 'pending' | 'processing' | 'completed' | 'error'>>(new Map())
+  const [predictionErrors, setPredictionErrors] = useState<Map<string, string>>(new Map())
 
   // Reverse geocoding cache and helpers
   const reverseGeocodeCache = useRef<Map<string, string>>(new Map())
@@ -197,18 +201,42 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
       setCurrentProgressIndex(i)
 
       try {
-        const response = await predictCompany({
-          companyId,
-          companyLocationId: location.id,
-          lat: location.latitude!,
-          lon: location.longitude!,
-        })
+        // Use smart prediction logic for batch processing
+        const hasImages = await checkLocationHasImages(location.id)
+        
+        let response
+        if (hasImages) {
+          // Get images for the location
+          const imagesResponse = await getLocationImages(companyId, location.id)
+          const imageIds = imagesResponse.images?.map(img => img.id) || []
+          
+          // Set status to processing for three-model prediction
+          setPredictionStatuses(prev => new Map(prev).set(location.id, 'processing'))
+          
+          // Use three-model prediction with extended timeout
+          response = await predictCompanyThreeModels({
+            companyId,
+            companyLocationId: location.id,
+            lat: location.latitude!,
+            lon: location.longitude!,
+            imageIds
+          })
+        } else {
+          // Use standard two-model prediction
+          response = await predictCompany({
+            companyId,
+            companyLocationId: location.id,
+            lat: location.latitude!,
+            lon: location.longitude!,
+          })
+        }
 
         if (response.success) {
           // Update item to completed
           setProgressItems(prev => prev.map((item, index) => 
             index === i ? { ...item, status: 'completed' } : item
           ))
+          setPredictionStatuses(prev => new Map(prev).set(location.id, 'completed'))
           localCompletedCount++
           setCompletedCount(localCompletedCount)
         } else {
@@ -220,6 +248,8 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
               error: 'Prediction failed'
             } : item
           ))
+          setPredictionStatuses(prev => new Map(prev).set(location.id, 'error'))
+          setPredictionErrors(prev => new Map(prev).set(location.id, 'Prediction failed'))
           localErrorCount++
           setErrorCount(localErrorCount)
         }
@@ -233,6 +263,8 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
             error: err.response?.data?.error || 'Network error'
           } : item
         ))
+        setPredictionStatuses(prev => new Map(prev).set(location.id, 'error'))
+        setPredictionErrors(prev => new Map(prev).set(location.id, err.response?.data?.error || 'Network error'))
         localErrorCount++
         setErrorCount(localErrorCount)
       }
@@ -281,41 +313,7 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
   }
 
   const predictLocation = async (lat: number, lon: number, locationId?: string) => {
-    if (!companyId) {
-      setError('Company ID not available')
-      return
-    }
-
-    // Check if this location already has a prediction for today
-    if (locationId && hasPredictionToday(locationId)) {
-      const existingPrediction = getTodayPrediction(locationId)
-      setError(`This location already has a prediction for today (${existingPrediction?.riskLevel.toUpperCase()} risk). Only one prediction per location per day is allowed.`)
-      return
-    }
-
-    setLoading(true)
-    setError('')
-
-    try {
-      const response = await predictCompany({
-        companyId,
-        companyLocationId: locationId,
-        lat,
-        lon
-      })
-
-      if (response.success) {
-        // Reload predictions to show the new one
-        await loadCompanyPredictions()
-        setSelectedLocation(null)
-      } else {
-        setError('Prediction failed')
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Prediction failed')
-    } finally {
-      setLoading(false)
-    }
+    await performSmartPrediction(lat, lon, locationId)
   }
 
   const getRiskColor = (riskLevel: string) => {
@@ -357,6 +355,112 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
       prediction.companyLocationId === locationId && 
       new Date(prediction.createdAt).toDateString() === today
     )
+  }
+
+  // Helper function to check if a location has images
+  const checkLocationHasImages = async (companyLocationId: string): Promise<boolean> => {
+    if (!companyId) return false
+    
+    try {
+      const response = await getLocationImages(companyId, companyLocationId)
+      return response.success && response.images && response.images.length > 0
+    } catch (error) {
+      console.error('Failed to check images for location:', error)
+      return false
+    }
+  }
+
+  // Enhanced prediction function that automatically chooses between 2-model and 3-model
+  const performSmartPrediction = async (lat: number, lon: number, locationId?: string) => {
+    if (!companyId) {
+      setError('Company ID not available')
+      return
+    }
+
+    // Check if this location already has a prediction for today
+    if (locationId && hasPredictionToday(locationId)) {
+      const existingPrediction = getTodayPrediction(locationId)
+      setError(`This location already has a prediction for today (${existingPrediction?.riskLevel.toUpperCase()} risk). Only one prediction per location per day is allowed.`)
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    try {
+      let hasImages = false
+      
+      // Check if location has images (only for company locations)
+      if (locationId) {
+        hasImages = await checkLocationHasImages(locationId)
+        
+        if (hasImages) {
+          // Set status to processing for three-model prediction
+          setPredictionStatuses(prev => new Map(prev).set(locationId, 'processing'))
+          
+          // Get images for the location
+          const imagesResponse = await getLocationImages(companyId, locationId)
+          const imageIds = imagesResponse.images?.map(img => img.id) || []
+          
+          // Use three-model prediction (async - will take longer)
+          const response = await predictCompanyThreeModels({
+            companyId,
+            companyLocationId: locationId,
+            lat,
+            lon,
+            imageIds
+          })
+
+          if (response.success) {
+            setPredictionStatuses(prev => new Map(prev).set(locationId, 'completed'))
+            await loadCompanyPredictions()
+            setSelectedLocation(null)
+          } else {
+            setPredictionStatuses(prev => new Map(prev).set(locationId, 'error'))
+            setPredictionErrors(prev => new Map(prev).set(locationId, 'Three-model prediction failed'))
+            setError('Three-model prediction failed')
+          }
+        } else {
+          // Use standard two-model prediction
+          const response = await predictCompany({
+            companyId,
+            companyLocationId: locationId,
+            lat,
+            lon
+          })
+
+          if (response.success) {
+            await loadCompanyPredictions()
+            setSelectedLocation(null)
+          } else {
+            setError('Prediction failed')
+          }
+        }
+      } else {
+        // For custom locations (no company location ID), use standard prediction
+        const response = await predictCompany({
+          companyId,
+          companyLocationId: locationId,
+          lat,
+          lon
+        })
+
+        if (response.success) {
+          await loadCompanyPredictions()
+          setSelectedLocation(null)
+        } else {
+          setError('Prediction failed')
+        }
+      }
+    } catch (err: any) {
+      if (locationId) {
+        setPredictionStatuses(prev => new Map(prev).set(locationId, 'error'))
+        setPredictionErrors(prev => new Map(prev).set(locationId, err.response?.data?.error || 'Network error'))
+      }
+      setError(err.response?.data?.error || 'Prediction failed')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -423,6 +527,8 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
                   const hasTodayPrediction = hasPredictionToday(location.id)
                   const todayPrediction = getTodayPrediction(location.id)
                   const canPredict = location.latitude && location.longitude && location.isActive && !hasTodayPrediction
+                  const predictionStatus = predictionStatuses.get(location.id)
+                  const predictionError = predictionErrors.get(location.id)
                   
                   return (
                     <div 
@@ -430,17 +536,27 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
                       className={`rounded-lg p-3 border transition-colors ${
                         hasTodayPrediction 
                           ? 'bg-green-50 border-green-200 cursor-default' 
+                          : predictionStatus === 'processing'
+                          ? 'bg-blue-50 border-blue-200 cursor-default'
+                          : predictionStatus === 'error'
+                          ? 'bg-red-50 border-red-200 cursor-pointer hover:bg-red-100'
                           : canPredict
                           ? 'bg-gray-50 border-gray-200 cursor-pointer hover:bg-gray-100'
                           : 'bg-gray-50 border-gray-200 cursor-not-allowed opacity-60'
                       }`}
-                      onClick={() => canPredict && handleLocationClick(location.latitude!, location.longitude!, location.id)}
+                      onClick={() => canPredict && !predictionStatus && handleLocationClick(location.latitude!, location.longitude!, location.id)}
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <FiMapPin className={hasTodayPrediction ? "text-green-500" : "text-gray-400"} />
                         <span className="font-medium text-sm">{location.name}</span>
                         {hasTodayPrediction && (
                           <FiCheckCircle className="w-4 h-4 text-green-500" />
+                        )}
+                        {predictionStatus === 'processing' && (
+                          <FiRefreshCw className="w-4 h-4 text-blue-500 animate-spin" />
+                        )}
+                        {predictionStatus === 'error' && (
+                          <FiAlertTriangle className="w-4 h-4 text-red-500" />
                         )}
                       </div>
                       {location.latitude && location.longitude ? (
@@ -456,6 +572,14 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
                       {hasTodayPrediction && todayPrediction ? (
                         <div className="text-xs text-green-600 mt-1 font-medium">
                           Today: {todayPrediction.riskLevel.toUpperCase()} Risk ({todayPrediction.riskScore.toFixed(3)})
+                        </div>
+                      ) : predictionStatus === 'processing' ? (
+                        <div className="text-xs text-blue-600 mt-1 font-medium">
+                          Processing with AI detection... (This may take several minutes)
+                        </div>
+                      ) : predictionStatus === 'error' ? (
+                        <div className="text-xs text-red-600 mt-1">
+                          Error: {predictionError || 'Unknown error'}
                         </div>
                       ) : canPredict ? (
                         <div className="text-xs text-blue-600 mt-1">Click to predict</div>
@@ -501,11 +625,27 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
                   <p className="text-sm text-gray-600">
                     Selected Branch: {selectedLocation.locationId ? companyLocations.find(loc => loc.id === selectedLocation.locationId)?.name || 'Unknown Location' : 'Custom Location'}
                   </p>
+                  {selectedLocation.locationId && predictionStatuses.get(selectedLocation.locationId) === 'processing' && (
+                    <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <FiRefreshCw className="animate-spin" />
+                        <span>Processing with AI detection... This may take several minutes</span>
+                      </div>
+                    </div>
+                  )}
+                  {selectedLocation.locationId && predictionStatuses.get(selectedLocation.locationId) === 'error' && (
+                    <div className="text-sm text-red-600 bg-red-50 p-2 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <FiAlertTriangle />
+                        <span>Error: {predictionErrors.get(selectedLocation.locationId) || 'Unknown error'}</span>
+                      </div>
+                    </div>
+                  )}
                   <button
                     onClick={() => predictLocation(selectedLocation.lat, selectedLocation.lon, selectedLocation.locationId)}
-                    disabled={loading || !isServiceHealthy || (selectedLocation.locationId ? hasPredictionToday(selectedLocation.locationId) : false)}
+                    disabled={loading || !isServiceHealthy || (selectedLocation.locationId ? hasPredictionToday(selectedLocation.locationId) || predictionStatuses.get(selectedLocation.locationId) === 'processing' : false)}
                     className={`px-4 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto ${
-                      selectedLocation.locationId && hasPredictionToday(selectedLocation.locationId)
+                      selectedLocation.locationId && (hasPredictionToday(selectedLocation.locationId) || predictionStatuses.get(selectedLocation.locationId) === 'processing')
                         ? 'bg-gray-500 text-white cursor-not-allowed'
                         : 'bg-[#A21C1C] text-white hover:bg-[#7C1D1D]'
                     }`}
@@ -513,6 +653,8 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
                     <FiRefreshCw className={loading ? 'animate-spin' : ''} />
                     {selectedLocation.locationId && hasPredictionToday(selectedLocation.locationId)
                       ? 'Already Predicted Today'
+                      : selectedLocation.locationId && predictionStatuses.get(selectedLocation.locationId) === 'processing'
+                      ? 'Processing...'
                       : loading 
                       ? 'Predicting...' 
                       : 'Predict Risk'

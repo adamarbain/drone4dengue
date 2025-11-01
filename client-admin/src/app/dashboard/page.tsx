@@ -53,7 +53,7 @@ const statusColors: Record<string, string> = {
   High: "bg-red-100 text-red-700 border-red-200",
 }
 
-const droneImages = ["/images/drone1.jpg", "/images/drone2.jpg", "/images/drone3.jpg"]
+// Remove hardcoded images - will use state instead
 
 const container = {
   hidden: { opacity: 0 },
@@ -78,6 +78,38 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [isPredictionModalOpen, setIsPredictionModalOpen] = useState(false);
   const [isCreatingPrediction, setIsCreatingPrediction] = useState(false);
+  const [recentDroneImages, setRecentDroneImages] = useState<any[]>([]);
+  const [loadingImages, setLoadingImages] = useState(false);
+
+  // Helper: get token
+  const getToken = () => {
+    const TOKEN = typeof window !== "undefined" ? localStorage.getItem("token") : null
+    return TOKEN
+  }
+
+  // Fetch recent drone images
+  const fetchRecentDroneImages = async () => {
+    try {
+      setLoadingImages(true)
+      const response = await fetch('http://localhost:4000/drones/recent-images', {
+        headers: {
+          'Authorization': `Bearer ${getToken()}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch recent drone images')
+      }
+
+      const data = await response.json()
+      return data.images || []
+    } catch (error) {
+      console.error('Fetch recent drone images error:', error)
+      return []
+    } finally {
+      setLoadingImages(false)
+    }
+  }
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -87,13 +119,15 @@ export default function DashboardPage() {
         setIsLoading(true);
         setError(null);
         
-        const [stats, predictions] = await Promise.all([
+        const [stats, predictions, images] = await Promise.all([
           getDashboardStats(companyId),
-          getRecentPredictions(companyId, 6)
+          getRecentPredictions(companyId, 6),
+          fetchRecentDroneImages()
         ]);
         
         setDashboardStats(stats);
         setRecentPredictions(predictions.predictions || []);
+        setRecentDroneImages(images);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
         setError('Failed to load dashboard data');
@@ -393,30 +427,61 @@ export default function DashboardPage() {
           {/* Recent Drone Images */}
           <motion.div variants={item}>
             <div className="font-bold text-xl mb-4">Recent Drone Images</div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {droneImages.map((src, idx) => (
-                <motion.div
-                  key={idx}
-                  className="rounded-xl overflow-hidden shadow-md bg-white p-3 border border-[#E2C275]/30"
-                  whileHover={{ y: -5 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <div className="relative h-48 rounded-lg overflow-hidden mb-3">
-                    <Image src={src || "/placeholder.svg"} alt={`Drone ${idx + 1}`} fill className="object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-                    <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium">
-                      Area {idx + 1}
+            {loadingImages ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#A21C1C] mx-auto mb-4"></div>
+                <p className="text-gray-500">Loading images...</p>
+              </div>
+            ) : recentDroneImages.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {recentDroneImages.slice(0, 6).map((image, idx) => (
+                  <motion.div
+                    key={image.id}
+                    className="rounded-xl overflow-hidden shadow-md bg-white p-3 border border-[#E2C275]/30"
+                    whileHover={{ y: -5 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
+                    <div className="relative h-48 rounded-lg overflow-hidden mb-3">
+                      <Image 
+                        src={`http://localhost:4000/uploads/drones/${image.filename}`} 
+                        alt={`Drone ${idx + 1}`} 
+                        fill 
+                        className="object-cover" 
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                      <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium">
+                        {image.companyLocation ? image.companyLocation.name : `Area ${idx + 1}`}
+                      </div>
+                      <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-medium">
+                        {new Date(image.createdAt).toLocaleDateString()}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div className="text-sm font-medium">Drone Capture #{idx + 1}</div>
-                    <button className="text-[#A21C1C] hover:bg-[#FFF7E3] p-1.5 rounded-lg transition-colors">
-                      <FiEye size={16} />
-                    </button>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="text-sm font-medium">{image.filename}</div>
+                        <div className="text-xs text-gray-500">
+                          {image.sourceType === 'video_frame' ? 'Video Frame' : 'Direct Upload'}
+                        </div>
+                        {image.companyLocation && (
+                          <div className="text-xs text-blue-600 mt-1">
+                            📍 {image.companyLocation.name}
+                          </div>
+                        )}
+                      </div>
+                      <button className="text-[#A21C1C] hover:bg-[#FFF7E3] p-1.5 rounded-lg transition-colors">
+                        <FiEye size={16} />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 bg-gray-50 rounded-lg">
+                <FiCamera className="text-gray-400 mx-auto mb-2" size={32} />
+                <p className="text-gray-500">No drone images available</p>
+                <p className="text-sm text-gray-400">Upload images in the Drone Management section</p>
+              </div>
+            )}
           </motion.div>
         </motion.section>
       </main>
