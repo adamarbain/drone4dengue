@@ -22,6 +22,19 @@ model Company {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // Notification Preferences
+  emailNotifications  Boolean  @default(true)
+  smsNotifications    Boolean  @default(false)
+  alertFrequency      String   @default("immediate") // "immediate", "daily", "weekly"
+
+  // System Configuration
+  alertThreshold      String   @default("medium") // "low", "medium", "high"
+  predictionModelParameters Json? // { temperatureWeight: 0.35, rainfallWeight: 0.40, populationDensityWeight: 0.25 }
+  syncMode            String   @default("automatic") // "automatic", "manual"
+
+  // Advanced Settings
+  advancedSettings    Json? // { dataRetentionPolicy: {...}, apiAccess: {...}, systemBackup: {...} }
+
   // Relations
   users       User[]
   locations   CompanyLocation[]

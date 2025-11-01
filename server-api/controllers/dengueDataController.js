@@ -7,12 +7,26 @@ const parse = require('csv-parse');
 // Get all dengue data (with filters)
 async function getAll(req, res) {
   try {
-    const { location, date, status } = req.query;
+    const { location, date, status, startDate, endDate } = req.query;
     
     const where = { };
     if (location) where.location = location;
     if (status) where.status = status;
     if (date) where.date = new Date(date);
+    
+    // Support date range filtering
+    if (startDate || endDate) {
+      where.date = {};
+      if (startDate) {
+        where.date.gte = new Date(startDate);
+      }
+      if (endDate) {
+        // Include the full end date (end of day)
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(23, 59, 59, 999);
+        where.date.lte = endDateTime;
+      }
+    }
     
     const data = await prisma.dengueData.findMany({ 
       where, 
@@ -219,12 +233,26 @@ async function getMapData(req, res) {
 // Export data as CSV
 async function exportData(req, res) {
   try {
-    const { location, date, status } = req.query;
+    const { location, date, status, startDate, endDate } = req.query;
     
     const where = { };
     if (location) where.location = location;
     if (status) where.status = status;
     if (date) where.date = new Date(date);
+    
+    // Support date range filtering
+    if (startDate || endDate) {
+      where.date = {};
+      if (startDate) {
+        where.date.gte = new Date(startDate);
+      }
+      if (endDate) {
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(23, 59, 59, 999);
+        where.date.lte = endDateTime;
+      }
+    }
+    
     const data = await prisma.dengueData.findMany({ where });
     const fields = ['id', 'location', 'date', 'activeCases', 'totalCases', 'coverageArea', 'status', 'source', 'latitude', 'longitude', 'createdAt', 'updatedAt'];
     const parser = new Parser({ fields });
@@ -235,6 +263,173 @@ async function exportData(req, res) {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+}
+
+// Get unique locations from dengue data
+async function getLocations(req, res) {
+  try {
+    const allData = await prisma.dengueData.findMany({
+      select: { location: true }
+    });
+    
+    // Get unique locations (filter out empty strings)
+    const uniqueLocations = [...new Set(allData.map(item => item.location).filter(loc => loc && loc.trim() !== ''))];
+    uniqueLocations.sort();
+    
+    res.json(uniqueLocations);
+  } catch (err) {
+    console.error('Error fetching locations:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// Generate report data combining dengue data and predictions
+async function generateReport(req, res) {
+  try {
+    const { startDate, endDate, location, dataType, companyId } = req.query;
+    
+    if (!startDate || !endDate || !location || !dataType) {
+      return res.status(400).json({ error: 'Missing required parameters: startDate, endDate, location, dataType' });
+    }
+
+    // Build date range filter
+    const dateFilter = {
+      gte: new Date(startDate),
+      lte: new Date(endDate + 'T23:59:59.999Z')
+    };
+
+    // Fetch dengue data
+    const dengueData = await prisma.dengueData.findMany({
+      where: {
+        location: location,
+        date: dateFilter
+      },
+      orderBy: { date: 'asc' }
+    });
+
+    // Fetch company predictions if companyId is provided
+    let predictions = [];
+    if (companyId) {
+      predictions = await prisma.companyPrediction.findMany({
+        where: {
+          companyId: companyId,
+          createdAt: dateFilter
+        },
+        include: {
+          companyLocation: {
+            select: {
+              id: true,
+              name: true,
+              address: true,
+              latitude: true,
+              longitude: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'asc' }
+      });
+    }
+
+    // Calculate stats based on dataType
+    let weeklyData = [];
+    let totalValue = 0;
+    let latestValue = 0;
+    let trend = 'stable';
+
+    if (dataType === 'Active Cases') {
+      // Group by week
+      const weeklyMap = {};
+      dengueData.forEach(record => {
+        const week = getWeekOfYear(record.date);
+        const weekKey = `${week.year}-W${week.week}`;
+        if (!weeklyMap[weekKey]) {
+          weeklyMap[weekKey] = { week: weekKey, value: 0, date: record.date };
+        }
+        weeklyMap[weekKey].value += (record.activeCases || 0);
+      });
+      weeklyData = Object.values(weeklyMap).sort((a, b) => 
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+      totalValue = dengueData.reduce((sum, r) => sum + (r.activeCases || 0), 0);
+      if (weeklyData.length > 0) {
+        latestValue = weeklyData[weeklyData.length - 1].value;
+        if (weeklyData.length > 1) {
+          const prevValue = weeklyData[weeklyData.length - 2].value;
+          trend = latestValue > prevValue ? 'up' : latestValue < prevValue ? 'down' : 'stable';
+        }
+      }
+    } else if (dataType === 'Total Cases') {
+      const weeklyMap = {};
+      dengueData.forEach(record => {
+        const week = getWeekOfYear(record.date);
+        const weekKey = `${week.year}-W${week.week}`;
+        if (!weeklyMap[weekKey]) {
+          weeklyMap[weekKey] = { week: weekKey, value: 0, date: record.date };
+        }
+        weeklyMap[weekKey].value += (record.totalCases || 0);
+      });
+      weeklyData = Object.values(weeklyMap).sort((a, b) => 
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+      totalValue = dengueData.reduce((sum, r) => sum + (r.totalCases || 0), 0);
+      if (weeklyData.length > 0) {
+        latestValue = weeklyData[weeklyData.length - 1].value;
+        if (weeklyData.length > 1) {
+          const prevValue = weeklyData[weeklyData.length - 2].value;
+          trend = latestValue > prevValue ? 'up' : latestValue < prevValue ? 'down' : 'stable';
+        }
+      }
+    } else if (dataType === 'Coverage Area') {
+      // For coverage area, count unique locations or use coverageArea field
+      const uniqueAreas = new Set();
+      dengueData.forEach(record => {
+        if (record.coverageArea) {
+          uniqueAreas.add(record.coverageArea);
+        } else if (record.location) {
+          uniqueAreas.add(record.location);
+        }
+      });
+      totalValue = uniqueAreas.size;
+      latestValue = totalValue;
+    }
+
+    // Calculate overall stats
+    const stats = {
+      totalDataPoints: dengueData.length,
+      predictionsCount: predictions.length,
+      averageRiskScore: predictions.length > 0 
+        ? predictions.reduce((sum, p) => sum + (p.riskScore || 0), 0) / predictions.length 
+        : 0,
+      highRiskPredictions: predictions.filter(p => p.riskScore >= 0.7).length,
+      mediumRiskPredictions: predictions.filter(p => p.riskScore >= 0.4 && p.riskScore < 0.7).length,
+      lowRiskPredictions: predictions.filter(p => p.riskScore < 0.4).length
+    };
+
+    res.json({
+      success: true,
+      data: {
+        weeklyData,
+        totalValue,
+        latestValue,
+        trend,
+        stats,
+        dengueData: dengueData.slice(0, 100), // Limit to first 100 for response size
+        predictions: predictions.slice(0, 100)
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// Helper function to get week of year
+function getWeekOfYear(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  const week = 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+  return { year: d.getFullYear(), week };
 }
 
 module.exports = {
@@ -248,4 +443,6 @@ module.exports = {
   getHistorical,
   getMapData,
   exportData,
+  getLocations,
+  generateReport,
 }; 

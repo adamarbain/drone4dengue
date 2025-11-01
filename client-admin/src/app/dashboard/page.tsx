@@ -3,6 +3,7 @@
 import AdminSidebar from "@/components/AdminSidebar"
 import AdminHeader from "@/components/AdminHeader"
 import Image from "next/image"
+import Link from "next/link"
 import {
   FiArrowUp,
   FiArrowDown,
@@ -85,6 +86,20 @@ export default function DashboardPage() {
   const getToken = () => {
     const TOKEN = typeof window !== "undefined" ? localStorage.getItem("token") : null
     return TOKEN
+  }
+
+  // Helper function to get image URL (handles both Firebase URLs and legacy local paths)
+  const getImageUrl = (image: any): string => {
+    if (image.url) {
+      // If URL is already absolute (Firebase URL), use it directly
+      if (image.url.startsWith('http://') || image.url.startsWith('https://')) {
+        return image.url
+      }
+      // Legacy local path - construct absolute URL
+      return `http://localhost:4000${image.url}`
+    }
+    // Fallback: construct from filename (legacy support)
+    return `http://localhost:4000/uploads/drones/${image.filename}`
   }
 
   // Fetch recent drone images
@@ -323,10 +338,13 @@ export default function DashboardPage() {
                 <FiPlus />
                 New Risk Prediction
               </button>
-              <button className="bg-white text-[#A21C1C] border border-[#A21C1C] px-6 py-3 rounded-lg font-bold text-base hover:bg-[#FFF7E3] transition-all flex items-center gap-2">
+              <Link 
+                href="/drone-management"
+                className="bg-white text-[#A21C1C] border border-[#A21C1C] px-6 py-3 rounded-lg font-bold text-base hover:bg-[#FFF7E3] transition-all flex items-center gap-2"
+              >
                 <FiUpload />
                 Upload New Drone Images
-              </button>
+              </Link>
             </div>
           </motion.div>
 
@@ -443,7 +461,7 @@ export default function DashboardPage() {
                   >
                     <div className="relative h-48 rounded-lg overflow-hidden mb-3">
                       <Image 
-                        src={`http://localhost:4000/uploads/drones/${image.filename}`} 
+                        src={getImageUrl(image)} 
                         alt={`Drone ${idx + 1}`} 
                         fill 
                         className="object-cover" 

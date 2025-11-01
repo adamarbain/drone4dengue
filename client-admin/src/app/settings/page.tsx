@@ -47,6 +47,37 @@ export default function SettingsPage() {
   const [profileSuccess, setProfileSuccess] = useState('');
   const company = useAuth().company;
 
+  // Company settings state
+  const [companySettings, setCompanySettings] = useState<any>(null);
+  const [companySettingsLoading, setCompanySettingsLoading] = useState(true);
+  const [companySettingsError, setCompanySettingsError] = useState('');
+  
+  // Notification preferences state
+  const [notificationLoading, setNotificationLoading] = useState(false);
+  const [notificationError, setNotificationError] = useState('');
+  const [notificationSuccess, setNotificationSuccess] = useState('');
+
+  // System configuration state
+  const [systemConfigLoading, setSystemConfigLoading] = useState(false);
+  const [systemConfigError, setSystemConfigError] = useState('');
+  const [systemConfigSuccess, setSystemConfigSuccess] = useState('');
+  const [predictionModelParams, setPredictionModelParams] = useState({
+    temperatureWeight: 0.35,
+    rainfallWeight: 0.40,
+    populationDensityWeight: 0.25
+  });
+  const [showModelParamsEdit, setShowModelParamsEdit] = useState(false);
+
+  // Advanced settings state
+  const [advancedSettingsLoading, setAdvancedSettingsLoading] = useState(false);
+  const [advancedSettingsError, setAdvancedSettingsError] = useState('');
+  const [advancedSettingsSuccess, setAdvancedSettingsSuccess] = useState('');
+  const [advancedSettings, setAdvancedSettings] = useState<any>({
+    dataRetentionPolicy: {},
+    apiAccess: {},
+    systemBackup: {}
+  });
+
   // Password update state
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -116,6 +147,45 @@ export default function SettingsPage() {
     }
     fetchLocations();
   }, [token]);
+
+  // Fetch company settings
+  useEffect(() => {
+    async function fetchCompanySettings() {
+      if (!company?.id || !token) return;
+      setCompanySettingsLoading(true);
+      setCompanySettingsError('');
+      try {
+        const res = await fetch(`${API_URL}/companies/${company.id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Failed to fetch company settings');
+        const data = await res.json();
+        setCompanySettings(data);
+        
+        // Update local state from company settings
+        if (data.emailNotifications !== undefined) setEmailNotifications(data.emailNotifications);
+        if (data.smsNotifications !== undefined) setSmsNotifications(data.smsNotifications);
+        if (data.alertFrequency) setAlertFrequency(data.alertFrequency);
+        if (data.alertThreshold) setAlertThreshold(data.alertThreshold);
+        if (data.syncMode) setSyncMode(data.syncMode);
+        if (data.predictionModelParameters) {
+          setPredictionModelParams({
+            temperatureWeight: data.predictionModelParameters.temperatureWeight || 0.35,
+            rainfallWeight: data.predictionModelParameters.rainfallWeight || 0.40,
+            populationDensityWeight: data.predictionModelParameters.populationDensityWeight || 0.25
+          });
+        }
+        if (data.advancedSettings) {
+          setAdvancedSettings(data.advancedSettings);
+        }
+      } catch (err) {
+        setCompanySettingsError(err instanceof Error ? err.message : 'Failed to fetch company settings');
+      } finally {
+        setCompanySettingsLoading(false);
+      }
+    }
+    fetchCompanySettings();
+  }, [company?.id, token]);
 
   // Handle profile form changes
   function handleProfileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -273,6 +343,116 @@ export default function SettingsPage() {
     setEditingLocation(null);
     setLocationError('');
     setLocationSuccess('');
+  }
+
+  // Handle save notification preferences
+  async function handleSaveNotificationPreferences() {
+    if (!company?.id || !token) {
+      setNotificationError('No company ID or token found.');
+      return;
+    }
+    setNotificationLoading(true);
+    setNotificationError('');
+    setNotificationSuccess('');
+    try {
+      const res = await fetch(`${API_URL}/companies/${company.id}/settings`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          emailNotifications,
+          smsNotifications,
+          alertFrequency,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to update notification preferences');
+      }
+      const data = await res.json();
+      setCompanySettings(data);
+      setNotificationSuccess('Notification preferences saved successfully!');
+      setTimeout(() => setNotificationSuccess(''), 3000);
+    } catch (err) {
+      setNotificationError(err instanceof Error ? err.message : 'Failed to update notification preferences');
+    } finally {
+      setNotificationLoading(false);
+    }
+  }
+
+  // Handle save system configuration
+  async function handleSaveSystemConfiguration() {
+    if (!company?.id || !token) {
+      setSystemConfigError('No company ID or token found.');
+      return;
+    }
+    setSystemConfigLoading(true);
+    setSystemConfigError('');
+    setSystemConfigSuccess('');
+    try {
+      const res = await fetch(`${API_URL}/companies/${company.id}/settings`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          alertThreshold,
+          predictionModelParameters: predictionModelParams,
+          syncMode,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to update system configuration');
+      }
+      const data = await res.json();
+      setCompanySettings(data);
+      setSystemConfigSuccess('System configuration saved successfully!');
+      setShowModelParamsEdit(false);
+      setTimeout(() => setSystemConfigSuccess(''), 3000);
+    } catch (err) {
+      setSystemConfigError(err instanceof Error ? err.message : 'Failed to update system configuration');
+    } finally {
+      setSystemConfigLoading(false);
+    }
+  }
+
+  // Handle save advanced settings
+  async function handleSaveAdvancedSettings() {
+    if (!company?.id || !token) {
+      setAdvancedSettingsError('No company ID or token found.');
+      return;
+    }
+    setAdvancedSettingsLoading(true);
+    setAdvancedSettingsError('');
+    setAdvancedSettingsSuccess('');
+    try {
+      const res = await fetch(`${API_URL}/companies/${company.id}/settings`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          advancedSettings,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to update advanced settings');
+      }
+      const data = await res.json();
+      setCompanySettings(data);
+      setAdvancedSettingsSuccess('Advanced settings saved successfully!');
+      setTimeout(() => setAdvancedSettingsSuccess(''), 3000);
+    } catch (err) {
+      setAdvancedSettingsError(err instanceof Error ? err.message : 'Failed to update advanced settings');
+    } finally {
+      setAdvancedSettingsLoading(false);
+    }
   }
 
   return (
@@ -518,10 +698,16 @@ export default function SettingsPage() {
                       </select>
                     </div>
 
+                    {notificationError && <div className="text-red-600 mt-2">{notificationError}</div>}
+                    {notificationSuccess && <div className="text-green-600 mt-2">{notificationSuccess}</div>}
                     <div className="pt-4">
-                      <button className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2">
+                      <button 
+                        className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2 disabled:opacity-50"
+                        onClick={handleSaveNotificationPreferences}
+                        disabled={notificationLoading || companySettingsLoading}
+                      >
                         <FiSave />
-                        Save Preferences
+                        {notificationLoading ? 'Saving...' : 'Save Preferences'}
                       </button>
                     </div>
                   </div>
@@ -582,25 +768,78 @@ export default function SettingsPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <Label htmlFor="prediction-model">Prediction Model Parameters</Label>
-                        <button className="text-[#A21C1C] hover:bg-[#F3EAD8] p-2 rounded-lg flex items-center gap-1">
+                        <button 
+                          onClick={() => setShowModelParamsEdit(!showModelParamsEdit)}
+                          className="text-[#A21C1C] hover:bg-[#F3EAD8] p-2 rounded-lg flex items-center gap-1"
+                        >
                           <FiSliders className="text-sm" />
-                          <span className="text-sm">Edit Parameters</span>
+                          <span className="text-sm">{showModelParamsEdit ? 'Cancel' : 'Edit Parameters'}</span>
                         </button>
                       </div>
-                      <div className="bg-gray-100 p-3 rounded-lg text-sm text-gray-600">
-                        <div className="flex justify-between mb-1">
-                          <span>Temperature Weight:</span>
-                          <span>0.35</span>
+                      {showModelParamsEdit ? (
+                        <div className="bg-gray-100 p-3 rounded-lg space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-700">Temperature Weight:</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max="1"
+                              value={predictionModelParams.temperatureWeight}
+                              onChange={(e) => setPredictionModelParams({
+                                ...predictionModelParams,
+                                temperatureWeight: parseFloat(e.target.value) || 0
+                              })}
+                              className="w-20 border-[#E2C275] focus:border-[#A21C1C]"
+                            />
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-700">Rainfall Weight:</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max="1"
+                              value={predictionModelParams.rainfallWeight}
+                              onChange={(e) => setPredictionModelParams({
+                                ...predictionModelParams,
+                                rainfallWeight: parseFloat(e.target.value) || 0
+                              })}
+                              className="w-20 border-[#E2C275] focus:border-[#A21C1C]"
+                            />
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-700">Population Density Weight:</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max="1"
+                              value={predictionModelParams.populationDensityWeight}
+                              onChange={(e) => setPredictionModelParams({
+                                ...predictionModelParams,
+                                populationDensityWeight: parseFloat(e.target.value) || 0
+                              })}
+                              className="w-20 border-[#E2C275] focus:border-[#A21C1C]"
+                            />
+                          </div>
                         </div>
-                        <div className="flex justify-between mb-1">
-                          <span>Rainfall Weight:</span>
-                          <span>0.40</span>
+                      ) : (
+                        <div className="bg-gray-100 p-3 rounded-lg text-sm text-gray-600">
+                          <div className="flex justify-between mb-1">
+                            <span>Temperature Weight:</span>
+                            <span>{predictionModelParams.temperatureWeight.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between mb-1">
+                            <span>Rainfall Weight:</span>
+                            <span>{predictionModelParams.rainfallWeight.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Population Density Weight:</span>
+                            <span>{predictionModelParams.populationDensityWeight.toFixed(2)}</span>
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span>Population Density Weight:</span>
-                          <span>0.25</span>
-                        </div>
-                      </div>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -637,10 +876,16 @@ export default function SettingsPage() {
                       )}
                     </div>
 
+                    {systemConfigError && <div className="text-red-600 mt-2">{systemConfigError}</div>}
+                    {systemConfigSuccess && <div className="text-green-600 mt-2">{systemConfigSuccess}</div>}
                     <div className="pt-4">
-                      <button className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2">
+                      <button 
+                        className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2 disabled:opacity-50"
+                        onClick={handleSaveSystemConfiguration}
+                        disabled={systemConfigLoading || companySettingsLoading}
+                      >
                         <FiSettings />
-                        Apply Settings
+                        {systemConfigLoading ? 'Saving...' : 'Apply Settings'}
                       </button>
                     </div>
                   </div>
@@ -856,7 +1101,13 @@ export default function SettingsPage() {
                       <h3 className="font-semibold">Data Retention Policy</h3>
                       <p className="text-sm text-gray-500">Control how long data is stored in the system</p>
                     </div>
-                    <button className="bg-[#E5E7EB] text-black px-4 py-2 rounded-lg text-sm hover:bg-[#F3EAD8]">
+                    <button 
+                      onClick={() => {
+                        // TODO: Implement data retention policy configuration modal
+                        alert('Data Retention Policy configuration coming soon!');
+                      }}
+                      className="bg-[#E5E7EB] text-black px-4 py-2 rounded-lg text-sm hover:bg-[#F3EAD8]"
+                    >
                       Configure
                     </button>
                   </div>
@@ -866,7 +1117,13 @@ export default function SettingsPage() {
                       <h3 className="font-semibold">API Access</h3>
                       <p className="text-sm text-gray-500">Manage API keys and access permissions</p>
                     </div>
-                    <button className="bg-[#E5E7EB] text-black px-4 py-2 rounded-lg text-sm hover:bg-[#F3EAD8]">
+                    <button 
+                      onClick={() => {
+                        // TODO: Implement API access management modal
+                        alert('API Access management coming soon!');
+                      }}
+                      className="bg-[#E5E7EB] text-black px-4 py-2 rounded-lg text-sm hover:bg-[#F3EAD8]"
+                    >
                       Manage Keys
                     </button>
                   </div>
@@ -876,8 +1133,28 @@ export default function SettingsPage() {
                       <h3 className="font-semibold">System Backup</h3>
                       <p className="text-sm text-gray-500">Configure automatic backups and restore points</p>
                     </div>
-                    <button className="bg-[#E5E7EB] text-black px-4 py-2 rounded-lg text-sm hover:bg-[#F3EAD8]">
+                    <button 
+                      onClick={() => {
+                        // TODO: Implement system backup functionality
+                        alert('System backup functionality coming soon!');
+                      }}
+                      className="bg-[#E5E7EB] text-black px-4 py-2 rounded-lg text-sm hover:bg-[#F3EAD8]"
+                    >
                       Backup Now
+                    </button>
+                  </div>
+                  
+                  {advancedSettingsError && <div className="text-red-600 mt-2">{advancedSettingsError}</div>}
+                  {advancedSettingsSuccess && <div className="text-green-600 mt-2">{advancedSettingsSuccess}</div>}
+                  
+                  <div className="pt-4">
+                    <button 
+                      className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2 disabled:opacity-50"
+                      onClick={handleSaveAdvancedSettings}
+                      disabled={advancedSettingsLoading || companySettingsLoading}
+                    >
+                      <FiSettings />
+                      {advancedSettingsLoading ? 'Saving...' : 'Save Advanced Settings'}
                     </button>
                   </div>
                 </div>
