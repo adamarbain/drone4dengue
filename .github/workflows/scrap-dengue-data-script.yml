@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests pandas matplotlib geopandas shapely folium plotly pytz scikit-learn joblib seaborn
+          pip install requests pandas matplotlib geopandas shapely folium plotly pytz scikit-learn joblib seaborn psycopg2-binary
 
       - name: Run Daily Data Processing Script
         working-directory: daily-scrap-dengue-data
@@ -32,6 +32,12 @@ jobs:
       - name: Train ML Models
         working-directory: daily-scrap-dengue-data
         run: python dengue_ml_models_improved.py
+
+      - name: Store Dengue Data to Database
+        working-directory: daily-scrap-dengue-data
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python store_dengue_data_to_db.py
 
       - name: Commit and Push Changes
         run: |

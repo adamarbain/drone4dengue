@@ -13,10 +13,10 @@ import {
   FiPieChart,
 } from "react-icons/fi"
 import { motion } from "framer-motion"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/context/AuthContext"
 
-const areas = ["Universiti Malaya", "Damansara Utama", "Petaling Jaya", "Vista Angkasa"]
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
 const dataTypes = ["Active Cases", "Total Cases", "Coverage Area"]
 
 const container = {
@@ -35,7 +35,7 @@ const item = {
 }
 
 export default function ReportsPage() {
-  const { companyId } = useAuth()
+  const { companyId, token } = useAuth()
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
   const [selectedLocation, setSelectedLocation] = useState("")
@@ -43,6 +43,80 @@ export default function ReportsPage() {
   const [reportGenerated, setReportGenerated] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [locations, setLocations] = useState<string[]>([])
+  const [reportData, setReportData] = useState<any>(null)
+  const [stats, setStats] = useState({
+    reportsGenerated: 0,
+    dataPoints: 0,
+    exportFormats: 4,
+    accuracyRate: "99.2%"
+  })
+
+  // Fetch locations on mount
+  useEffect(() => {
+    async function fetchLocations() {
+      try {
+        const response = await fetch(`${API_URL}/dengue-data/locations`)
+        if (response.ok) {
+          const data = await response.json()
+          setLocations(data)
+        }
+      } catch (err) {
+        console.error("Failed to fetch locations:", err)
+      }
+    }
+    fetchLocations()
+  }, [])
+
+  // Fetch initial stats
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const [summaryRes, predictionsRes] = await Promise.all([
+          fetch(`${API_URL}/dengue-data/summary/dengue-data`, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }),
+          companyId ? fetch(`${API_URL}/api/predict/company/${companyId}?limit=1000`, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }) : null
+        ])
+
+        if (summaryRes.ok) {
+          const summary = await summaryRes.json()
+          setStats(prev => ({
+            ...prev,
+            dataPoints: summary.totalRecords || 0
+          }))
+        }
+
+        // Count unique report generations (based on predictions count)
+        if (predictionsRes && predictionsRes.ok) {
+          const predictions = await predictionsRes.json()
+          if (predictions.success && predictions.predictions) {
+            // Count unique date-based reports
+            const uniqueReports = new Set(
+              predictions.predictions.map((p: any) => 
+                new Date(p.createdAt).toISOString().split('T')[0]
+              )
+            )
+            setStats(prev => ({
+              ...prev,
+              reportsGenerated: uniqueReports.size
+            }))
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch stats:", err)
+      }
+    }
+    if (token) {
+      fetchStats()
+    }
+  }, [token, companyId])
 
   // Helper to check if all filters are filled
   const filtersComplete = startDate && endDate && selectedLocation && selectedDataType
@@ -51,28 +125,51 @@ export default function ReportsPage() {
   const handleFilterChange = (setter: (value: string) => void) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setter(e.target.value)
     setReportGenerated(false)
+    setReportData(null)
     setError("")
   }
 
-  const handleGenerateReport = () => {
+  const handleGenerateReport = async () => {
     if (!filtersComplete) {
       setError("Please complete all filters before generating the report.")
       return
     }
     setLoading(true)
     setError("")
-    // Simulate async report generation
-    setTimeout(() => {
-      // Simulate error randomly (for demo)
-      // if (Math.random() < 0.1) {
-      //   setError("Report generation failed. Please try again.")
-      //   setLoading(false)
-      //   setReportGenerated(false)
-      //   return
-      // }
-      setReportGenerated(true)
+    
+    try {
+      const params = new URLSearchParams({
+        startDate,
+        endDate,
+        location: selectedLocation,
+        dataType: selectedDataType,
+        ...(companyId ? { companyId } : {})
+      })
+
+      const response = await fetch(`${API_URL}/dengue-data/generate-report?${params}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to generate report")
+      }
+
+      const result = await response.json()
+      if (result.success) {
+        setReportData(result.data)
+        setReportGenerated(true)
+      } else {
+        throw new Error("Report generation failed")
+      }
+    } catch (err: any) {
+      setError(err.message || "Report generation failed. Please try again.")
+      setReportGenerated(false)
+    } finally {
       setLoading(false)
-    }, 1200)
+    }
   }
 
   const handleClearFilters = () => {
@@ -81,7 +178,97 @@ export default function ReportsPage() {
     setSelectedLocation("")
     setSelectedDataType("")
     setReportGenerated(false)
+    setReportData(null)
     setError("")
+  }
+
+  // Export handlers
+  const handleExport = async (format: string) => {
+    if (!reportData || !reportGenerated) {
+      setError("Please generate a report first")
+      return
+    }
+
+    try {
+      if (format === "CSV") {
+        const params = new URLSearchParams({
+          startDate,
+          endDate,
+          location: selectedLocation,
+          ...(selectedDataType === "Active Cases" ? { status: "Active Cases" } : {})
+        })
+        const response = await fetch(`${API_URL}/dengue-data/export?${params}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+        if (response.ok) {
+          const blob = await response.blob()
+          const url = window.URL.createObjectURL(blob)
+          const a = document.createElement("a")
+          a.href = url
+          a.download = `dengue_report_${startDate}_${endDate}.csv`
+          document.body.appendChild(a)
+          a.click()
+          window.URL.revokeObjectURL(url)
+          document.body.removeChild(a)
+        }
+      } else if (format === "JSON") {
+        const dataStr = JSON.stringify(reportData, null, 2)
+        const blob = new Blob([dataStr], { type: "application/json" })
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `dengue_report_${startDate}_${endDate}.json`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } else if (format === "PDF" || format === "XLSX") {
+        setError(`${format} export is not yet implemented`)
+      }
+    } catch (err: any) {
+      setError(`Export failed: ${err.message}`)
+    }
+  }
+
+  // Generate chart data for weekly overview
+  const generateBarChartData = () => {
+    if (!reportData || !reportData.weeklyData || reportData.weeklyData.length === 0) {
+      return []
+    }
+    const data = reportData.weeklyData.slice(-7) // Last 7 weeks
+    const maxValue = Math.max(...data.map((d: any) => d.value), 1)
+    return data.map((d: any, idx: number) => ({
+      x: 20 + idx * 24,
+      y: 80 - (d.value / maxValue) * 60,
+      height: (d.value / maxValue) * 60,
+      value: d.value
+    }))
+  }
+
+  // Generate area chart data
+  const generateAreaChartData = () => {
+    if (!reportData || !reportData.weeklyData || reportData.weeklyData.length === 0) {
+      return { path: "M0,60 Q40,40 80,50 Q120,70 160,40 Q200,20 240,50 Q280,80 320,40", points: [] }
+    }
+    const data = reportData.weeklyData.slice(-8) // Last 8 data points
+    const maxValue = Math.max(...data.map((d: any) => d.value), 1)
+    const width = 320
+    const height = 80
+    const stepX = data.length > 1 ? width / (data.length - 1) : 0
+    
+    const points = data.map((d: any, idx: number) => {
+      const x = idx * stepX
+      const y = height - (d.value / maxValue) * 60
+      return { x, y }
+    })
+    
+    const pathData = points.map((p: { x: number; y: number }, idx: number) => 
+      idx === 0 ? `M${p.x},${p.y}` : `L${p.x},${p.y}`
+    ).join(" ")
+    
+    return { path: pathData, points }
   }
 
   return (
@@ -102,10 +289,10 @@ export default function ReportsPage() {
           {/* Report Stats */}
           <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             {[
-              { label: "Reports Generated", value: "156", icon: <FiFileText />, color: "bg-blue-500" },
-              { label: "Data Points", value: "2.4K", icon: <FiBarChart2 />, color: "bg-green-500" },
-              { label: "Export Formats", value: "4", icon: <FiDownload />, color: "bg-purple-500" },
-              { label: "Accuracy Rate", value: "99.2%", icon: <FiTrendingUp />, color: "bg-orange-500" },
+              { label: "Reports Generated", value: stats.reportsGenerated.toString(), icon: <FiFileText />, color: "bg-blue-500" },
+              { label: "Data Points", value: stats.dataPoints >= 1000 ? `${(stats.dataPoints / 1000).toFixed(1)}K` : stats.dataPoints.toString(), icon: <FiBarChart2 />, color: "bg-green-500" },
+              { label: "Export Formats", value: stats.exportFormats.toString(), icon: <FiDownload />, color: "bg-purple-500" },
+              { label: "Accuracy Rate", value: stats.accuracyRate, icon: <FiTrendingUp />, color: "bg-orange-500" },
             ].map((stat, idx) => (
               <motion.div
                 key={stat.label}
@@ -168,7 +355,7 @@ export default function ReportsPage() {
                     className="rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#E2C275]"
                   >
                     <option value="">Select Area</option>
-                    {areas.map((area) => (
+                    {locations.map((area) => (
                       <option key={area} value={area}>
                         {area}
                       </option>
@@ -243,18 +430,40 @@ export default function ReportsPage() {
                 <div className="w-full h-32 mb-4 bg-gradient-to-r from-[#FFF7E3] to-[#F3EAD8] rounded-lg flex items-end p-4">
                   {/* Enhanced bar chart */}
                   <svg width="100%" height="100%" viewBox="0 0 200 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="20" y="40" width="16" height="30" fill="#E2C275" rx="2" />
-                    <rect x="44" y="30" width="16" height="40" fill="#E2C275" rx="2" />
-                    <rect x="68" y="50" width="16" height="20" fill="#E2C275" rx="2" />
-                    <rect x="92" y="20" width="16" height="50" fill="#A21C1C" rx="2" />
-                    <rect x="116" y="35" width="16" height="35" fill="#E2C275" rx="2" />
-                    <rect x="140" y="45" width="16" height="25" fill="#E2C275" rx="2" />
+                    {reportGenerated && reportData && reportData.weeklyData ? (
+                      generateBarChartData().map((bar: any, idx: number) => (
+                        <rect 
+                          key={idx}
+                          x={bar.x} 
+                          y={bar.y} 
+                          width="16" 
+                          height={bar.height} 
+                          fill={idx === generateBarChartData().length - 1 ? "#A21C1C" : "#E2C275"} 
+                          rx="2" 
+                        />
+                      ))
+                    ) : (
+                      <>
+                        <rect x="20" y="40" width="16" height="30" fill="#E2C275" rx="2" />
+                        <rect x="44" y="30" width="16" height="40" fill="#E2C275" rx="2" />
+                        <rect x="68" y="50" width="16" height="20" fill="#E2C275" rx="2" />
+                        <rect x="92" y="20" width="16" height="50" fill="#A21C1C" rx="2" />
+                        <rect x="116" y="35" width="16" height="35" fill="#E2C275" rx="2" />
+                        <rect x="140" y="45" width="16" height="25" fill="#E2C275" rx="2" />
+                      </>
+                    )}
                   </svg>
                 </div>
                 <div className="text-center mb-4">
-                  <div className="text-2xl font-bold text-[#A21C1C]">{reportGenerated ? "20" : "-"}</div>
-                  <div className="text-sm text-gray-500">Active Cases</div>
-                  <div className="text-xs text-gray-400">{reportGenerated ? "Monday, April 22nd" : "No data"}</div>
+                  <div className="text-2xl font-bold text-[#A21C1C]">
+                    {reportGenerated && reportData ? reportData.latestValue : "-"}
+                  </div>
+                  <div className="text-sm text-gray-500">{selectedDataType || "Data"}</div>
+                  <div className="text-xs text-gray-400">
+                    {reportGenerated && reportData && reportData.weeklyData && reportData.weeklyData.length > 0
+                      ? new Date(reportData.weeklyData[reportData.weeklyData.length - 1].date).toLocaleDateString()
+                      : "No data"}
+                  </div>
                 </div>
                 <button className="w-full bg-[#A21C1C] text-white py-2 rounded-lg font-bold hover:bg-[#7C1D1D] transition-colors" disabled={!reportGenerated}>
                   View Details
@@ -283,30 +492,72 @@ export default function ReportsPage() {
                         <stop offset="1" stopColor="#A21C1C" stopOpacity="0.1" />
                       </linearGradient>
                     </defs>
-                    <path
-                      d="M0,60 Q40,40 80,50 Q120,70 160,40 Q200,20 240,50 Q280,80 320,40 V80 H0 Z"
-                      fill="url(#areaGrad)"
-                    />
-                    <path
-                      d="M0,60 Q40,40 80,50 Q120,70 160,40 Q200,20 240,50 Q280,80 320,40"
-                      stroke="#A21C1C"
-                      strokeWidth="2"
-                      fill="none"
-                    />
-                    <circle cx="80" cy="50" r="3" fill="#A21C1C" />
-                    <circle cx="160" cy="40" r="3" fill="#A21C1C" />
-                    <circle cx="240" cy="50" r="3" fill="#A21C1C" />
+                    {reportGenerated && reportData && reportData.weeklyData && reportData.weeklyData.length > 0 ? (() => {
+                      const chartData = generateAreaChartData()
+                      return (
+                        <>
+                          <path
+                            d={`${chartData.path} V80 H0 Z`}
+                            fill="url(#areaGrad)"
+                          />
+                          <path
+                            d={chartData.path}
+                            stroke="#A21C1C"
+                            strokeWidth="2"
+                            fill="none"
+                          />
+                          {chartData.points.map((point: any, idx: number) => (
+                            <circle key={idx} cx={point.x} cy={point.y} r="3" fill="#A21C1C" />
+                          ))}
+                        </>
+                      )
+                    })() : (
+                      <>
+                        <path
+                          d="M0,60 Q40,40 80,50 Q120,70 160,40 Q200,20 240,50 Q280,80 320,40 V80 H0 Z"
+                          fill="url(#areaGrad)"
+                        />
+                        <path
+                          d="M0,60 Q40,40 80,50 Q120,70 160,40 Q200,20 240,50 Q280,80 320,40"
+                          stroke="#A21C1C"
+                          strokeWidth="2"
+                          fill="none"
+                        />
+                        <circle cx="80" cy="50" r="3" fill="#A21C1C" />
+                        <circle cx="160" cy="40" r="3" fill="#A21C1C" />
+                        <circle cx="240" cy="50" r="3" fill="#A21C1C" />
+                      </>
+                    )}
                   </svg>
                 </div>
                 <div className="flex justify-center gap-6 text-xs mb-4">
-                  <span className="flex items-center gap-2">
-                    <span className="inline-block w-3 h-3 rounded-full bg-blue-500"></span>
-                    Vista Angkasa
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <span className="inline-block w-3 h-3 rounded-full bg-red-400"></span>
-                    Petaling Jaya
-                  </span>
+                  {reportGenerated && reportData && reportData.stats ? (
+                    <>
+                      <span className="flex items-center gap-2">
+                        <span className="inline-block w-3 h-3 rounded-full bg-red-500"></span>
+                        High Risk: {reportData.stats.highRiskPredictions}
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <span className="inline-block w-3 h-3 rounded-full bg-yellow-500"></span>
+                        Medium Risk: {reportData.stats.mediumRiskPredictions}
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <span className="inline-block w-3 h-3 rounded-full bg-green-500"></span>
+                        Low Risk: {reportData.stats.lowRiskPredictions}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="flex items-center gap-2">
+                        <span className="inline-block w-3 h-3 rounded-full bg-blue-500"></span>
+                        Vista Angkasa
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <span className="inline-block w-3 h-3 rounded-full bg-red-400"></span>
+                        Petaling Jaya
+                      </span>
+                    </>
+                  )}
                 </div>
                 <button className="w-full bg-[#A21C1C] text-white py-2 rounded-lg font-bold hover:bg-[#7C1D1D] transition-colors" disabled={!reportGenerated}>
                   View Details
@@ -335,7 +586,7 @@ export default function ReportsPage() {
                       className="flex flex-col items-center gap-3 p-6 border border-gray-200 rounded-lg hover:border-[#E2C275] hover:bg-[#FFF7E3]/50 transition-all"
                       whileHover={{ y: -2 }}
                       whileTap={{ scale: 0.98 }}
-                      onClick={() => setError("") /* TODO: implement export logic */}
+                      onClick={() => handleExport(option.format)}
                     >
                       <div className={`p-3 ${option.color} rounded-lg text-white`}>{option.icon}</div>
                       <span className="font-medium">Export as {option.format}</span>

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../prisma/client');
 const authMiddleware = require('../middleware/authMiddleware');
+const companyController = require('../controllers/companyController');
 
 // GET /companies - Get all active companies
 router.get('/', async (req, res) => {
@@ -23,40 +24,10 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /companies/:id - Get specific company by ID
-router.get('/:id', authMiddleware.checkToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // Verify the user can access this company (they should only access their own company)
-    if (req.companyId !== id) {
-      return res.status(403).json({ error: 'Access denied. You can only view your own company.' });
-    }
-    
-    const company = await prisma.company.findUnique({
-      where: { 
-        id: id,
-        isActive: true 
-      },
-      select: {
-        id: true,
-        name: true,
-        code: true,
-        description: true,
-        createdAt: true,
-        updatedAt: true
-      }
-    });
-    
-    if (!company) {
-      return res.status(404).json({ error: 'Company not found.' });
-    }
-    
-    res.json(company);
-  } catch (err) {
-    console.error('[COMPANIES ERROR] Failed to fetch company:', err);
-    res.status(500).json({ error: 'Failed to fetch company.' });
-  }
-});
+// GET /companies/:id - Get specific company by ID (with settings)
+router.get('/:id', authMiddleware.checkToken, companyController.getCompanyById);
+
+// PATCH /companies/:id/settings - Update company settings
+router.patch('/:id/settings', authMiddleware.checkToken, companyController.updateCompanySettings);
 
 module.exports = router;
