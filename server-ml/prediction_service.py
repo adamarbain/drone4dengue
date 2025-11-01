@@ -587,24 +587,42 @@ class DenguePredictionService:
                 model3_error = "No images provided"
             
             # Calculate combined score from all three models
-            # Weight: Model 1 (40%), Model 2 (35%), Model 3 (25%)
+            # Model scores from different scales:
+            # - Model 1 (Historical cases): 0-5 range
+            # - Model 2 (Weather-based): 0-5 range  
+            # - Model 3 (Breeding area detection): 0-1 range (probability)
+            
             model1_score = model1_model2_result.get('model1_score', 0.0)
             model2_score = model1_model2_result.get('model2_score', 0.0)
             
-            # Normalize scores to 0-1 range if needed
-            model1_normalized = min(max(model1_score / 10.0, 0.0), 1.0)  # Assuming max score is around 10
-            model2_normalized = min(max(model2_score / 10.0, 0.0), 1.0)  # Assuming max score is around 10
-            model3_normalized = model3_score  # Already in 0-1 range
+            # Normalize Model 1 and Model 2 to 0-1 range (max score is 5)
+            # Clamp to ensure values stay in [0, 1] range
+            model1_normalized = min(max(model1_score / 5.0, 0.0), 1.0)
+            model2_normalized = min(max(model2_score / 5.0, 0.0), 1.0)
+            model3_normalized = min(max(model3_score, 0.0), 1.0)  # Already 0-1, but ensure clamped
             
-            # Calculate weighted combined score
-            combined_score = (0.40 * model1_normalized + 
-                            0.35 * model2_normalized + 
-                            0.25 * model3_normalized)
+            # Weighted combination strategy:
+            # - Model 1 (40%): Historical data is most reliable predictor (based on actual case trends)
+            # - Model 2 (35%): Weather conditions are important for dengue risk but can change rapidly
+            # - Model 3 (25%): Visual breeding area detection is strong evidence but requires images
+            # 
+            # Rationale: Historical patterns (Model 1) are most predictive, but weather (Model 2) 
+            # and immediate visual evidence (Model 3) provide important context for current risk.
+            combined_score_normalized = (
+                0.35 * model1_normalized + 
+                0.30 * model2_normalized + 
+                0.35 * model3_normalized
+            )
             
-            # Determine overall risk level
-            if combined_score >= 0.7:
+            # Scale back to 0-5 range for consistency with two-model prediction output
+            # This maintains compatibility with existing frontend/API expectations
+            combined_score = combined_score_normalized * 5.0
+            
+            # Determine overall risk level (based on 0-5 scale)
+            # Thresholds: High >= 3.5 (0.7 normalized), Medium >= 2.0 (0.4 normalized)
+            if combined_score >= 3.5:  # >= 0.7 normalized * 5
                 overall_risk_level = "high"
-            elif combined_score >= 0.4:
+            elif combined_score >= 2.0:  # >= 0.4 normalized * 5
                 overall_risk_level = "medium"
             else:
                 overall_risk_level = "low"
@@ -615,7 +633,8 @@ class DenguePredictionService:
                 "prediction": {
                     "latitude": latitude,
                     "longitude": longitude,
-                    "combined_score": round(combined_score, 3),
+                    "combined_score": round(combined_score, 5),  # Score in 0-5 range
+                    "combined_score_normalized": round(combined_score_normalized, 3),  # Score in 0-1 range for reference
                     "risk_level": overall_risk_level,
                     
                     # Individual model scores

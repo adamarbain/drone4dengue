@@ -7,7 +7,9 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "seed": "node ./prisma/seed.js"
+    "seed": "node ./prisma/seed.js",
+    "prisma-reset": "npx prisma migrate reset --force && npm run seed",
+    "prisma-migrate": "npx prisma migrate reset --force && npx prisma migrate dev --force && npm run seed"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +23,7 @@
     "csv-parse": "^5.6.0",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "firebase-admin": "^12.7.0",
     "json2csv": "^6.0.0-alpha.2",
     "jsonwebtoken": "^9.0.0",
     "leaflet": "^1.9.4",

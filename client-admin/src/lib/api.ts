@@ -52,6 +52,9 @@ export interface PredictionResponse {
     riskLevel: 'high' | 'medium' | 'low';
     model1Score?: number;
     model2Score?: number;
+    model3Score?: number;  // Breeding area detection score (0-1 range)
+    combinedScore?: number;  // Combined score from all three models (0-5 range)
+    combinedScoreNormalized?: number;  // Combined score in 0-1 range for reference
     createdAt?: string;
     timestamp?: string;
     cached?: boolean;
@@ -73,6 +76,11 @@ export interface PredictionResponse {
       has_lag_30: boolean;
     };
     model?: string;
+    // Three-model specific fields
+    breedingAreaDetections?: any[];  // Breeding area detection results
+    model3RiskLevel?: string;  // Model 3 risk level
+    imagesProcessed?: number;  // Number of images processed
+    modelsUsed?: string[];  // Which models were used
   };
 }
 

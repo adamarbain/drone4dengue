@@ -2,6 +2,7 @@ const prisma = require('../prisma/client');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { uploadImage, deleteImage: deleteFirebaseImage, generateStoragePath } = require('../utils/firebase_storage_utils');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -407,16 +408,30 @@ exports.deleteDrone = async (req, res) => {
       return res.status(404).json({ error: 'Drone not found' });
     }
 
-    // Delete associated files
+    // Delete associated images from Firebase Storage
     const images = await prisma.image.findMany({ where: { droneId: id } });
 
-    // Delete physical files
-    images.forEach(file => {
-      const filePath = path.join('uploads/drones', path.basename(file.url));
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+    // Delete files from Firebase Storage
+    for (const image of images) {
+      if (image.url && (image.url.includes('storage.googleapis.com') || image.url.includes('firebasestorage.googleapis.com'))) {
+        try {
+          const { extractFilePathFromUrl } = require('../utils/firebase_storage_utils');
+          const filePath = extractFilePathFromUrl(image.url);
+          if (filePath) {
+            await deleteFirebaseImage(filePath);
+          }
+        } catch (error) {
+          console.error(`Error deleting image from Firebase: ${error.message}`);
+          // Continue with other images
+        }
+      } else {
+        // Fallback: Delete local file if it's still using local storage
+        const filePath = path.join('uploads/drones', path.basename(image.url));
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
       }
-    });
+    }
 
     // Delete drone (cascade will delete images)
     await prisma.drone.delete({
@@ -459,30 +474,64 @@ exports.uploadImages = async (req, res) => {
     const uploadedFiles = [];
 
     for (const file of files) {
-      const fileData = {
-        url: `/uploads/drones/${file.filename}`,
-        filename: file.originalname,
-        fileSize: file.size,
-        mimeType: file.mimetype,
-        sourceType: 'upload',
-        droneId: droneId,
-        companyId: req.companyId,
-        companyLocationId: drone.companyLocationId || null
-      };
+      try {
+        // Generate Firebase Storage path
+        const storagePath = generateStoragePath(file.originalname, 'drone-images');
+        
+        // Upload to Firebase Storage
+        const firebaseUrl = await uploadImage(file.path, storagePath, {
+          contentType: file.mimetype,
+          customMetadata: {
+            originalName: file.originalname,
+            droneId: droneId,
+            uploadedBy: req.user?.userId || 'system',
+          },
+        });
 
-      const image = await prisma.image.create({
-        data: fileData
-      });
-      uploadedFiles.push({ type: 'image', ...image });
+        // Clean up temporary local file after successful upload
+        if (fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path);
+        }
+
+        // Store Firebase URL in database
+        const fileData = {
+          url: firebaseUrl, // Store Firebase URL instead of local path
+          filename: file.originalname,
+          fileSize: file.size,
+          mimeType: file.mimetype,
+          sourceType: 'upload',
+          droneId: droneId,
+          companyId: req.companyId,
+          companyLocationId: drone.companyLocationId || null
+        };
+
+        const image = await prisma.image.create({
+          data: fileData
+        });
+        
+        uploadedFiles.push({ type: 'image', ...image });
+        console.log(`Image uploaded to Firebase: ${firebaseUrl}`);
+      } catch (fileError) {
+        console.error(`Error uploading file ${file.originalname}:`, fileError);
+        // Clean up local file even on error
+        if (fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path);
+        }
+        // Continue with other files
+      }
+    }
+
+    if (uploadedFiles.length === 0) {
+      return res.status(500).json({ error: 'Failed to upload any images' });
     }
 
     res.json({
-      message: 'Images uploaded successfully',
+      message: 'Images uploaded successfully to Firebase',
       files: uploadedFiles
     });
   } catch (err) {
     console.error('[UPLOAD IMAGES ERROR]', err);
-    res.status(500).json({ error: 'Failed to upload images' });
+    res.status(500).json({ error: 'Failed to upload images: ' + err.message });
   }
 };
 
@@ -515,48 +564,63 @@ exports.uploadVideoFrames = async (req, res) => {
     const uploadedFrames = [];
 
     for (let i = 0; i < frames.length; i++) {
-      const frame = frames[i];
-      const base64Data = frame.replace(/^data:image\/[a-z]+;base64,/, '');
-      const buffer = Buffer.from(base64Data, 'base64');
-      
-      // Generate unique filename
-      const filename = `frame-${Date.now()}-${i}-${Math.round(Math.random() * 1E9)}.jpg`;
-      const filePath = path.join('uploads/drones', filename);
-      
-      // Ensure directory exists
-      const uploadDir = 'uploads/drones';
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
+      try {
+        const frame = frames[i];
+        const base64Data = frame.replace(/^data:image\/[a-z]+;base64,/, '');
+        const buffer = Buffer.from(base64Data, 'base64');
+        
+        // Generate unique filename
+        const filename = `frame-${Date.now()}-${i}-${Math.round(Math.random() * 1E9)}.jpg`;
+        
+        // Generate Firebase Storage path
+        const storagePath = generateStoragePath(filename, 'video-frames');
+        
+        // Upload directly to Firebase Storage (using buffer, no temporary file needed)
+        const firebaseUrl = await uploadImage(buffer, storagePath, {
+          contentType: 'image/jpeg',
+          customMetadata: {
+            originalName: filename,
+            droneId: droneId,
+            frameIndex: i.toString(),
+            uploadedBy: req.user?.userId || 'system',
+          },
+        });
+
+        const fileData = {
+          url: firebaseUrl, // Store Firebase URL instead of local path
+          filename: filename,
+          fileSize: buffer.length,
+          mimeType: 'image/jpeg',
+          sourceType: 'video_frame',
+          droneId: droneId,
+          companyId: req.companyId,
+          companyLocationId: drone.companyLocationId || null
+        };
+
+        const image = await prisma.image.create({
+          data: fileData
+        });
+        
+        uploadedFrames.push({ type: 'image', ...image });
+        console.log(`Video frame ${i + 1}/${frames.length} uploaded to Firebase: ${firebaseUrl}`);
+      } catch (frameError) {
+        console.error(`Error uploading frame ${i}:`, frameError);
+        // Continue with other frames
       }
-      
-      // Write file
-      fs.writeFileSync(filePath, buffer);
+    }
 
-      const fileData = {
-        url: `/uploads/drones/${filename}`,
-        filename: filename,
-        fileSize: buffer.length,
-        mimeType: 'image/jpeg',
-        sourceType: 'video_frame',
-        droneId: droneId,
-        companyId: req.companyId,
-        companyLocationId: drone.companyLocationId || null
-      };
-
-      const image = await prisma.image.create({
-        data: fileData
-      });
-      uploadedFrames.push({ type: 'image', ...image });
+    if (uploadedFrames.length === 0) {
+      return res.status(500).json({ error: 'Failed to upload any video frames' });
     }
 
     res.json({
-      message: 'Video frames uploaded successfully',
+      message: 'Video frames uploaded successfully to Firebase',
       frames: uploadedFrames,
       count: uploadedFrames.length
     });
   } catch (err) {
     console.error('[UPLOAD VIDEO FRAMES ERROR]', err);
-    res.status(500).json({ error: 'Failed to upload video frames' });
+    res.status(500).json({ error: 'Failed to upload video frames: ' + err.message });
   }
 };
 
@@ -640,10 +704,26 @@ exports.deleteImage = async (req, res) => {
       return res.status(404).json({ error: 'Image not found' });
     }
 
-    // Delete physical file
-    const filePath = path.join('uploads/drones', path.basename(image.url));
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    // Delete from Firebase Storage if URL is a Firebase URL
+    if (image.url && (image.url.includes('storage.googleapis.com') || image.url.includes('firebasestorage.googleapis.com'))) {
+      try {
+        const { extractFilePathFromUrl } = require('../utils/firebase_storage_utils');
+        const filePath = extractFilePathFromUrl(image.url);
+        if (filePath) {
+          await deleteFirebaseImage(filePath);
+          console.log(`Image deleted from Firebase: ${filePath}`);
+        }
+      } catch (firebaseError) {
+        console.error('Error deleting from Firebase (continuing with DB delete):', firebaseError);
+        // Continue with database deletion even if Firebase delete fails
+      }
+    } else {
+      // Fallback: Delete local file if it's still using local storage
+      const filePath = path.join('uploads/drones', path.basename(image.url));
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log(`Local file deleted: ${filePath}`);
+      }
     }
 
     // Delete from database
@@ -654,7 +734,7 @@ exports.deleteImage = async (req, res) => {
     res.json({ message: 'Image deleted successfully' });
   } catch (err) {
     console.error('[DELETE IMAGE ERROR]', err);
-    res.status(500).json({ error: 'Failed to delete image' });
+    res.status(500).json({ error: 'Failed to delete image: ' + err.message });
   }
 };
 
@@ -676,6 +756,13 @@ exports.downloadImage = async (req, res) => {
       return res.status(404).json({ error: 'Image not found' });
     }
 
+    // If it's a Firebase URL, redirect to Firebase or download via proxy
+    if (image.url && (image.url.includes('storage.googleapis.com') || image.url.includes('firebasestorage.googleapis.com'))) {
+      // Redirect to Firebase URL (or proxy the download)
+      return res.redirect(image.url);
+    }
+
+    // Fallback: Local file download (for backward compatibility)
     const filePath = path.join('uploads/drones', path.basename(image.url));
     
     if (!fs.existsSync(filePath)) {

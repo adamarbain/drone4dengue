@@ -110,6 +110,20 @@ export default function DroneManagementPage() {
   const [droneImages, setDroneImages] = useState<any[]>([])
   const [loadingImages, setLoadingImages] = useState(false)
 
+  // Helper function to get image URL (handles both Firebase URLs and legacy local paths)
+  const getImageUrl = (image: any): string => {
+    if (image.url) {
+      // If URL is already absolute (Firebase URL), use it directly
+      if (image.url.startsWith('http://') || image.url.startsWith('https://')) {
+        return image.url
+      }
+      // Legacy local path - construct absolute URL
+      return `http://localhost:4000${image.url}`
+    }
+    // Fallback: construct from filename (legacy support)
+    return `http://localhost:4000/uploads/drones/${image.filename}`
+  }
+
   const filteredDrones = droneList.filter(
     (drone) =>
       drone.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -678,7 +692,7 @@ export default function DroneManagementPage() {
                         >
                           <div className="relative h-48">
                             <Image
-                              src={`http://localhost:4000/uploads/drones/${image.filename}` || "/placeholder.svg"}
+                              src={getImageUrl(image) || "/placeholder.svg"}
                               alt={`Drone capture ${idx + 1}`}
                               fill
                               className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -699,7 +713,7 @@ export default function DroneManagementPage() {
                               <button 
                                 className="bg-white/90 backdrop-blur-sm p-3 rounded-full hover:bg-white transition-colors"
                                 onClick={() => {
-                                  setSelectedImage(`http://localhost:4000/uploads/drones/${image.filename}`)
+                                  setSelectedImage(getImageUrl(image))
                                   setShowImageModal(true)
                                 }}
                               >
@@ -808,7 +822,7 @@ export default function DroneManagementPage() {
                     {droneImages.map((image, idx) => (
                       <div key={image.id} className="relative h-36 rounded-lg overflow-hidden bg-gray-100 group">
                         <Image 
-                          src={`http://localhost:4000/uploads/drones/${image.filename}`} 
+                          src={getImageUrl(image)} 
                           alt={`Image ${idx + 1}`} 
                           fill 
                           className="object-cover" 

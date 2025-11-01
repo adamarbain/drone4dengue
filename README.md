@@ -28,10 +28,11 @@ Drone4Dengue is a hybrid system comprising a mobile app (DroneEye) and an admin 
 - Expo Push Notifications
 - Optional: SendGrid / Twilio
 
-### ☁️ Deployment
+### ☁️ Deployment & Storage
 - Web & API: Vercel / Railway / Render
 - DB: Supabase / Railway PostgreSQL
 - ML Service: Render / PythonAnywhere
+- Image Storage: Firebase Storage (migrated from local filesystem)
 
 ---
 
@@ -52,6 +53,8 @@ Drone4Dengue is a hybrid system comprising a mobile app (DroneEye) and an admin 
 - [📄 UI Navigation](./docs/ui-navigation.md)
 - [📄 API Specification](./docs/api-spec.md)
 - [📄 Prediction Model](./docs/prediction-model.md)
+- [📄 Firebase Storage Migration](./docs/firebase-storage-migration.md)
+- [📄 Three-Model Prediction Flow](./docs/three-model-prediction-flow.md)
 
 ## ✅ Getting Started
 

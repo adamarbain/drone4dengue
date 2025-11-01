@@ -298,12 +298,18 @@ export default function PredictionAlertPage() {
           riskLevel: response.prediction.riskLevel,
           model1Score: response.prediction.model1Score,
           model2Score: response.prediction.model2Score,
+          model3Score: response.prediction.model3Score,
+          combinedScore: response.prediction.combinedScore,
           createdAt: response.prediction.timestamp || new Date().toISOString(),
           historicalFeatures: response.prediction.historicalFeatures,
           isHotspot: response.prediction.isHotspot,
           locationCluster: response.prediction.locationCluster,
           dataQuality: response.prediction.dataQuality,
-          model: response.prediction.model
+          model: response.prediction.model,
+          breedingAreaDetections: response.prediction.breedingAreaDetections,
+          model3RiskLevel: response.prediction.model3RiskLevel,
+          imagesProcessed: response.prediction.imagesProcessed,
+          modelsUsed: response.prediction.modelsUsed
         }
 
         setPredictions(prev => [newPrediction, ...prev])

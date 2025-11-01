@@ -368,9 +368,13 @@ async function predictCompanyThreeModels(req, res) {
         }
       });
 
-      // Convert relative URLs to absolute URLs
+      // Convert relative URLs to absolute URLs (or use Firebase URLs as-is)
       imageUrls = images.map(img => {
-        // Assuming images are served from the API server
+        // If URL is already a Firebase URL (absolute), use it directly
+        if (img.url && (img.url.startsWith('http://') || img.url.startsWith('https://'))) {
+          return img.url;
+        }
+        // Otherwise, assume it's a relative URL and prepend API base URL
         const baseUrl = process.env.API_BASE_URL || 'http://localhost:4000';
         return `${baseUrl}${img.url}`;
       });
@@ -523,8 +527,13 @@ async function detectBreedingAreas(req, res) {
       return res.status(404).json({ error: 'No images found for the specified criteria' });
     }
 
-    // Convert relative URLs to absolute URLs
+    // Convert relative URLs to absolute URLs (or use Firebase URLs as-is)
     const imageUrls = images.map(img => {
+      // If URL is already a Firebase URL (absolute), use it directly
+      if (img.url && (img.url.startsWith('http://') || img.url.startsWith('https://'))) {
+        return img.url;
+      }
+      // Otherwise, assume it's a relative URL and prepend API base URL
       const baseUrl = process.env.API_BASE_URL || 'http://localhost:4000';
       return `${baseUrl}${img.url}`;
     });
@@ -801,6 +810,7 @@ async function getCompanyPredictions(req, res) {
         riskLevel: p.riskScore >= 3 ? 'high' : p.riskScore >= 1 ? 'medium' : 'low',
         model1Score: p.model1Score,
         model2Score: p.model2Score,
+        model3Score: p.model3Score,
         createdAt: p.createdAt
       }))
     });
