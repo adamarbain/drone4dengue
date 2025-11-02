@@ -22,6 +22,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Database URL - can be overridden by DATABASE_URL environment variable
+DEFAULT_DATABASE_URL = "postgresql://neondb_owner:npg_zkRpJ0wqb1Og@ep-blue-scene-a1vazo7s-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"  # Replace with your actual database URL
+
 def parse_database_url(db_url):
     """Parse DATABASE_URL into connection parameters."""
     parsed = urlparse(db_url)
@@ -34,10 +37,11 @@ def parse_database_url(db_url):
     }
 
 def get_db_connection():
-    """Get database connection from DATABASE_URL environment variable."""
-    db_url = os.getenv('DATABASE_URL')
-    if not db_url:
-        raise ValueError("DATABASE_URL environment variable is not set")
+    """Get database connection from DATABASE_URL environment variable or default URL."""
+    db_url = os.getenv('DATABASE_URL') or DEFAULT_DATABASE_URL
+    
+    if not db_url or db_url == "postgresql://user:password@host:port/database":
+        raise ValueError("DATABASE_URL environment variable is not set and default URL is not configured. Please set DEFAULT_DATABASE_URL in the script or set DATABASE_URL environment variable.")
     
     try:
         conn_params = parse_database_url(db_url)
