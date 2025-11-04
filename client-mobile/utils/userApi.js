@@ -59,6 +59,7 @@ export async function updateUserProfile(fields) {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.error || 'Failed to update profile');
+  }
   const data = await res.json();
   return data.user;
 }

@@ -59,6 +59,9 @@ exports.getUserById = async (req, res) => {
         status: true,
         createdAt: true,
         updatedAt: true,
+        companyId: true,
+        organization: true,
+        userId: true,
       },
     });
     if (!user) {
