@@ -508,7 +508,7 @@ export default function PredictionAlertPage() {
                           <div className="space-y-1">
                             <div>Model 1: {prediction.model1Score ? prediction.model1Score.toFixed(3) : 'N/A'}</div>
                             <div>Model 2: {prediction.model2Score ? prediction.model2Score.toFixed(3) : 'N/A'}</div>
-                            {prediction.model3Score !== undefined && (
+                            {prediction.model3Score != null && (
                               <div>Model 3: {prediction.model3Score.toFixed(3)}</div>
                             )}
                             {prediction.combinedScore !== undefined && (
@@ -603,7 +603,7 @@ export default function PredictionAlertPage() {
                   <div><span className="font-semibold">Risk Score:</span> {showDetails.riskScore.toFixed(3)}</div>
                   <div><span className="font-semibold">Model 1 Score:</span> {showDetails.model1Score ? showDetails.model1Score.toFixed(3) : 'N/A'}</div>
                   <div><span className="font-semibold">Model 2 Score:</span> {showDetails.model2Score ? showDetails.model2Score.toFixed(3) : 'N/A'}</div>
-                  {showDetails.model3Score !== undefined && (
+                  {showDetails.model3Score != null && (
                     <div><span className="font-semibold">Model 3 Score:</span> {showDetails.model3Score.toFixed(3)}</div>
                   )}
                   {showDetails.combinedScore !== undefined && (

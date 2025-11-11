@@ -89,6 +89,15 @@ async function update(req, res) {
       }
     });
     
+    // Send notification to admin users
+    try {
+      const { notifyCompanyLocationChange } = require('../services/notificationService');
+      await notifyCompanyLocationChange(location, 'updated');
+    } catch (notifError) {
+      console.error('Failed to send location notification:', notifError);
+      // Don't fail the request if notification fails
+    }
+    
     res.json(location);
   } catch (err) {
     if (err.code === 'P2002') {

@@ -38,6 +38,15 @@ export default function ProfilePage() {
   }, []);
 
   const handleLogout = async () => {
+    // Unregister push notifications
+    try {
+      const { unregisterDeviceToken, clearAllNotifications } = require('../utils/pushNotifications');
+      await unregisterDeviceToken();
+      await clearAllNotifications();
+    } catch (error) {
+      console.error('Error unregistering push notifications:', error);
+    }
+    
     await AsyncStorage.removeItem('token');
     await AsyncStorage.removeItem('token_exp');
     router.replace('/(auth)/login');

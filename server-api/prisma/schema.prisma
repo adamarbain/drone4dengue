@@ -23,47 +23,48 @@ model Company {
   updatedAt   DateTime @updatedAt
 
   // Notification Preferences
-  emailNotifications  Boolean  @default(true)
-  smsNotifications    Boolean  @default(false)
-  alertFrequency      String   @default("immediate") // "immediate", "daily", "weekly"
+  emailNotifications Boolean @default(true)
+  smsNotifications   Boolean @default(false)
+  alertFrequency     String  @default("immediate") // "immediate", "daily", "weekly"
 
   // System Configuration
-  alertThreshold      String   @default("medium") // "low", "medium", "high"
+  alertThreshold            String @default("medium") // "low", "medium", "high"
   predictionModelParameters Json? // { temperatureWeight: 0.35, rainfallWeight: 0.40, populationDensityWeight: 0.25 }
-  syncMode            String   @default("automatic") // "automatic", "manual"
+  syncMode                  String @default("automatic") // "automatic", "manual"
 
   // Advanced Settings
-  advancedSettings    Json? // { dataRetentionPolicy: {...}, apiAccess: {...}, systemBackup: {...} }
+  advancedSettings Json? // { dataRetentionPolicy: {...}, apiAccess: {...}, systemBackup: {...} }
 
   // Relations
-  users       User[]
-  locations   CompanyLocation[]
-  drones      Drone[]
-  images      Image[]
-  reports     Report[]
-  predictions CompanyPrediction[]
+  users                  User[]
+  locations              CompanyLocation[]
+  drones                 Drone[]
+  images                 Image[]
+  reports                Report[]
+  predictions            CompanyPrediction[]
   breedingAreaDetections BreedingAreaDetection[]
+  notifications          Notification[]
   // alerts      Alert[]
   // recommendations Recommendation[]
 }
 
 model CompanyLocation {
-  id          String   @id @default(uuid())
-  name        String
-  address     String?
-  latitude    Float?
-  longitude   Float?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id])
+  id        String   @id @default(uuid())
+  name      String
+  address   String?
+  latitude  Float?
+  longitude Float?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
 
   // Relations
-  weather     Weather[]
-  predictions CompanyPrediction[]
-  drones      Drone[]
-  images      Image[]
+  weather                Weather[]
+  predictions            CompanyPrediction[]
+  drones                 Drone[]
+  images                 Image[]
   breedingAreaDetections BreedingAreaDetection[]
 
   @@unique([name, companyId])
@@ -91,29 +92,31 @@ model User {
   company         Company   @relation(fields: [companyId], references: [id])
 
   // Relations
-  drones  Drone[]
-  reports Report[]
-  alerts  Alert[]
+  drones        Drone[]
+  reports       Report[]
+  alerts        Alert[]
+  notifications Notification[]
+  deviceTokens  DeviceToken[]
 }
 
 model Drone {
-  id              String   @id @default(uuid())
-  droneId         String   @unique // Display ID like DRN-001
-  name            String
-  model           String   // Drone model (e.g., DJI Phantom 4 Pro)
-  serial          String   @unique
-  operationalArea String   // Operational area/location
-  status          String   @default("Operational") // Operational, Maintenance, Inactive
-  registrationDate DateTime @default(now())
-  userId          String?
-  user            User?    @relation(fields: [userId], references: [id])
-  companyId       String
-  company         Company  @relation(fields: [companyId], references: [id])
+  id                String           @id @default(uuid())
+  droneId           String           @unique // Display ID like DRN-001
+  name              String
+  model             String // Drone model (e.g., DJI Phantom 4 Pro)
+  serial            String           @unique
+  operationalArea   String // Operational area/location
+  status            String           @default("Operational") // Operational, Maintenance, Inactive
+  registrationDate  DateTime         @default(now())
+  userId            String?
+  user              User?            @relation(fields: [userId], references: [id])
+  companyId         String
+  company           Company          @relation(fields: [companyId], references: [id])
   companyLocationId String?
-  companyLocation CompanyLocation? @relation(fields: [companyLocationId], references: [id])
-  images          Image[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  companyLocation   CompanyLocation? @relation(fields: [companyLocationId], references: [id])
+  images            Image[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   @@index([companyId])
   @@index([status])
@@ -124,12 +127,12 @@ model Drone {
 model Image {
   id                String           @id @default(uuid())
   url               String
-  filename          String           // Original filename
-  fileSize          Int              // File size in bytes
-  mimeType          String           // MIME type (image/jpeg, image/png, etc.)
-  width             Int?             // Image width in pixels
-  height            Int?             // Image height in pixels
-  description       String?          // Optional description
+  filename          String // Original filename
+  fileSize          Int // File size in bytes
+  mimeType          String // MIME type (image/jpeg, image/png, etc.)
+  width             Int? // Image width in pixels
+  height            Int? // Image height in pixels
+  description       String? // Optional description
   isProcessed       Boolean          @default(false) // Whether image has been processed for analysis
   sourceType        String           @default("upload") // "upload" or "video_frame"
   droneId           String
@@ -152,16 +155,16 @@ model Image {
 }
 
 model Weather {
-  id          String   @id @default(uuid())
-  date        DateTime
-  temperature Float
-  humidity    Float
-  rainfall    Float
-  location    String
+  id                String          @id @default(uuid())
+  date              DateTime
+  temperature       Float
+  humidity          Float
+  rainfall          Float
+  location          String
   companyLocationId String
   companyLocation   CompanyLocation @relation(fields: [companyLocationId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
   @@unique([date, location, companyLocationId])
 }
@@ -223,12 +226,12 @@ model CompanyPrediction {
   latitude          Float
   longitude         Float
   riskScore         Float
-  model1Score       Float?          // Historical cases model score
-  model2Score       Float?          // Weather-based model score
-  model3Score       Float?          // Breeding area detection model score
-  combinedScore     Float?          // Combined score from all three models
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  model1Score       Float? // Historical cases model score
+  model2Score       Float? // Weather-based model score
+  model3Score       Float? // Breeding area detection model score
+  combinedScore     Float? // Combined score from all three models
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   @@index([companyId])
   @@index([companyLocationId])
@@ -255,23 +258,59 @@ model BreedingAreaDetection {
   company           Company          @relation(fields: [companyId], references: [id])
   companyLocationId String?
   companyLocation   CompanyLocation? @relation(fields: [companyLocationId], references: [id])
-  
+
   // Detection results from Roboflow API
-  breedingAreaScore Float            // Confidence score for breeding area detection (0-1)
-  detectedObjects   Json?            // Full detection results from Roboflow API
-  boundingBoxes     Json?            // Bounding boxes of detected breeding areas
-  riskLevel         String           // "high", "medium", "low" based on detection score
-  
+  breedingAreaScore Float // Confidence score for breeding area detection (0-1)
+  detectedObjects   Json? // Full detection results from Roboflow API
+  boundingBoxes     Json? // Bounding boxes of detected breeding areas
+  riskLevel         String // "high", "medium", "low" based on detection score
+
   // Processing metadata
-  processingStatus  String           @default("pending") // "pending", "processing", "completed", "failed"
-  errorMessage      String?
-  processedAt       DateTime?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  processingStatus String    @default("pending") // "pending", "processing", "completed", "failed"
+  errorMessage     String?
+  processedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@index([imageId])
   @@index([companyId])
   @@index([companyLocationId])
   @@index([processingStatus])
   @@index([riskLevel])
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  title     String
+  message   String
+  type      String // 'prediction', 'dengue_case', 'drone', 'drone_image', 'location', 'daily_prediction'
+  userId    String? // null for company-wide notifications
+  user      User?     @relation(fields: [userId], references: [id])
+  companyId String
+  company   Company   @relation(fields: [companyId], references: [id])
+  isRead    Boolean   @default(false)
+  metadata  Json? // Additional data like riskLevel, location, etc.
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  @@index([userId])
+  @@index([companyId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@index([type])
+}
+
+model DeviceToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pushToken String   @unique
+  platform  String // 'ios' or 'android'
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([pushToken])
+  @@index([isActive])
 }

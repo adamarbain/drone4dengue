@@ -6,7 +6,6 @@ import { useRouter, usePathname } from 'expo-router';
 const tabs = [
   { key: 'dashboard', label: 'Dashboard', icon: 'home' },
   { key: 'action', label: 'Action', icon: 'flash' },
-  { key: 'drone', label: 'Drone', icon: 'paper-plane' },
   { key: 'notification', label: 'Notification', icon: 'notifications' },
   { key: 'profile', label: 'Profile', icon: 'person' },
 ];
@@ -16,7 +15,17 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   // Determine the active tab based on the current path
-  const active = pathname.replace('/', '') || 'dashboard';
+  // If on risk-analysis page, show dashboard as active
+  let active = pathname.replace('/', '') || 'dashboard';
+  if (active === 'risk-analysis') {
+    active = 'dashboard';
+  }
+  if (active === 'edit-profile') {
+    active = 'profile';
+  }
+  if (active === 'recommendations') {
+    active = 'action';
+  }
 
   return (
     <View
@@ -46,8 +55,6 @@ export default function BottomNav() {
                 router.replace('/dashboard' as '/dashboard');
               } else if (tab.key === 'action') {
                 router.replace('/action' as '/action');
-              } else if (tab.key === 'drone') {
-                router.replace('/drone' as '/drone');
               } else if (tab.key === 'notification') {
                 router.replace('/notification' as '/notification');
               } else if (tab.key === 'profile') {

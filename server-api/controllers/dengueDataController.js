@@ -3,6 +3,52 @@ const prisma = new PrismaClient();
 const { Parser } = require('json2csv');
 const fs = require('fs');
 const parse = require('csv-parse');
+const redis = require('redis');
+
+// Redis client configuration
+let redisClient = null;
+let redisConnected = false;
+
+// Initialize Redis client (similar to predictionController.js)
+try {
+  const redisUrl = process.env.REDIS_URL;
+  if (redisUrl) {
+    redisClient = redis.createClient({
+      url: redisUrl,
+      socket: {
+        tls: redisUrl.startsWith('rediss://'),
+      },
+    });
+  } else {
+    redisClient = redis.createClient({
+      username: process.env.REDIS_USERNAME || 'default',
+      password: process.env.REDIS_PASSWORD || undefined,
+      socket: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: Number(process.env.REDIS_PORT || 6379),
+      },
+    });
+  }
+
+  redisClient.on('error', (err) => {
+    console.error('Redis Client Error:', err);
+    redisConnected = false;
+  });
+
+  redisClient.on('connect', () => {
+    console.log('Connected to Redis');
+    redisConnected = true;
+  });
+
+  // Connect to Redis (non-blocking)
+  redisClient.connect().catch((err) => {
+    console.error('Redis connection failed:', err);
+    redisConnected = false;
+  });
+} catch (error) {
+  console.error('Failed to create Redis client:', error);
+  redisConnected = false;
+}
 
 // Get all dengue data (with filters)
 async function getAll(req, res) {
@@ -78,6 +124,19 @@ async function create(req, res) {
     
     const data = { ...otherData, companyLocationId };
     const record = await prisma.dengueData.create({ data });
+    
+    // Send notification to admin users
+    try {
+      const { notifyDengueCaseAdded } = require('../services/notificationService');
+      await notifyDengueCaseAdded({
+        ...record,
+        companyId: req.companyId
+      });
+    } catch (notifError) {
+      console.error('Failed to send dengue case notification:', notifError);
+      // Don't fail the request if notification fails
+    }
+    
     res.status(201).json(record);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -148,8 +207,20 @@ async function uploadCSV(req, res) {
           longitude: row.longitude ? parseFloat(row.longitude) : null,
           companyLocationId,
         };
-        await prisma.dengueData.create({ data });
-        results.push(data);
+        const record = await prisma.dengueData.create({ data });
+        results.push(record);
+        
+        // Send notification to admin users for each record
+        try {
+          const { notifyDengueCaseAdded } = require('../services/notificationService');
+          await notifyDengueCaseAdded({
+            ...record,
+            companyId: req.companyId
+          });
+        } catch (notifError) {
+          console.error('Failed to send dengue case notification:', notifError);
+          // Don't fail the request if notification fails
+        }
       } catch (err) {
         errors.push({ row, error: err.message });
       }
@@ -422,6 +493,215 @@ async function generateReport(req, res) {
   }
 }
 
+/**
+ * Generate cache key for coordinates
+ * @param {number} latitude - Latitude coordinate
+ * @param {number} longitude - Longitude coordinate
+ * @param {number} tolerance - Tolerance value
+ * @returns {string} Cache key
+ */
+function generateNearbyCasesCacheKey(latitude, longitude, tolerance) {
+  // Round coordinates to 4 decimal places for cache efficiency
+  const lat = Math.round(latitude * 10000) / 10000;
+  const lon = Math.round(longitude * 10000) / 10000;
+  const tol = Math.round(tolerance * 100000) / 100000; // Round tolerance to 5 decimal places
+  return `nearby-cases:${lat}:${lon}:${tol}`;
+}
+
+/**
+ * Get cached nearby cases
+ * @param {string} cacheKey - Cache key
+ * @returns {Promise<Object|null>} Cached data or null
+ */
+async function getCachedNearbyCases(cacheKey) {
+  if (!redisClient || !redisConnected) {
+    return null;
+  }
+  
+  try {
+    const cached = await redisClient.get(cacheKey);
+    return cached ? JSON.parse(cached) : null;
+  } catch (error) {
+    console.error('Redis get error:', error);
+    return null;
+  }
+}
+
+/**
+ * Cache nearby cases result
+ * @param {string} cacheKey - Cache key
+ * @param {Object} data - Nearby cases data
+ * @param {number} ttl - Time to live in seconds (default: 1 hour = 3600)
+ */
+async function cacheNearbyCases(cacheKey, data, ttl = 3600) {
+  if (!redisClient || !redisConnected) {
+    return;
+  }
+  
+  try {
+    await redisClient.setEx(cacheKey, ttl, JSON.stringify(data));
+  } catch (error) {
+    console.error('Redis set error:', error);
+  }
+}
+
+// Calculate centroid of a polygon from rings (similar to Python implementation)
+function calculateCentroid(rings) {
+  if (!rings || rings.length === 0) {
+    return null;
+  }
+  
+  let allX = [];
+  let allY = [];
+  
+  // Extract all x and y coordinates from all rings
+  for (const ring of rings) {
+    if (Array.isArray(ring)) {
+      for (const point of ring) {
+        if (Array.isArray(point) && point.length >= 2) {
+          allX.push(point[0]);
+          allY.push(point[1]);
+        }
+      }
+    }
+  }
+  
+  if (allX.length === 0 || allY.length === 0) {
+    return null;
+  }
+  
+  // Calculate mean of all x and y coordinates
+  const centroidX = allX.reduce((sum, x) => sum + x, 0) / allX.length;
+  const centroidY = allY.reduce((sum, y) => sum + y, 0) / allY.length;
+  
+  return { x: centroidX, y: centroidY };
+}
+
+// Get nearby dengue cases within a radius (tolerance) of given coordinates
+// Uses external API similar to Python implementation with Redis caching
+async function getNearbyCases(req, res) {
+  try {
+    const { latitude, longitude, tolerance } = req.query;
+    
+    if (!latitude || !longitude) {
+      return res.status(400).json({ error: 'latitude and longitude are required' });
+    }
+    
+    const lat = parseFloat(latitude);
+    const lon = parseFloat(longitude);
+    // Default tolerance for 2km radius (0.018 degrees)
+    // 0.045 = 5km, so 2km = 0.045 * (2/5) = 0.018
+    const tol = tolerance ? parseFloat(tolerance) : 0.018;
+    
+    if (isNaN(lat) || isNaN(lon) || isNaN(tol)) {
+      return res.status(400).json({ error: 'Invalid latitude, longitude, or tolerance values' });
+    }
+    
+    // Generate cache key
+    const cacheKey = generateNearbyCasesCacheKey(lat, lon, tol);
+    
+    // Check cache first
+    let cachedResult = await getCachedNearbyCases(cacheKey);
+    
+    if (cachedResult) {
+      // Add cached flag to response
+      cachedResult.cached = true;
+      return res.json(cachedResult);
+    }
+    
+    // If not in cache, fetch from external API
+    // External API URL for dengue data (similar to Python implementation)
+    const apiUrl = "https://sppk.mysa.gov.my/proxy/proxy.php?https://mygis.mysa.gov.my/erica1/rest/services/iDengue/WM_idengue/MapServer/4/query?f=json&where=1%3D1&returnGeometry=true&spatialRel=esriSpatialRelIntersects&outFields=SPWD.AVT_WABAK_IDENGUE_NODM.LOKALITI%2CSPWD.AVT_WABAK_IDENGUE_NODM.TOTAL_KES%2CSPWD.AVT_WABAK_IDENGUE_NODM.NEGERI";
+    
+    // Fetch data from external API
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'DengueEye-API/1.0',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`External API returned status ${response.status}`);
+    }
+    
+    const responseJson = await response.json();
+    const features = responseJson.features || [];
+    
+    // Process features similar to Python implementation
+    const filteredData = [];
+    let totalNearbyCases = 0;
+    const uniqueLocations = new Set();
+    
+    // Note: In Python, x_target is longitude and y_target is latitude
+    // So we use lon as x_target and lat as y_target
+    const xTarget = lon;
+    const yTarget = lat;
+    
+    for (const feature of features) {
+      const rings = feature.geometry?.rings;
+      if (!rings || rings.length === 0) {
+        continue;
+      }
+      
+      // Calculate centroid
+      const centroid = calculateCentroid(rings);
+      if (!centroid) {
+        continue;
+      }
+      
+      const centroidX = centroid.x;
+      const centroidY = centroid.y;
+      
+      // Check if centroid is within tolerance range
+      if (
+        (xTarget - tol <= centroidX && centroidX <= xTarget + tol) &&
+        (yTarget - tol <= centroidY && centroidY <= yTarget + tol)
+      ) {
+        // Extract relevant attributes
+        const attributes = feature.attributes || {};
+        const location = attributes['SPWD.AVT_WABAK_IDENGUE_NODM.LOKALITI'] || 'Unknown';
+        const state = attributes['SPWD.AVT_WABAK_IDENGUE_NODM.NEGERI'] || 'Unknown';
+        const totalCases = parseInt(attributes['SPWD.AVT_WABAK_IDENGUE_NODM.TOTAL_KES'] || '0', 10);
+        
+        if (location && location !== 'null' && location !== 'Unknown') {
+          uniqueLocations.add(location);
+        }
+        
+        totalNearbyCases += totalCases;
+        
+        filteredData.push({
+          location: location,
+          state: state,
+          totalCases: totalCases,
+          centroidX: centroidX,
+          centroidY: centroidY,
+          latitude: centroidY, // centroidY is latitude
+          longitude: centroidX, // centroidX is longitude
+        });
+      }
+    }
+    
+    const result = {
+      count: filteredData.length,
+      totalCases: totalNearbyCases,
+      uniqueLocations: uniqueLocations.size,
+      locations: Array.from(uniqueLocations),
+      data: filteredData,
+      cached: false,
+    };
+    
+    // Cache the result for 1 hour (3600 seconds)
+    await cacheNearbyCases(cacheKey, result, 3600);
+    
+    res.json(result);
+  } catch (err) {
+    console.error('Error fetching nearby cases:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch nearby dengue cases' });
+  }
+}
+
 // Helper function to get week of year
 function getWeekOfYear(date) {
   const d = new Date(date);
@@ -445,4 +725,5 @@ module.exports = {
   exportData,
   getLocations,
   generateReport,
+  getNearbyCases,
 }; 
