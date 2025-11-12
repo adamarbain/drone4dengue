@@ -16,7 +16,8 @@
         "foregroundImage": "./assets/dengueeye_logo.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.adamarbain.dengueeyemobileapp"
     },
     "web": {
       "bundler": "metro",
@@ -52,15 +53,15 @@
       "androidMode": "default",
       "androidCollapsedTitle": "#{unread_notifications} new notifications"
     },
-    "extra": {
-      "eas": {
-        "projectId": "779f5626-9b90-465e-89d3-9b79f91af27d"
-      },
-      "router": {}
-    },
     "experiments": {
       "typedRoutes": true
     },
-    "owner": "adamarbain"
+    "owner": "adamarbain",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4b73eff3-4b69-4f15-ab29-5f1ee9dd3c33"
+      }
+    }
   }
 }

@@ -266,6 +266,50 @@ export default function RiskAnalysisPage() {
     return 65;
   };
 
+  // Helper functions to determine color level based on actual values
+  const getTemperatureLevel = (temp: number): 'high' | 'medium' | 'low' => {
+    if (temp >= 30) return 'high';
+    if (temp >= 25) return 'medium';
+    return 'low';
+  };
+
+  const getRainfallLevel = (rain: number): 'high' | 'medium' | 'low' => {
+    if (rain >= 10) return 'high';
+    if (rain >= 5) return 'medium';
+    return 'low';
+  };
+
+  const getHumidityLevel = (hum: number): 'high' | 'medium' | 'low' => {
+    if (hum >= 80) return 'high';
+    if (hum >= 60) return 'medium';
+    return 'low';
+  };
+
+  // Get card colors based on value level
+  const getCardBackgroundColor = (level: 'high' | 'medium' | 'low'): string => {
+    if (level === 'high') return '#BF3131';
+    if (level === 'medium') return '#EAD196';
+    return '#F3F4F6';
+  };
+
+  const getCardTextColor = (level: 'high' | 'medium' | 'low'): string => {
+    if (level === 'high') return '#FFFFFF';
+    if (level === 'medium') return '#7D0A0A';
+    return '#000000';
+  };
+
+  const getCardSecondaryTextColor = (level: 'high' | 'medium' | 'low'): string => {
+    if (level === 'high') return '#FFFFFF';
+    if (level === 'medium') return '#7D0A0A';
+    return '#6B7280';
+  };
+
+  const getCardIconColor = (level: 'high' | 'medium' | 'low'): string => {
+    if (level === 'high') return '#FFFFFF';
+    if (level === 'medium') return '#7D0A0A';
+    return '#6B7280';
+  };
+
   const callLocalAuthority = () => {
     // You can replace this with actual emergency number
     const phoneNumber = 'tel:+0388810600';
@@ -326,6 +370,11 @@ export default function RiskAnalysisPage() {
   const temperature = getTemperature(riskLevel, prediction.model2Score);
   const rainfall = getRainfall(riskLevel);
   const humidity = getHumidity(riskLevel);
+  
+  // Calculate levels based on actual values
+  const temperatureLevel = getTemperatureLevel(temperature);
+  const rainfallLevel = getRainfallLevel(rainfall);
+  const humidityLevel = getHumidityLevel(humidity);
   
   // Background color based on risk level
   const backgroundColor = riskLevel === 'high' ? '#BF3131' : riskLevel === 'medium' ? '#EAD196' : '#F3F4F6';
@@ -462,78 +511,78 @@ export default function RiskAnalysisPage() {
             {/* Temperature Card */}
             <View
               className="rounded-2xl p-4 flex-row items-center justify-between"
-              style={{ backgroundColor: riskLevel === 'high' ? '#BF3131' : riskLevel === 'medium' ? '#EAD196' : '#F3F4F6' }}
+              style={{ backgroundColor: getCardBackgroundColor(temperatureLevel) }}
             >
               <View className="flex-1">
                 <Text 
                   className="text-2xl font-extrabold mb-1"
-                  style={{ color: riskLevel === 'high' ? '#FFFFFF' : riskLevel === 'medium' ? '#7D0A0A' : '#000000' }}
+                  style={{ color: getCardTextColor(temperatureLevel) }}
                 >
                   {temperature}° C
                 </Text>
                 <Text 
                   className="text-sm"
-                  style={{ color: riskLevel === 'high' ? '#FFFFFF' : riskLevel === 'medium' ? '#7D0A0A' : '#6B7280' }}
+                  style={{ color: getCardSecondaryTextColor(temperatureLevel) }}
                 >
-                  {riskLevel === 'high' ? 'High dew point' : riskLevel === 'medium' ? 'Moderate Temperature' : 'Low Temperature'}
+                  {temperatureLevel === 'high' ? 'High Temperature' : temperatureLevel === 'medium' ? 'Moderate Temperature' : 'Low Temperature'}
                 </Text>
               </View>
               <Feather 
                 name="droplet" 
                 size={24} 
-                color={riskLevel === 'high' ? '#FFFFFF' : riskLevel === 'medium' ? '#7D0A0A' : '#6B7280'} 
+                color={getCardIconColor(temperatureLevel)} 
               />
             </View>
 
             {/* Rainfall Card */}
             <View
               className="rounded-2xl p-4 flex-row items-center justify-between"
-              style={{ backgroundColor: riskLevel === 'high' ? '#BF3131' : riskLevel === 'medium' ? '#EAD196' : '#F3F4F6' }}
+              style={{ backgroundColor: getCardBackgroundColor(rainfallLevel) }}
             >
               <View className="flex-1">
                 <Text 
                   className="text-2xl font-extrabold mb-1"
-                  style={{ color: riskLevel === 'high' ? '#FFFFFF' : riskLevel === 'medium' ? '#7D0A0A' : '#000000' }}
+                  style={{ color: getCardTextColor(rainfallLevel) }}
                 >
                   {rainfall.toFixed(1)} mm
                 </Text>
                 <Text 
                   className="text-sm"
-                  style={{ color: riskLevel === 'high' ? '#FFFFFF' : riskLevel === 'medium' ? '#7D0A0A' : '#6B7280' }}
+                  style={{ color: getCardSecondaryTextColor(rainfallLevel) }}
                 >
-                  {riskLevel === 'high' ? 'High Rainfall' : riskLevel === 'medium' ? 'Moderate Rainfall' : 'Low Rainfall'}
+                  {rainfallLevel === 'high' ? 'High Rainfall' : rainfallLevel === 'medium' ? 'Moderate Rainfall' : 'Low Rainfall'}
                 </Text>
               </View>
               <Feather 
                 name="cloud-rain" 
                 size={24} 
-                color={riskLevel === 'high' ? '#FFFFFF' : riskLevel === 'medium' ? '#7D0A0A' : '#6B7280'} 
+                color={getCardIconColor(rainfallLevel)} 
               />
             </View>
 
             {/* Humidity Card */}
             <View
               className="rounded-2xl p-4 flex-row items-center justify-between"
-              style={{ backgroundColor: riskLevel === 'high' ? '#BF3131' : riskLevel === 'medium' ? '#EAD196' : '#F3F4F6' }}
+              style={{ backgroundColor: getCardBackgroundColor(humidityLevel) }}
             >
               <View className="flex-1">
                 <Text 
                   className="text-2xl font-extrabold mb-1"
-                  style={{ color: riskLevel === 'high' ? '#FFFFFF' : riskLevel === 'medium' ? '#7D0A0A' : '#000000' }}
+                  style={{ color: getCardTextColor(humidityLevel) }}
                 >
                   {humidity}%
                 </Text>
                 <Text 
                   className="text-sm"
-                  style={{ color: riskLevel === 'high' ? '#FFFFFF' : riskLevel === 'medium' ? '#7D0A0A' : '#6B7280' }}
+                  style={{ color: getCardSecondaryTextColor(humidityLevel) }}
                 >
-                  {riskLevel === 'high' ? 'High Humidity' : riskLevel === 'medium' ? 'Moderate Humidity' : 'Low Humidity'}
+                  {humidityLevel === 'high' ? 'High Humidity' : humidityLevel === 'medium' ? 'Moderate Humidity' : 'Low Humidity'}
                 </Text>
               </View>
               <Feather 
                 name="wind" 
                 size={24} 
-                color={riskLevel === 'high' ? '#FFFFFF' : riskLevel === 'medium' ? '#7D0A0A' : '#6B7280'} 
+                color={getCardIconColor(humidityLevel)} 
               />
             </View>
             </View>

@@ -10,7 +10,25 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Set up environment variables
+
+   Create a `.env` file in the root of the `client-mobile` directory with the following variables:
+
+   ```env
+   EXPO_PUBLIC_API_URL=http://localhost:4000
+   EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key-here
+   ```
+
+   **Getting a Google Maps API Key:**
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or select an existing one
+   - Enable the "Maps SDK for Android" and "Maps SDK for iOS" APIs
+   - Go to "APIs & Services" > "Credentials"
+   - Click "Create Credentials" > "API Key"
+   - Copy the API key and add it to your `.env` file
+   - **Important:** Restrict your API key to only allow requests from your app's package name for security
+
+3. Start the app
 
    ```bash
    npx expo start

@@ -33,6 +33,12 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     });
   }
 
+  // Expo Go does not support remote push notifications on Android starting from SDK 53
+  if (Constants.appOwnership === 'expo') {
+    console.warn('Push notifications are not supported in Expo Go. Use a development build instead.');
+    return null;
+  }
+
   // Check if running on a physical device
   // Constants.isDevice is true for physical devices, false for simulators
   const isDevice = Constants.isDevice !== false;

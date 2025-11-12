@@ -116,8 +116,9 @@ export default function Dashboard() {
       } catch (error) {
         console.error('Error getting location:', error);
         if (isMounted) {
+          // Show Alert
+          Alert.alert('Error', 'Failed to get location');
           setLocationLoading(false);
-          // Don't show alert, just silently fail
         }
       }
     })();
@@ -242,7 +243,7 @@ export default function Dashboard() {
     <SafeAreaView className="flex-1 bg-white">
       <View className="flex-1 px-4 pt-2 pb-20">
         {/* Title */}
-        <Text className="text-[36px] font-extrabold text-black mb-4" style={{ fontFamily: 'SF Pro' }}>
+        <Text className="text-4xl font-extrabold text-black mb-4" style={{ fontFamily: 'SF Pro' }}>
           Dashboard
         </Text>
         {/* Tabs: Only show when user has a companyId; show Current and Organisation only */}
@@ -268,9 +269,12 @@ export default function Dashboard() {
         ) : null}
         {/* Current Tab Content */}
         {activeTab === 'current' && (
-          <>
+          <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
             {/* Map */}
-            <View className="rounded-2xl overflow-hidden mb-2" style={{ height: 120, position: 'relative' }}>
+            <View
+              className="rounded-2xl overflow-hidden mb-2 w-full"
+              style={{ aspectRatio: 16 / 5 }}
+            >
               {locationLoading ? (
                 <View className="w-full h-full bg-gray-200 items-center justify-center">
                   <ActivityIndicator size="large" color="#7D0A0A" />
@@ -334,7 +338,7 @@ export default function Dashboard() {
             
             {/* Action Cards - Only show when prediction exists */}
             {hasPrediction && (
-              <View className="flex-row gap-1 mt-1">
+              <View className="flex-row gap-1 mt-1 mb-8">
                 <TouchableOpacity 
                   className="flex-1 bg-[#EAD196] rounded-2xl items-center justify-center" 
                   style={{ height: 100 }}
@@ -345,7 +349,7 @@ export default function Dashboard() {
                 </TouchableOpacity>
               </View>
             )}
-          </>
+          </ScrollView>
         )}
 
         {/* Organisation Tab Content */}
@@ -369,7 +373,10 @@ export default function Dashboard() {
             ) : (
               <>
                 {/* Organisation Map */}
-                <View className="rounded-2xl overflow-hidden mb-4" style={{ height: 300, position: 'relative' }}>
+                <View
+                  className="rounded-2xl overflow-hidden mb-4 w-full"
+                  style={{ aspectRatio: 4 / 3 }}
+                >
                   <MapView
                     ref={orgMapRef}
                     style={{ width: '100%', height: '100%' }}
@@ -473,7 +480,7 @@ export default function Dashboard() {
                 {/* Selected Location Prediction Details */}
                 {selectedLocation && selectedPrediction && (
                   <View 
-                    className="bg-white rounded-2xl p-4 mb-4 border-l-4"
+                    className="bg-white rounded-2xl p-4 mb-4 border-l-4 mb-8"
                     style={{ 
                       borderLeftColor: getRiskColor(getRiskLevel(selectedPrediction.riskScore)),
                       shadowColor: '#000',

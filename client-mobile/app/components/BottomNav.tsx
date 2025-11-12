@@ -40,8 +40,6 @@ export default function BottomNav() {
         shadowOpacity: 0.12,
         shadowRadius: 12,
         elevation: 12,
-        borderTopLeftRadius: 28,
-        borderTopRightRadius: 28,
       }}
     >
       {tabs.map(tab => {
@@ -49,7 +47,7 @@ export default function BottomNav() {
         return (
           <TouchableOpacity
             key={tab.key}
-            className="flex-1 items-center"
+            className="flex-1 items-center py-0.5"
             onPress={() => {
               if (tab.key === 'dashboard') {
                 router.replace('/dashboard' as '/dashboard');
@@ -62,29 +60,18 @@ export default function BottomNav() {
               }
             }}
             activeOpacity={0.8}
-            style={{ paddingVertical: 2 }}
           >
-            <View style={{
-              backgroundColor: isActive ? '#EAD196' : 'transparent',
-              borderRadius: 18,
-              paddingHorizontal: isActive ? 18 : 0,
-              paddingVertical: isActive ? 6 : 0,
-              marginBottom: 2,
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexDirection: 'row',
-              minWidth: 44,
-            }}>
+            <View
+              className={`flex-row items-center justify-center rounded-full ${isActive ? 'bg-[#EAD196] px-5 py-2' : 'px-2 py-2'} mb-0.5`}
+            >
               <Ionicons
                 name={tab.icon as any}
                 size={22}
                 color={isActive ? '#7D0A0A' : '#fff'}
-                style={{ marginBottom: 0 }}
               />
             </View>
             <Text
-              className={`font-bold ${isActive ? 'text-[#7D0A0A]' : 'text-white'}`}
-              style={{ marginTop: 2, letterSpacing: 0.2, fontSize: 10 }}
+              className={`mt-0.5 font-bold text-xs tracking-tight ${isActive ? 'text-[#7D0A0A]' : 'text-white'}`}
             >
               {tab.label}
             </Text>

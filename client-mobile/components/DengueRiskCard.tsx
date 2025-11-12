@@ -375,17 +375,17 @@ export default function DengueRiskCard({ onPredictionUpdate }: DengueRiskCardPro
   };
 
   return (
-    <View className="bg-white rounded-3xl p-3 mb-1 shadow-lg" style={{ borderWidth: 1, borderColor: '#F3F4F6' }}>
+    <View className="bg-white rounded-3xl p-3 mb-1 shadow-lg border" style={{ borderColor: '#F3F4F6' }}>
       {/* Header with Service Status */}
       <View className="flex-row items-center justify-between mb-2">
         <View className="flex-1">
-          <Text className="text-xl font-extrabold text-black text-center" style={{ fontFamily: 'SF Pro', fontSize: 20 }}>
+          <Text className="text-2xl font-extrabold text-black text-center" style={{ fontFamily: 'SF Pro' }}>
             Dengue Risk Assessment
           </Text>
           {/* <View className="flex-row items-center">
             <View className={`w-3 h-3 rounded-full mr-2 ${serviceHealthy ? 'bg-green-500' : 'bg-red-500'}`} 
               style={{ shadowColor: serviceHealthy ? '#10B981' : '#EF4444', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 4 }} />
-            <Text className="text-xs font-semibold" style={{ color: serviceHealthy ? '#10B981' : '#EF4444', fontSize: 12 }}>
+            <Text className="text-xs font-semibold" style={{ color: serviceHealthy ? '#10B981' : '#EF4444' }}>
               {serviceHealthy ? 'Service Online' : 'Service Offline'}
             </Text>
           </View> */}
@@ -397,11 +397,11 @@ export default function DengueRiskCard({ onPredictionUpdate }: DengueRiskCardPro
         <View className="mb-4 p-3 bg-gray-50 rounded-2xl border border-gray-100">
           <View className="flex-row items-center mb-2">
             <Feather name="map-pin" size={18} color="#7D0A0A" />
-            <Text className="text-sm font-semibold text-gray-700 ml-2" style={{ fontSize: 14 }}>
+            <Text className="text-sm font-semibold text-gray-700 ml-2">
               Current Location
             </Text>
           </View>
-          <Text className="text-base font-extrabold text-black" style={{ fontSize: 16, lineHeight: 22 }}>
+          <Text className="text-base font-extrabold text-black leading-6">
             {locationName || `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`}
           </Text>
         </View>
@@ -420,22 +420,22 @@ export default function DengueRiskCard({ onPredictionUpdate }: DengueRiskCardPro
               className="px-4 py-2 rounded-xl"
               style={{ backgroundColor: getRiskColor(prediction.riskLevel) + '30' }}
             >
-              <Text className="text-lg font-extrabold" style={{ color: getRiskTextColor(prediction.riskLevel), fontSize: 18 }}>
+              <Text className="text-lg font-extrabold" style={{ color: getRiskTextColor(prediction.riskLevel) }}>
                 {prediction.riskLevel.toUpperCase()}
               </Text>
             </View>
             {prediction.riskLevel === 'high' && (
-              <Feather name="alert-triangle" size={24} color="#BF3131" style={{ marginLeft: 12 }} />
+              <Feather name="alert-triangle" size={24} color="#BF3131" style={{ marginLeft: '3%' }} />
             )}
             {prediction.riskLevel === 'medium' && (
-              <Feather name="info" size={24} color="#EAD196" style={{ marginLeft: 12 }} />
+              <Feather name="info" size={24} color="#EAD196" style={{ marginLeft: '3%' }} />
             )}
             {prediction.riskLevel === 'low' && (
-              <Feather name="check-circle" size={24} color="#4CAF50" style={{ marginLeft: 12 }} />
+              <Feather name="check-circle" size={24} color="#4CAF50" style={{ marginLeft: '3%' }} />
             )}
           </View>
           
-          <Text className="text-sm text-gray-800 leading-6 mb-2" style={{ fontFamily: 'SF Pro Rounded', fontSize: 14, lineHeight: 20 }}>
+          <Text className="text-sm text-gray-800 leading-6 mb-2" style={{ fontFamily: 'SF Pro Rounded' }}>
             {getRiskMessage(prediction.riskLevel)}
           </Text>
           
@@ -462,7 +462,7 @@ export default function DengueRiskCard({ onPredictionUpdate }: DengueRiskCardPro
               ) : (
                 <>
                   <Feather name="refresh-cw" size={16} color={loading || !location || !serviceHealthy ? '#6B7280' : 'white'} style={{ marginRight: 6 }} />
-                  <Text className={`font-semibold text-sm ${loading || !location || !serviceHealthy ? 'text-gray-600' : 'text-white'}`} style={{ fontSize: 14 }}>
+                  <Text className={`font-semibold text-sm ${loading || !location || !serviceHealthy ? 'text-gray-600' : 'text-white'}`}>
                     Refresh Prediction
                   </Text>
                 </>
@@ -493,7 +493,7 @@ export default function DengueRiskCard({ onPredictionUpdate }: DengueRiskCardPro
           {loading ? (
             <View className="flex-row items-center justify-center">
               <ActivityIndicator color="white" size="large" />
-              <Text className="text-white font-bold text-base ml-3" style={{ fontSize: 16 }}>
+              <Text className="text-white font-bold text-base ml-3">
                 Analyzing...
               </Text>
             </View>
@@ -505,7 +505,7 @@ export default function DengueRiskCard({ onPredictionUpdate }: DengueRiskCardPro
                 color={loading || !location || !serviceHealthy || !canPredict ? '#6B7280' : 'white'} 
                 style={{ marginRight: 8 }}
               />
-              <Text className={`font-bold text-base text-center ${loading || !location || !serviceHealthy || !canPredict ? 'text-gray-600' : 'text-white'}`} style={{ fontSize: 16 }}>
+              <Text className={`font-bold text-base text-center ${loading || !location || !serviceHealthy || !canPredict ? 'text-gray-600' : 'text-white'}`}>
                 {!location 
                   ? 'Enable Location to Predict' 
                   : !serviceHealthy
