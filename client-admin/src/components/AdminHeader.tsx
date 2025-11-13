@@ -148,28 +148,29 @@ export default function AdminHeader() {
         if (!userRes.ok) throw new Error('Failed to fetch user');
         const userData = await userRes.json();
         setUserData(userData.user);
+        console.log('User Data:', userData);
         
         // Fetch company data if companyId is available
-        if (companyId) {
-          const companyRes = await fetch(`${API_URL}/companies/${companyId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (companyRes.ok) {
-            const companyData = await companyRes.json();
-            setCompanyData(companyData);
-          } else {
-            // Log error details for debugging
-            const errorData = await companyRes.json().catch(() => ({ error: 'Unknown error' }));
-            console.error('[AdminHeader] Failed to fetch company:', {
-              status: companyRes.status,
-              statusText: companyRes.statusText,
-              error: errorData,
-              companyId,
-              apiUrl: API_URL
-            });
-            setProfileError(`Failed to fetch company: ${errorData.error || companyRes.statusText}`);
-          }
-        }
+        // if (companyId) {
+        //   const companyRes = await fetch(`${API_URL}/companies/${companyId}`, {
+        //     headers: { 'Authorization': `Bearer ${token}` }
+        //   });
+        //   if (companyRes.ok) {
+        //     const companyData = await companyRes.json();
+        //     setCompanyData(companyData);
+        //   } else {
+        //     // Log error details for debugging
+        //     const errorData = await companyRes.json().catch(() => ({ error: 'Unknown error' }));
+        //     console.error('[AdminHeader] Failed to fetch company:', {
+        //       status: companyRes.status,
+        //       statusText: companyRes.statusText,
+        //       error: errorData,
+        //       companyId,
+        //       apiUrl: API_URL
+        //     });
+        //     setProfileError(`Failed to fetch company: ${errorData.error || companyRes.statusText}`);
+        //   }
+        // }
       } catch (err) {
         setProfileError(err instanceof Error ? err.message : 'Failed to fetch user');
       } finally {
@@ -184,7 +185,7 @@ export default function AdminHeader() {
       <div className="flex items-center">
         <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FFF7E3] rounded-lg">
           <span className="text-[#A21C1C] font-medium text-sm">
-            {profileLoading ? 'Loading Company...' : companyData?.name || 'Company Portal'}
+            {profileLoading ? 'Loading Company...' : userData?.organization || 'Company Portal'}
           </span>
           <div className="w-2 h-2 rounded-full bg-[#A21C1C] animate-pulse"></div>
         </div>
