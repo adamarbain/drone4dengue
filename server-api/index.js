@@ -21,6 +21,7 @@ app.use('/companies', require('./routes/companies'));
 app.use('/company-locations', require('./routes/companyLocationRoutes'));
 app.use('/geocode', require('./routes/geocode'));
 app.use('/api/predict', require('./routes/predictionRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 // app.use('/images', require('./routes/images'));
 // app.use('/alerts', require('./routes/alerts'));
@@ -29,6 +30,10 @@ app.use('/api/predict', require('./routes/predictionRoutes'));
 app.get('/', (req, res) => {
   res.json({ status: 'DengueEye API running' });
 });
+
+// Initialize scheduled jobs
+const { scheduleDailyPredictions } = require('./jobs/dailyPredictionJob');
+scheduleDailyPredictions();
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, '0.0.0.0', () => {

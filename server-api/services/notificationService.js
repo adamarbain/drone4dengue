@@ -1,0 +1,422 @@
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+const axios = require('axios');
+const { createNotification } = require('../controllers/notificationController');
+
+// Expo Push Notification API endpoint
+const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send';
+
+/**
+ * Notification service - Helper functions for creating notifications
+ */
+
+/**
+ * Send push notification via Expo Push API
+ * @param {string[]} pushTokens - Array of Expo push tokens
+ * @param {Object} notification - Notification data
+ */
+async function sendPushNotification(pushTokens, notification) {
+  if (!pushTokens || pushTokens.length === 0) {
+    return;
+  }
+
+  try {
+    const messages = pushTokens.map(token => ({
+      to: token,
+      sound: 'default',
+      title: notification.title,
+      body: notification.message,
+      data: {
+        type: notification.type,
+        ...notification.metadata
+      },
+      badge: 1, // Increment badge count
+      priority: notification.metadata?.riskLevel === 'high' ? 'high' : 'default',
+      channelId: 'default' // Android channel
+    }));
+
+    const response = await axios.post(EXPO_PUSH_API_URL, messages, {
+      headers: {
+        'Accept': 'application/json',
+        'Accept-Encoding': 'gzip, deflate',
+        'Content-Type': 'application/json'
+      }
+    });
+
+    console.log(`[PUSH NOTIFICATION] Sent ${messages.length} push notifications`);
+    
+    // Check for errors in response
+    if (response.data.data) {
+      const errors = response.data.data.filter(item => item.status === 'error');
+      if (errors.length > 0) {
+        console.error('[PUSH NOTIFICATION] Some notifications failed:', errors);
+      }
+    }
+  } catch (error) {
+    console.error('[PUSH NOTIFICATION ERROR] Failed to send push notifications:', error.message);
+    // Don't throw - push notification failure shouldn't break the main flow
+  }
+}
+
+/**
+ * Get push tokens for users
+ * @param {string[]} userIds - Array of user IDs
+ * @returns {Promise<string[]>} Array of push tokens
+ */
+async function getPushTokensForUsers(userIds) {
+  try {
+    const deviceTokens = await prisma.deviceToken.findMany({
+      where: {
+        userId: { in: userIds },
+        isActive: true
+      },
+      select: {
+        pushToken: true
+      }
+    });
+
+    return deviceTokens.map(dt => dt.pushToken);
+  } catch (error) {
+    console.error('[PUSH NOTIFICATION ERROR] Failed to get push tokens:', error);
+    return [];
+  }
+}
+
+/**
+ * Notify mobile users when admin creates company prediction
+ */
+async function notifyCompanyPredictionCreated(prediction) {
+  try {
+    const { companyId, companyLocationId, riskScore, latitude, longitude } = prediction;
+    
+    // Get risk level from risk score
+    let riskLevel = 'low';
+    if (riskScore >= 0.7) riskLevel = 'high';
+    else if (riskScore >= 0.4) riskLevel = 'medium';
+
+    // Get company location name
+    let locationName = 'Unknown Location';
+    if (companyLocationId) {
+      const location = await prisma.companyLocation.findUnique({
+        where: { id: companyLocationId }
+      });
+      if (location) {
+        locationName = location.name;
+      }
+    }
+
+    // Get all mobile users (role='user') in the company
+    const users = await prisma.user.findMany({
+      where: {
+        companyId,
+        role: 'user'
+      },
+      select: { id: true }
+    });
+
+    if (users.length === 0) {
+      console.log(`[NOTIFICATION] No mobile users found for company ${companyId}`);
+      return;
+    }
+
+    const userIds = users.map(u => u.id);
+    const title = `New Dengue Risk Prediction - ${riskLevel.toUpperCase()} Risk`;
+    const message = `A new dengue risk prediction has been created for ${locationName}. Risk Level: ${riskLevel.toUpperCase()}`;
+
+    await createNotification({
+      title,
+      message,
+      type: 'prediction',
+      companyId,
+      userIds,
+      metadata: {
+        riskLevel,
+        riskScore,
+        latitude,
+        longitude,
+        companyLocationId,
+        predictionId: prediction.id
+      }
+    });
+
+    // Send push notifications
+    const pushTokens = await getPushTokensForUsers(userIds);
+    if (pushTokens.length > 0) {
+      await sendPushNotification(pushTokens, {
+        title,
+        message,
+        type: 'prediction',
+        metadata: {
+          riskLevel,
+          riskScore,
+          latitude,
+          longitude,
+          companyLocationId,
+          predictionId: prediction.id
+        }
+      });
+    }
+
+    console.log(`[NOTIFICATION] Sent prediction notification to ${userIds.length} users (${pushTokens.length} push notifications)`);
+  } catch (error) {
+    console.error('[NOTIFICATION ERROR] Failed to notify company prediction:', error);
+  }
+}
+
+/**
+ * Notify admin users when dengue case is added
+ */
+async function notifyDengueCaseAdded(dengueData) {
+  try {
+    let { companyId, companyLocationId } = dengueData;
+    
+    // If no companyId, try to get it from companyLocation
+    if (!companyId && companyLocationId) {
+      const location = await prisma.companyLocation.findUnique({
+        where: { id: companyLocationId },
+        select: { companyId: true }
+      });
+      if (location) {
+        companyId = location.companyId;
+      }
+    }
+    
+    if (!companyId) {
+      // If no companyId, we need to find which companies might be affected
+      // For now, we'll skip if no companyId
+      console.log('[NOTIFICATION] Dengue data has no companyId, skipping notification');
+      return;
+    }
+
+    // Get all admin users in the company
+    const admins = await prisma.user.findMany({
+      where: {
+        companyId,
+        role: 'admin'
+      },
+      select: { id: true }
+    });
+
+    if (admins.length === 0) {
+      console.log(`[NOTIFICATION] No admin users found for company ${companyId}`);
+      return;
+    }
+
+    const adminIds = admins.map(a => a.id);
+    const title = 'New Dengue Case Added';
+    const message = `A new dengue case has been added: ${dengueData.location} - ${dengueData.totalCases || 0} total cases`;
+
+    await createNotification({
+      title,
+      message,
+      type: 'dengue_case',
+      companyId,
+      userIds: adminIds,
+      metadata: {
+        location: dengueData.location,
+        totalCases: dengueData.totalCases,
+        activeCases: dengueData.activeCases,
+        date: dengueData.date,
+        dengueDataId: dengueData.id
+      }
+    });
+
+    console.log(`[NOTIFICATION] Sent dengue case notification to ${adminIds.length} admins`);
+  } catch (error) {
+    console.error('[NOTIFICATION ERROR] Failed to notify dengue case:', error);
+  }
+}
+
+/**
+ * Notify admin users when drone is created or updated
+ */
+async function notifyDroneChange(drone, action = 'created') {
+  try {
+    const { companyId, id, name, droneId } = drone;
+
+    // Get all admin users in the company
+    const admins = await prisma.user.findMany({
+      where: {
+        companyId,
+        role: 'admin'
+      },
+      select: { id: true }
+    });
+
+    if (admins.length === 0) {
+      console.log(`[NOTIFICATION] No admin users found for company ${companyId}`);
+      return;
+    }
+
+    const adminIds = admins.map(a => a.id);
+    const title = action === 'created' ? 'New Drone Added' : 'Drone Updated';
+    const message = `Drone ${name} (${droneId}) has been ${action === 'created' ? 'added' : 'updated'}`;
+
+    await createNotification({
+      title,
+      message,
+      type: 'drone',
+      companyId,
+      userIds: adminIds,
+      metadata: {
+        droneId: id,
+        droneName: name,
+        droneDisplayId: droneId,
+        action
+      }
+    });
+
+    console.log(`[NOTIFICATION] Sent drone ${action} notification to ${adminIds.length} admins`);
+  } catch (error) {
+    console.error(`[NOTIFICATION ERROR] Failed to notify drone ${action}:`, error);
+  }
+}
+
+/**
+ * Notify admin users when drone images are uploaded
+ */
+async function notifyDroneImagesUploaded(images, drone) {
+  try {
+    const { companyId } = drone;
+
+    // Get all admin users in the company
+    const admins = await prisma.user.findMany({
+      where: {
+        companyId,
+        role: 'admin'
+      },
+      select: { id: true }
+    });
+
+    if (admins.length === 0) {
+      console.log(`[NOTIFICATION] No admin users found for company ${companyId}`);
+      return;
+    }
+
+    const adminIds = admins.map(a => a.id);
+    const imageCount = images.length;
+    const title = 'New Drone Images Uploaded';
+    const message = `${imageCount} new image${imageCount > 1 ? 's' : ''} uploaded for drone ${drone.name} (${drone.droneId})`;
+
+    await createNotification({
+      title,
+      message,
+      type: 'drone_image',
+      companyId,
+      userIds: adminIds,
+      metadata: {
+        droneId: drone.id,
+        droneName: drone.name,
+        droneDisplayId: drone.droneId,
+        imageCount,
+        imageIds: images.map(img => img.id)
+      }
+    });
+
+    console.log(`[NOTIFICATION] Sent drone image upload notification to ${adminIds.length} admins`);
+  } catch (error) {
+    console.error('[NOTIFICATION ERROR] Failed to notify drone images:', error);
+  }
+}
+
+/**
+ * Notify admin users when company location is created or updated
+ */
+async function notifyCompanyLocationChange(location, action = 'created') {
+  try {
+    const { companyId, id, name } = location;
+
+    // Get all admin users in the company
+    const admins = await prisma.user.findMany({
+      where: {
+        companyId,
+        role: 'admin'
+      },
+      select: { id: true }
+    });
+
+    if (admins.length === 0) {
+      console.log(`[NOTIFICATION] No admin users found for company ${companyId}`);
+      return;
+    }
+
+    const adminIds = admins.map(a => a.id);
+    const title = action === 'created' ? 'New Company Location Added' : 'Company Location Updated';
+    const message = `Location ${name} has been ${action === 'created' ? 'added' : 'updated'}`;
+
+    await createNotification({
+      title,
+      message,
+      type: 'location',
+      companyId,
+      userIds: adminIds,
+      metadata: {
+        locationId: id,
+        locationName: name,
+        action
+      }
+    });
+
+    console.log(`[NOTIFICATION] Sent location ${action} notification to ${adminIds.length} admins`);
+  } catch (error) {
+    console.error(`[NOTIFICATION ERROR] Failed to notify location ${action}:`, error);
+  }
+}
+
+/**
+ * Notify mobile user about daily prediction
+ */
+async function notifyDailyPrediction(userId, companyId, prediction) {
+  try {
+    const { riskLevel, riskScore, latitude, longitude } = prediction;
+    
+    const title = `Daily Dengue Risk Update - ${riskLevel.toUpperCase()} Risk`;
+    const message = `Your daily dengue risk assessment: ${riskLevel.toUpperCase()} risk detected at your location`;
+
+    await createNotification({
+      title,
+      message,
+      type: 'daily_prediction',
+      companyId,
+      userIds: [userId],
+      metadata: {
+        riskLevel,
+        riskScore,
+        latitude,
+        longitude,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+    // Send push notification
+    const pushTokens = await getPushTokensForUsers([userId]);
+    if (pushTokens.length > 0) {
+      await sendPushNotification(pushTokens, {
+        title,
+        message,
+        type: 'daily_prediction',
+        metadata: {
+          riskLevel,
+          riskScore,
+          latitude,
+          longitude,
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
+
+    console.log(`[NOTIFICATION] Sent daily prediction notification to user ${userId} (${pushTokens.length} push notifications)`);
+  } catch (error) {
+    console.error('[NOTIFICATION ERROR] Failed to notify daily prediction:', error);
+  }
+}
+
+module.exports = {
+  notifyCompanyPredictionCreated,
+  notifyDengueCaseAdded,
+  notifyDroneChange,
+  notifyDroneImagesUploaded,
+  notifyCompanyLocationChange,
+  notifyDailyPrediction
+};
+

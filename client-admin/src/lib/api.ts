@@ -353,4 +353,61 @@ export async function createPrediction(data: {
   };
   const response = await api.post('/api/predict/public/enhanced', payload);
   return response.data;
+}
+
+// Notification API functions
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'prediction' | 'dengue_case' | 'drone' | 'drone_image' | 'location' | 'daily_prediction';
+  userId?: string;
+  companyId: string;
+  isRead: boolean;
+  metadata?: any;
+  createdAt: string;
+  readAt?: string;
+}
+
+export interface NotificationsResponse {
+  notifications: Notification[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+// Get notifications
+export async function getNotifications(
+  limit: number = 10,
+  offset: number = 0,
+  unreadOnly: boolean = false
+): Promise<NotificationsResponse> {
+  const response = await api.get(
+    `/api/notifications?limit=${limit}&offset=${offset}&unreadOnly=${unreadOnly}`
+  );
+  return response.data;
+}
+
+// Get unread notification count
+export async function getUnreadNotificationCount(): Promise<number> {
+  const response = await api.get('/api/notifications/unread-count');
+  return response.data.count;
+}
+
+// Mark notification as read
+export async function markNotificationAsRead(notificationId: string): Promise<Notification> {
+  const response = await api.put(`/api/notifications/${notificationId}/read`);
+  return response.data;
+}
+
+// Mark all notifications as read
+export async function markAllNotificationsAsRead(): Promise<{ updated: number }> {
+  const response = await api.put('/api/notifications/read-all');
+  return response.data;
+}
+
+// Delete notification
+export async function deleteNotification(notificationId: string): Promise<{ success: boolean }> {
+  const response = await api.delete(`/api/notifications/${notificationId}`);
+  return response.data;
 } 

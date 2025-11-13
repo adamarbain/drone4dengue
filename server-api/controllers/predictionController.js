@@ -415,6 +415,18 @@ async function predictCompanyThreeModels(req, res) {
       }
     });
 
+    // Send notification to mobile users
+    try {
+      const { notifyCompanyPredictionCreated } = require('../services/notificationService');
+      await notifyCompanyPredictionCreated({
+        ...companyPrediction,
+        riskLevel: prediction.risk_level
+      });
+    } catch (notifError) {
+      console.error('Failed to send prediction notification:', notifError);
+      // Don't fail the request if notification fails
+    }
+
     // Store breeding area detection results if available
     let breedingAreaDetections = [];
     if (prediction.breeding_area_detections && prediction.breeding_area_detections.length > 0) {
@@ -662,6 +674,18 @@ async function predictCompany(req, res) {
       }
     });
 
+    // Send notification to mobile users
+    try {
+      const { notifyCompanyPredictionCreated } = require('../services/notificationService');
+      await notifyCompanyPredictionCreated({
+        ...companyPrediction,
+        riskLevel: prediction.risk_level
+      });
+    } catch (notifError) {
+      console.error('Failed to send prediction notification:', notifError);
+      // Don't fail the request if notification fails
+    }
+
     res.json({
       success: true,
       prediction: {
@@ -898,6 +922,18 @@ async function predictPublicEnhanced(req, res) {
               model2Score: prediction.model2Score || null
             }
           });
+          
+          // Send notification to mobile users
+          try {
+            const { notifyCompanyPredictionCreated } = require('../services/notificationService');
+            await notifyCompanyPredictionCreated({
+              ...companyPrediction,
+              riskLevel: prediction.riskLevel
+            });
+          } catch (notifError) {
+            console.error('Failed to send prediction notification:', notifError);
+            // Don't fail the request if notification fails
+          }
         }
       } catch (dbError) {
         console.error('Error saving to CompanyPrediction:', dbError);

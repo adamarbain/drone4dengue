@@ -1,0 +1,76 @@
+module.exports = {
+  expo: {
+    name: "DengueEye",
+    slug: "dengueeye-mobile-app",
+    version: "1.0.0",
+    orientation: "portrait",
+    icon: "./assets/dengueeye_logo.png",
+    scheme: "dengueeye",
+    userInterfaceStyle: "automatic",
+    newArchEnabled: true,
+    ios: {
+      supportsTablet: true,
+      config: {
+        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+      },
+    },
+    android: {
+      adaptiveIcon: {
+        foregroundImage: "./assets/dengueeye_logo.png",
+        backgroundColor: "#ffffff",
+      },
+      edgeToEdgeEnabled: true,
+      package: "com.adamarbain.dengueeyemobileapp",
+      config: {
+        googleMaps: {
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+        },
+      },
+    },
+    web: {
+      bundler: "metro",
+      output: "static",
+      favicon: "./assets/dengueeye_logo.png",
+    },
+    plugins: [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          image: "./assets/dengueeye_logo.png",
+          imageWidth: 200,
+          resizeMode: "contain",
+          backgroundColor: "#ffffff",
+        },
+      ],
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          icon: "./assets/dengueeye_logo.png",
+          color: "#A21C1C",
+          sounds: [],
+          mode: "production",
+        },
+      ],
+    ],
+    notification: {
+      icon: "./assets/dengueeye_logo.png",
+      color: "#A21C1C",
+      iosDisplayInForeground: true,
+      androidMode: "default",
+      androidCollapsedTitle: "#{unread_notifications} new notifications",
+    },
+    experiments: {
+      typedRoutes: true,
+    },
+    owner: "adamarbain",
+    extra: {
+      router: {},
+      eas: {
+        projectId: "4b73eff3-4b69-4f15-ab29-5f1ee9dd3c33",
+      },
+    },
+  },
+};
+

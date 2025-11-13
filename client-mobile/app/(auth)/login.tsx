@@ -132,6 +132,16 @@ export default function LoginScreen() {
       const { exp } = JSON.parse(jsonPayload);
       // Store expiration in ms
       await AsyncStorage.setItem('token_exp', (exp * 1000).toString());
+      
+      // Initialize push notifications after successful login
+      try {
+        const { initializePushNotifications } = require('../../utils/pushNotifications');
+        await initializePushNotifications();
+      } catch (error) {
+        console.error('Error initializing push notifications:', error);
+        // Don't block login if push notifications fail
+      }
+      
       router.replace('/dashboard');
     } catch (err) {
       setLoginError((err as Error).message);

@@ -28,6 +28,7 @@
     "jsonwebtoken": "^9.0.0",
     "leaflet": "^1.9.4",
     "multer": "^2.0.1",
+    "node-cron": "^3.0.3",
     "nodemailer": "^7.0.3",
     "react-leaflet": "^5.0.0",
     "redis": "^4.6.8",

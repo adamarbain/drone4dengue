@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Modal, ScrollView, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, ScrollView, StatusBar, Dimensions } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNav from './components/BottomNav';
@@ -47,6 +47,8 @@ export default function RecommendationsPage() {
     const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
     const riskLevel: RiskLevel = (typeof risk === 'string' && ['high', 'medium', 'low'].includes(risk)) ? (risk as RiskLevel) : 'low';
     const riskConfig = getRiskConfig(riskLevel);
+    const screenHeight = Dimensions.get('window').height;
+    const maxModalHeight = screenHeight * 0.8;
 
     useEffect(() => {
         fetch(`${API_URL}/recommendations/${riskLevel}`)
@@ -103,17 +105,25 @@ export default function RecommendationsPage() {
                 animationType="slide"
                 onRequestClose={() => setSelected(null)}
             >
-                <View className="flex-1 items-center justify-center bg-black bg-opacity-50">
-                    <View className="bg-white rounded-lg p-6 w-9/10 max-w-80">
-                        <Text className="text-2xl font-bold text-gray-800 mb-3">
-                            {selected !== null ? recommendations[selected].title : ''}
-                        </Text>
-                        <Text className="text-base text-gray-600 mb-6">
-                            {selected !== null ? recommendations[selected].details : ''}
-                        </Text>
+                <View className="flex-1 items-center justify-center bg-black bg-opacity-50 p-4">
+                    <View 
+                        className="bg-white rounded-lg p-6 w-full max-w-[90%]"
+                        style={{ maxHeight: maxModalHeight }}
+                    >
+                        <ScrollView 
+                            showsVerticalScrollIndicator={false}
+                            contentContainerClassName="pb-4"
+                        >
+                            <Text className="text-2xl font-bold text-gray-800 mb-3">
+                                {selected !== null ? recommendations[selected].title : ''}
+                            </Text>
+                            <Text className="text-base text-gray-600 mb-6 leading-6">
+                                {selected !== null ? recommendations[selected].details : ''}
+                            </Text>
+                        </ScrollView>
                         <TouchableOpacity
                             onPress={() => setSelected(null)}
-                            className="bg-gray-800 rounded-lg px-4 py-2 self-end"
+                            className="bg-gray-800 rounded-lg px-4 py-2 self-end mt-4"
                         >
                             <Text className="text-white font-semibold">Close</Text>
                         </TouchableOpacity>

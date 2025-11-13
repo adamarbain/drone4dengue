@@ -334,6 +334,15 @@ exports.registerDrone = async (req, res) => {
       }
     });
 
+    // Send notification to admin users
+    try {
+      const { notifyDroneChange } = require('../services/notificationService');
+      await notifyDroneChange(drone, 'created');
+    } catch (notifError) {
+      console.error('Failed to send drone notification:', notifError);
+      // Don't fail the request if notification fails
+    }
+
     res.status(201).json({ 
       message: 'Drone registered successfully',
       drone 
@@ -380,6 +389,15 @@ exports.updateDrone = async (req, res) => {
         }
       }
     });
+
+    // Send notification to admin users
+    try {
+      const { notifyDroneChange } = require('../services/notificationService');
+      await notifyDroneChange(updatedDrone, 'updated');
+    } catch (notifError) {
+      console.error('Failed to send drone notification:', notifError);
+      // Don't fail the request if notification fails
+    }
 
     res.json({
       message: 'Drone updated successfully',
@@ -525,6 +543,15 @@ exports.uploadImages = async (req, res) => {
       return res.status(500).json({ error: 'Failed to upload any images' });
     }
 
+    // Send notification to admin users
+    try {
+      const { notifyDroneImagesUploaded } = require('../services/notificationService');
+      await notifyDroneImagesUploaded(uploadedFiles, drone);
+    } catch (notifError) {
+      console.error('Failed to send drone image notification:', notifError);
+      // Don't fail the request if notification fails
+    }
+
     res.json({
       message: 'Images uploaded successfully to Firebase',
       files: uploadedFiles
@@ -611,6 +638,15 @@ exports.uploadVideoFrames = async (req, res) => {
 
     if (uploadedFrames.length === 0) {
       return res.status(500).json({ error: 'Failed to upload any video frames' });
+    }
+
+    // Send notification to admin users
+    try {
+      const { notifyDroneImagesUploaded } = require('../services/notificationService');
+      await notifyDroneImagesUploaded(uploadedFrames, drone);
+    } catch (notifError) {
+      console.error('Failed to send drone image notification:', notifError);
+      // Don't fail the request if notification fails
     }
 
     res.json({
