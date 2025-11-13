@@ -350,7 +350,7 @@ async function main() {
 
   console.log('Seeded users (with hashed passwords)!');
 
-  // Insert recommendations for each company
+  // Insert recommendations for all risk levels
   await prisma.recommendation.deleteMany();
   const recommendations = [
     // High risk
@@ -371,14 +371,9 @@ async function main() {
     { risk: 'low', title: 'Check and clean flower pots', details: 'Check and clean flower pots, roof gutters regularly to prevent water accumulation.' },
   ];
 
-  // Create recommendations for each company
-  // for (const company of companies) {
-  //   const companyRecommendations = recommendations.map(rec => ({
-  //     ...rec,
-  //     companyId: company.id
-  //   }));
-  //   await prisma.recommendation.createMany({ data: companyRecommendations });
-  // }
+  // Create recommendations (global, not company-specific)
+  await prisma.recommendation.createMany({ data: recommendations });
+  console.log('Seeded recommendations for all risk levels!');
 
   // Seed DengueData from CSVs
   await seedDengueDataFromCSV();

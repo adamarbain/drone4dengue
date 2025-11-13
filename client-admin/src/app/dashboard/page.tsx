@@ -106,7 +106,7 @@ export default function DashboardPage() {
   const fetchRecentDroneImages = async () => {
     try {
       setLoadingImages(true)
-      const response = await fetch('http://localhost:4000/drones/recent-images', {
+      const response = await fetch(`${process.env.API_BASE_URL}/drones/recent-images`, {
         headers: {
           'Authorization': `Bearer ${getToken()}`
         }
