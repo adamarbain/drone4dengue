@@ -5,8 +5,29 @@ exports.getCompanyById = async (req, res) => {
   try {
     const { id } = req.params;
     
+    // Log for debugging
+    console.log('[GET COMPANY] Request details:', {
+      requestedCompanyId: id,
+      tokenCompanyId: req.companyId,
+      userId: req.user?.userId,
+      userRole: req.user?.role
+    });
+    
     // Verify the user can access this company
-    if (req.companyId !== id) {
+    // Convert both to strings for comparison to handle type mismatches
+    const tokenCompanyId = String(req.companyId || '');
+    const requestedId = String(id || '');
+    
+    if (!req.companyId) {
+      console.error('[GET COMPANY ERROR] No companyId in token');
+      return res.status(403).json({ error: 'Access denied. No company associated with your account.' });
+    }
+    
+    if (tokenCompanyId !== requestedId) {
+      console.error('[GET COMPANY ERROR] Company ID mismatch:', {
+        tokenCompanyId,
+        requestedId
+      });
       return res.status(403).json({ error: 'Access denied. You can only view your own company.' });
     }
     

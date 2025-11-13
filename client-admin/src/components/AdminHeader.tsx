@@ -157,6 +157,17 @@ export default function AdminHeader() {
           if (companyRes.ok) {
             const companyData = await companyRes.json();
             setCompanyData(companyData);
+          } else {
+            // Log error details for debugging
+            const errorData = await companyRes.json().catch(() => ({ error: 'Unknown error' }));
+            console.error('[AdminHeader] Failed to fetch company:', {
+              status: companyRes.status,
+              statusText: companyRes.statusText,
+              error: errorData,
+              companyId,
+              apiUrl: API_URL
+            });
+            setProfileError(`Failed to fetch company: ${errorData.error || companyRes.statusText}`);
           }
         }
       } catch (err) {
