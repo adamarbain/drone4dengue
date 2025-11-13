@@ -6,4 +6,3 @@ requests>=2.31.0
 python-dotenv>=1.0.0
 gunicorn>=21.2.0
 joblib>=1.2.0
-inference-cli
