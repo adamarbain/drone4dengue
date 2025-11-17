@@ -91,8 +91,7 @@ const overlayVariants = {
 }
 
 export default function UserManagementPage() {
-  const { companyId } = useAuth()
-  const company = useAuth().company
+  const { companyId, company } = useAuth()
   const [users, setUsers] = useState<any[]>([])
   const [summary, setSummary] = useState<any>({})
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
@@ -108,7 +107,7 @@ export default function UserManagementPage() {
     phone: "",
     address: "",
     role: "user",
-    companyId: "", // Add company field
+    companyId: companyId ?? "",
   })
   const [updating, setUpdating] = useState(false)
   const [updateUser, setUpdateUser] = useState<any>(null)
@@ -176,6 +175,12 @@ export default function UserManagementPage() {
     // eslint-disable-next-line
   }, [searchTerm, filterStatus, filterRole])
 
+  useEffect(() => {
+    if (companyId) {
+      setNewUser((prev: any) => ({ ...prev, companyId }))
+    }
+  }, [companyId])
+
   // Create user
   const handleCreateUser = async () => {
     setCreating(true)
@@ -190,7 +195,15 @@ export default function UserManagementPage() {
         const errData = await res.json()
         throw new Error(errData.error || "Failed to create user")
       }
-      setNewUser({ name: "", email: "", password: "", phone: "", address: "", role: "user", companyId: "" })
+      setNewUser({
+        name: "",
+        email: "",
+        password: "",
+        phone: "",
+        address: "",
+        role: "user",
+        companyId: companyId ?? "",
+      })
       setCreating(false)
       setOpenModalCreateUser(false)
       fetchUsers()
@@ -876,7 +889,7 @@ export default function UserManagementPage() {
                         Company
                       </label>
                       <div className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
-                        {company.name}
+                        {company?.name ?? "Company not available"}
                       </div>
                     </div>
                   </div>
@@ -1062,7 +1075,7 @@ export default function UserManagementPage() {
                         Company
                       </label>
                       <div className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
-                        {company.name}
+                        {company?.name ?? "Company not available"}
                       </div>
                     </div>
                   </div>

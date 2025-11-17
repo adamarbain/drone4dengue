@@ -130,8 +130,12 @@ export default function LoginScreen() {
           .join('')
       );
       const { exp } = JSON.parse(jsonPayload);
-      // Store expiration in ms
-      await AsyncStorage.setItem('token_exp', (exp * 1000).toString());
+      // Extend expiration to 1 month (30 days) from now for better user experience
+      // This allows users to stay logged in for 1 month
+      const oneMonthFromNow = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days in milliseconds
+      // Use the longer of: JWT expiration or 1 month from now
+      const extendedExp = Math.max(exp * 1000, oneMonthFromNow);
+      await AsyncStorage.setItem('token_exp', extendedExp.toString());
       
       // Initialize push notifications after successful login
       try {

@@ -273,7 +273,7 @@ export default function Dashboard() {
             {/* Map */}
             <View
               className="rounded-2xl overflow-hidden mb-2 w-full"
-              style={{ aspectRatio: 16 / 5 }}
+              style={{ aspectRatio: 16 / 8 }}
             >
               {locationLoading ? (
                 <View className="w-full h-full bg-gray-200 items-center justify-center">
