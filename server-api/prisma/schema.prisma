@@ -14,38 +14,28 @@ datasource db {
 }
 
 model Company {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  code        String   @unique // e.g., "COMP001"
-  description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Notification Preferences
-  emailNotifications Boolean @default(true)
-  smsNotifications   Boolean @default(false)
-  alertFrequency     String  @default("immediate") // "immediate", "daily", "weekly"
-
-  // System Configuration
-  alertThreshold            String @default("medium") // "low", "medium", "high"
+  id                        String                  @id @default(uuid())
+  name                      String                  @unique
+  code                      String                  @unique // e.g., "COMP001"
+  description               String?
+  isActive                  Boolean                 @default(true)
+  createdAt                 DateTime                @default(now())
+  updatedAt                 DateTime                @updatedAt
+  emailNotifications        Boolean                 @default(true)
+  smsNotifications          Boolean                 @default(false)
+  alertFrequency            String                  @default("immediate") // "immediate", "daily", "weekly"
+  alertThreshold            String                  @default("medium") // "low", "medium", "high"
   predictionModelParameters Json? // { temperatureWeight: 0.35, rainfallWeight: 0.40, populationDensityWeight: 0.25 }
-  syncMode                  String @default("automatic") // "automatic", "manual"
-
-  // Advanced Settings
-  advancedSettings Json? // { dataRetentionPolicy: {...}, apiAccess: {...}, systemBackup: {...} }
-
-  // Relations
-  users                  User[]
-  locations              CompanyLocation[]
-  drones                 Drone[]
-  images                 Image[]
-  reports                Report[]
-  predictions            CompanyPrediction[]
-  breedingAreaDetections BreedingAreaDetection[]
-  notifications          Notification[]
-  // alerts      Alert[]
-  // recommendations Recommendation[]
+  syncMode                  String                  @default("automatic") // "automatic", "manual"
+  advancedSettings          Json? // { dataRetentionPolicy: {...}, apiAccess: {...}, systemBackup: {...} }
+  users                     User[]
+  locations                 CompanyLocation[]
+  drones                    Drone[]
+  images                    Image[]
+  reports                   Report[]
+  predictions               CompanyPrediction[]
+  breedingAreaDetections    BreedingAreaDetection[]
+  notifications             Notification[]
 }
 
 model CompanyLocation {
@@ -59,8 +49,6 @@ model CompanyLocation {
   updatedAt DateTime @updatedAt
   companyId String
   company   Company  @relation(fields: [companyId], references: [id])
-
-  // Relations
   weather                Weather[]
   predictions            CompanyPrediction[]
   drones                 Drone[]
@@ -90,8 +78,6 @@ model User {
   otpExpiry       DateTime? // for OTP verification
   companyId       String
   company         Company   @relation(fields: [companyId], references: [id])
-
-  // Relations
   drones        Drone[]
   reports       Report[]
   alerts        Alert[]
@@ -143,8 +129,6 @@ model Image {
   companyLocation   CompanyLocation? @relation(fields: [companyLocationId], references: [id])
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
-
-  // Relations
   breedingAreaDetections BreedingAreaDetection[]
 
   @@index([droneId])
@@ -181,8 +165,6 @@ model DengueData {
   source        String?
   latitude      Float?
   longitude     Float?
-  // companyLocationId String
-  // companyLocation   CompanyLocation @relation(fields: [companyLocationId], references: [id])
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
@@ -192,8 +174,6 @@ model Alert {
   message   String
   userId    String?
   user      User?    @relation(fields: [userId], references: [id])
-  // companyId String
-  // company   Company  @relation(fields: [companyId], references: [id])
   createdAt DateTime @default(now())
 }
 
@@ -212,8 +192,6 @@ model Recommendation {
   risk      String // 'high', 'medium', 'low'
   title     String
   details   String
-  // companyId String
-  // company   Company  @relation(fields: [companyId], references: [id])
   createdAt DateTime @default(now())
 }
 
@@ -258,14 +236,10 @@ model BreedingAreaDetection {
   company           Company          @relation(fields: [companyId], references: [id])
   companyLocationId String?
   companyLocation   CompanyLocation? @relation(fields: [companyLocationId], references: [id])
-
-  // Detection results from Roboflow API
   breedingAreaScore Float // Confidence score for breeding area detection (0-1)
   detectedObjects   Json? // Full detection results from Roboflow API
   boundingBoxes     Json? // Bounding boxes of detected breeding areas
   riskLevel         String // "high", "medium", "low" based on detection score
-
-  // Processing metadata
   processingStatus String    @default("pending") // "pending", "processing", "completed", "failed"
   errorMessage     String?
   processedAt      DateTime?

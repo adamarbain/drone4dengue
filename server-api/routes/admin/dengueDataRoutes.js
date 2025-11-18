@@ -9,6 +9,7 @@ router.get('/summary/dengue-data', checkToken, checkRole('admin'), getSummary);
 router.get('/locations', getLocations);
 router.get('/generate-report', checkToken, checkRole('admin'), generateReport);
 router.get('/nearby', getNearbyCases); // Public endpoint for nearby cases
+router.get('/export/generate-report', exportData);
 router.get('/', getAll);
 router.get('/:id', getOne);
 router.post('/', create);
@@ -17,6 +18,5 @@ router.delete('/:id', remove);
 router.post('/upload', checkToken, checkRole('admin'), upload.single('file'), uploadCSV);
 router.get('/historical/dengue-data', getHistorical);
 router.get('/map/location', getMapData);
-router.get('/export', exportData);
 
 module.exports = router; 

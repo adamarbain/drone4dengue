@@ -32,6 +32,8 @@ import { useAuth } from "@/context/AuthContext"
 
 const drones: any[] = []
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+
 const statusStyles: Record<string, string> = {
   Operational: "text-green-700 bg-green-100 border-green-200",
   Maintenance: "text-yellow-800 bg-yellow-100 border-yellow-200",
@@ -292,7 +294,7 @@ export default function DroneManagementPage() {
 
   const uploadVideoFrames = async (frames: string[], droneId: string) => {
     try {
-      const response = await fetch(`http://localhost:4000/drones/${droneId}/upload-frames`, {
+      const response = await fetch(`${API_URL}/drones/${droneId}/upload-frames`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${getToken()}`,
@@ -320,7 +322,7 @@ export default function DroneManagementPage() {
         formData.append('images', file)
       })
 
-      const response = await fetch(`http://localhost:4000/drones/${droneId}/upload-images`, {
+      const response = await fetch(`${API_URL}/drones/${droneId}/upload-images`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${getToken()}`
@@ -346,7 +348,7 @@ export default function DroneManagementPage() {
       setLoadingLocations(true)
       console.log('Fetching company locations...')
       
-      const response = await fetch('http://localhost:4000/drones/locations', {
+      const response = await fetch(`${API_URL}/drones/locations`, {
         headers: {
           'Authorization': `Bearer ${getToken()}`
         }
@@ -396,7 +398,7 @@ export default function DroneManagementPage() {
   // Create new drone function
   const createNewDrone = async (droneData: any) => {
     try {
-      const response = await fetch('http://localhost:4000/drones/register', {
+      const response = await fetch(`${API_URL}/drones/register`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${getToken()}`,
@@ -421,7 +423,7 @@ export default function DroneManagementPage() {
   // Fetch all drones function
   const fetchAllDrones = async () => {
     try {
-      const response = await fetch('http://localhost:4000/drones', {
+      const response = await fetch(`${API_URL}/drones`, {
         headers: {
           'Authorization': `Bearer ${getToken()}`
         }

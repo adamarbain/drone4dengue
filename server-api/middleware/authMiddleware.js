@@ -14,13 +14,13 @@ function checkToken(req, res, next) {
     req.companyId = user.companyId; // Add company context to request
     
     // Log for debugging (only in development or when debugging)
-    if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_AUTH === 'true') {
-      console.log('[AUTH MIDDLEWARE] Token decoded:', {
-        userId: user.userId,
-        role: user.role,
-        companyId: user.companyId
-      });
-    }
+    // if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_AUTH === 'true') {
+    //   console.log('[AUTH MIDDLEWARE] Token decoded:', {
+    //     userId: user.userId,
+    //     role: user.role,
+    //     companyId: user.companyId
+    //   });
+    // }
     
     next();
   });
