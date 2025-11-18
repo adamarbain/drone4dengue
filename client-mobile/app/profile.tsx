@@ -23,6 +23,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Debug: Check token and expiration
   useEffect(() => {
@@ -37,7 +38,7 @@ export default function ProfilePage() {
     })();
   }, []);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     // Unregister push notifications
     try {
       const { unregisterDeviceToken, clearAllNotifications } = require('../utils/pushNotifications');
@@ -50,23 +51,44 @@ export default function ProfilePage() {
     await AsyncStorage.removeItem('token');
     await AsyncStorage.removeItem('token_exp');
     router.replace('/(auth)/login');
-  };
+  }, [router]);
 
-  // Fetch user every time the screen is focused
+  // Fetch user on initial load and when screen is focused
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
+      let isMounted = true;
+      const wasInitialLoad = isInitialLoad;
+      
+      // Only show loading spinner on initial load for smoother transitions
+      if (wasInitialLoad) {
+        setLoading(true);
+      }
+      
       fetchCurrentUser()
         .then(user => {
-          setUser(user);
-          console.log('[DEBUG] User fetched:', user);
+          if (isMounted) {
+            setUser(user);
+            console.log('[DEBUG] User fetched:', user);
+            setIsInitialLoad(false);
+            setLoading(false);
+          }
         })
         .catch((err) => {
           console.log('[DEBUG] fetchCurrentUser error:', err);
-          handleLogout();
-        })
-        .finally(() => setLoading(false));
-    }, [])
+          if (isMounted) {
+            // Only logout on actual errors during initial load
+            if (wasInitialLoad) {
+              handleLogout();
+            } else {
+              setLoading(false);
+            }
+          }
+        });
+
+      return () => {
+        isMounted = false;
+      };
+    }, [isInitialLoad, handleLogout])
   );
 
   if (loading) {
