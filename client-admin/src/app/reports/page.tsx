@@ -6,18 +6,18 @@ import {
   FiDownload,
   FiFilter,
   FiCalendar,
-  FiMapPin,
   FiFileText,
   FiBarChart2,
   FiTrendingUp,
   FiPieChart,
+  FiX,
 } from "react-icons/fi"
 import { motion } from "framer-motion"
 import { useState, useEffect } from "react"
 import { useAuth } from "@/context/AuthContext"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
-const dataTypes = ["Active Cases", "Total Cases", "Coverage Area"]
+const dataTypes = ["Active Cases", "Total Cases"]
 
 const container = {
   hidden: { opacity: 0 },
@@ -38,12 +38,11 @@ export default function ReportsPage() {
   const { companyId, token } = useAuth()
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
-  const [selectedLocation, setSelectedLocation] = useState("")
   const [selectedDataType, setSelectedDataType] = useState("")
   const [reportGenerated, setReportGenerated] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [locations, setLocations] = useState<string[]>([])
+  const [detailView, setDetailView] = useState<"weekly" | "cases" | null>(null)
   const [reportData, setReportData] = useState<any>(null)
   const [stats, setStats] = useState({
     reportsGenerated: 0,
@@ -51,22 +50,6 @@ export default function ReportsPage() {
     exportFormats: 4,
     accuracyRate: "99.2%"
   })
-
-  // Fetch locations on mount
-  useEffect(() => {
-    async function fetchLocations() {
-      try {
-        const response = await fetch(`${API_URL}/dengue-data/locations`)
-        if (response.ok) {
-          const data = await response.json()
-          setLocations(data)
-        }
-      } catch (err) {
-        console.error("Failed to fetch locations:", err)
-      }
-    }
-    fetchLocations()
-  }, [])
 
   // Fetch initial stats
   useEffect(() => {
@@ -119,7 +102,7 @@ export default function ReportsPage() {
   }, [token, companyId])
 
   // Helper to check if all filters are filled
-  const filtersComplete = startDate && endDate && selectedLocation && selectedDataType
+  const filtersComplete = startDate && endDate && selectedDataType
 
   // Reset report state on filter change
   const handleFilterChange = (setter: (value: string) => void) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -127,6 +110,7 @@ export default function ReportsPage() {
     setReportGenerated(false)
     setReportData(null)
     setError("")
+    setDetailView(null)
   }
 
   const handleGenerateReport = async () => {
@@ -141,7 +125,6 @@ export default function ReportsPage() {
       const params = new URLSearchParams({
         startDate,
         endDate,
-        location: selectedLocation,
         dataType: selectedDataType,
         ...(companyId ? { companyId } : {})
       })
@@ -175,11 +158,11 @@ export default function ReportsPage() {
   const handleClearFilters = () => {
     setStartDate("")
     setEndDate("")
-    setSelectedLocation("")
     setSelectedDataType("")
     setReportGenerated(false)
     setReportData(null)
     setError("")
+    setDetailView(null)
   }
 
   // Export handlers
@@ -189,46 +172,58 @@ export default function ReportsPage() {
       return
     }
 
+    if (format === "JSON") {
+      const dataStr = JSON.stringify(reportData, null, 2)
+      const blob = new Blob([dataStr], { type: "application/json" })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `dengue_report_${startDate}_${endDate}.json`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      return
+    }
+
     try {
-      if (format === "CSV") {
-        const params = new URLSearchParams({
-          startDate,
-          endDate,
-          location: selectedLocation,
-          ...(selectedDataType === "Active Cases" ? { status: "Active Cases" } : {})
-        })
-        const response = await fetch(`${API_URL}/dengue-data/export?${params}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
+      const params = new URLSearchParams({
+        startDate,
+        endDate,
+        format: format.toLowerCase(),
+        ...(selectedDataType === "Active Cases" ? { status: "Active Cases" } : {})
+      })
+
+      const response = await fetch(`${API_URL}/dengue-data/export/generate-report?${params}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined
+      })
+
+      if (!response.ok) {
+        let message = `Failed to export ${format}.`
+        try {
+          const errorPayload = await response.json()
+          if (errorPayload?.error) {
+            message = errorPayload.error
           }
-        })
-        if (response.ok) {
-          const blob = await response.blob()
-          const url = window.URL.createObjectURL(blob)
-          const a = document.createElement("a")
-          a.href = url
-          a.download = `dengue_report_${startDate}_${endDate}.csv`
-          document.body.appendChild(a)
-          a.click()
-          window.URL.revokeObjectURL(url)
-          document.body.removeChild(a)
+        } catch {
+          const text = await response.text()
+          message = text || message
         }
-      } else if (format === "JSON") {
-        const dataStr = JSON.stringify(reportData, null, 2)
-        const blob = new Blob([dataStr], { type: "application/json" })
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = `dengue_report_${startDate}_${endDate}.json`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-      } else if (format === "PDF" || format === "XLSX") {
-        setError(`${format} export is not yet implemented`)
+        throw new Error(message)
       }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const extension = format === "PDF" ? "pdf" : format === "XLSX" ? "xlsx" : "csv"
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `dengue_report_${startDate}_${endDate}.${extension}`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
     } catch (err: any) {
-      setError(`Export failed: ${err.message}`)
+      setError(`Export failed: ${err.message || "Unknown error"}`)
     }
   }
 
@@ -269,6 +264,11 @@ export default function ReportsPage() {
     ).join(" ")
     
     return { path: pathData, points }
+  }
+
+  const handleViewDetails = (view: "weekly" | "cases") => {
+    if (!reportGenerated || !reportData) return
+    setDetailView(view)
   }
 
   return (
@@ -319,7 +319,7 @@ export default function ReportsPage() {
                 <FiFilter className="text-[#A21C1C]" />
                 Report Filters
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 <div className="flex flex-col gap-2">
                   <label className="font-semibold text-black text-sm flex items-center gap-2">
                     <FiCalendar className="text-[#A21C1C]" size={16} />
@@ -343,24 +343,6 @@ export default function ReportsPage() {
                     onChange={handleFilterChange(setEndDate)}
                     className="rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent"
                   />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="font-semibold text-black text-sm flex items-center gap-2">
-                    <FiMapPin className="text-[#A21C1C]" size={16} />
-                    Location
-                  </label>
-                  <select
-                    value={selectedLocation}
-                    onChange={handleFilterChange(setSelectedLocation)}
-                    className="rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#E2C275]"
-                  >
-                    <option value="">Select Area</option>
-                    {locations.map((area) => (
-                      <option key={area} value={area}>
-                        {area}
-                      </option>
-                    ))}
-                  </select>
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="font-semibold text-black text-sm flex items-center gap-2">
@@ -465,7 +447,11 @@ export default function ReportsPage() {
                       : "No data"}
                   </div>
                 </div>
-                <button className="w-full bg-[#A21C1C] text-white py-2 rounded-lg font-bold hover:bg-[#7C1D1D] transition-colors" disabled={!reportGenerated}>
+                <button
+                  className="w-full bg-[#A21C1C] text-white py-2 rounded-lg font-bold hover:bg-[#7C1D1D] transition-colors disabled:cursor-not-allowed"
+                  disabled={!reportGenerated}
+                  onClick={() => handleViewDetails("weekly")}
+                >
                   View Details
                 </button>
               </motion.div>
@@ -547,24 +533,111 @@ export default function ReportsPage() {
                       </span>
                     </>
                   ) : (
-                    <>
-                      <span className="flex items-center gap-2">
-                        <span className="inline-block w-3 h-3 rounded-full bg-blue-500"></span>
-                        Vista Angkasa
-                      </span>
-                      <span className="flex items-center gap-2">
-                        <span className="inline-block w-3 h-3 rounded-full bg-red-400"></span>
-                        Petaling Jaya
-                      </span>
-                    </>
+                    <span className="text-gray-400">Generate a report to view risk insights.</span>
                   )}
                 </div>
-                <button className="w-full bg-[#A21C1C] text-white py-2 rounded-lg font-bold hover:bg-[#7C1D1D] transition-colors" disabled={!reportGenerated}>
+                <button
+                  className="w-full bg-[#A21C1C] text-white py-2 rounded-lg font-bold hover:bg-[#7C1D1D] transition-colors disabled:cursor-not-allowed"
+                  disabled={!reportGenerated}
+                  onClick={() => handleViewDetails("cases")}
+                >
                   View Details
                 </button>
               </motion.div>
             </div>
           </motion.div>
+
+          {detailView && reportGenerated && reportData && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col">
+                <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+                  <div>
+                    <div className="text-lg font-bold">
+                      {detailView === "weekly" ? "Weekly Overview Details" : "Cases Overview Details"}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {startDate || "N/A"} - {endDate || "N/A"} · {selectedDataType || "All Data"}
+                    </div>
+                  </div>
+                  <button
+                    className="text-gray-500 hover:text-gray-900 transition-colors"
+                    onClick={() => setDetailView(null)}
+                    aria-label="Close details modal"
+                  >
+                    <FiX size={20} />
+                  </button>
+                </div>
+                <div className="p-6 overflow-y-auto space-y-4">
+                  {detailView === "weekly" ? (
+                    reportData.weeklyData && reportData.weeklyData.length > 0 ? (
+                      <div className="space-y-3">
+                        {reportData.weeklyData.map((entry: any, idx: number) => (
+                          <div
+                            key={`${entry.date}-${idx}`}
+                            className="flex items-center justify-between rounded-lg border border-gray-100 px-4 py-3"
+                          >
+                            <div className="font-medium text-gray-800">
+                              {entry.date ? new Date(entry.date).toLocaleDateString() : `Week ${idx + 1}`}
+                            </div>
+                            <div className="text-[#A21C1C] font-semibold">
+                              {entry.value !== undefined ? entry.value.toLocaleString() : "-"}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-500">No weekly data available for the selected filters.</div>
+                    )
+                  ) : (
+                    <>
+                      {reportData.stats ? (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {[
+                            { label: "High Risk", value: reportData.stats.highRiskPredictions, color: "bg-red-500" },
+                            { label: "Medium Risk", value: reportData.stats.mediumRiskPredictions, color: "bg-yellow-500" },
+                            { label: "Low Risk", value: reportData.stats.lowRiskPredictions, color: "bg-green-500" },
+                          ].map((stat) => (
+                            <div key={stat.label} className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2">
+                              <div className="flex items-center gap-2 text-sm font-semibold text-gray-600">
+                                <span className={`inline-block w-3 h-3 rounded-full ${stat.color}`}></span>
+                                {stat.label}
+                              </div>
+                              <div className="text-2xl font-bold text-[#A21C1C]">
+                                {stat.value !== undefined ? stat.value.toLocaleString() : "-"}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-500">No case statistics available for the selected filters.</div>
+                      )}
+                      {reportData.predictions && reportData.predictions.length > 0 && (
+                        <div>
+                          <div className="text-sm font-semibold text-gray-600 mb-2">Latest Predictions</div>
+                          <div className="space-y-2">
+                            {reportData.predictions.slice(0, 5).map((prediction: any, idx: number) => (
+                              <div key={idx} className="rounded-lg border border-gray-100 px-4 py-3">
+                                <div className="flex justify-between text-sm text-gray-500">
+                                  <span>{prediction.location || "Unknown Location"}</span>
+                                  <span>{prediction.riskLevel || "N/A"}</span>
+                                </div>
+                                <div className="text-lg font-semibold text-gray-800">
+                                  {prediction.totalCases !== undefined ? `${prediction.totalCases.toLocaleString()} cases` : "-"}
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                  {prediction.date ? new Date(prediction.date).toLocaleDateString() : ""}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Export Options */}
           {reportGenerated && !loading && (

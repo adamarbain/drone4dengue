@@ -1,6 +1,8 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { Parser } = require('json2csv');
+const ExcelJS = require('exceljs');
+const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const parse = require('csv-parse');
 const redis = require('redis');
@@ -301,10 +303,10 @@ async function getMapData(req, res) {
   }
 }
 
-// Export data as CSV
+// Export data in multiple formats
 async function exportData(req, res) {
   try {
-    const { location, date, status, startDate, endDate } = req.query;
+    const { location, date, status, startDate, endDate, format = 'csv' } = req.query;
     
     const where = { };
     if (location) where.location = location;
@@ -323,8 +325,81 @@ async function exportData(req, res) {
         where.date.lte = endDateTime;
       }
     }
-    
-    const data = await prisma.dengueData.findMany({ where });
+
+    const exportFormat = (format || 'csv').toString().toLowerCase();
+    const data = await prisma.dengueData.findMany({ where, orderBy: { date: 'asc' } });
+    const safeDate = (value) => value ? new Date(value).toISOString().split('T')[0] : '';
+
+    if (exportFormat === 'xlsx') {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Dengue Data');
+      worksheet.columns = [
+        { header: 'ID', key: 'id', width: 26 },
+        { header: 'Date', key: 'date', width: 18 },
+        { header: 'Location', key: 'location', width: 24 },
+        { header: 'Status', key: 'status', width: 16 },
+        { header: 'Active Cases', key: 'activeCases', width: 16 },
+        { header: 'Total Cases', key: 'totalCases', width: 16 },
+        { header: 'Coverage Area', key: 'coverageArea', width: 22 },
+        { header: 'Source', key: 'source', width: 14 },
+      ];
+      data.forEach(record => {
+        worksheet.addRow({
+          id: record.id,
+          date: safeDate(record.date),
+          location: record.location || '',
+          status: record.status || '',
+          activeCases: record.activeCases ?? '',
+          totalCases: record.totalCases ?? '',
+          coverageArea: record.coverageArea || '',
+          source: record.source || '',
+        });
+      });
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename="dengue_data_export.xlsx"');
+      await workbook.xlsx.write(res);
+      res.end();
+      return;
+    }
+
+    if (exportFormat === 'pdf') {
+      const doc = new PDFDocument({ margin: 40, size: 'A4' });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="dengue_data_export.pdf"');
+      doc.pipe(res);
+
+      const dateRange = `${startDate || 'N/A'} - ${endDate || 'N/A'}`;
+      doc.fontSize(18).text('Dengue Data Export', { align: 'center' });
+      doc.moveDown();
+      doc.fontSize(12).text(`Date Range: ${dateRange}`);
+      doc.text(`Location: ${location || 'All locations'}`);
+      doc.text(`Status: ${status || 'All statuses'}`);
+      doc.text(`Total Records: ${data.length}`);
+      doc.moveDown();
+
+      const rows = data.slice(0, 50);
+      rows.forEach(record => {
+        doc.font('Helvetica-Bold').text(`${safeDate(record.date)} • ${record.location || 'N/A'}`);
+        doc.font('Helvetica').text(
+          `Status: ${record.status || '-'} | Active: ${record.activeCases ?? 0} | Total: ${record.totalCases ?? 0}`
+        );
+        if (record.coverageArea || record.source) {
+          doc.fontSize(10).text(
+            `Coverage: ${record.coverageArea || '-'} • Source: ${record.source || '-'}`
+          );
+        }
+        doc.moveDown();
+      });
+
+      if (data.length > rows.length) {
+        doc.font('Helvetica-Oblique').text(`+ ${data.length - rows.length} more records not shown to keep the PDF concise.`);
+      }
+
+      doc.end();
+      return;
+    }
+
+    // Default CSV export
     const fields = ['id', 'location', 'date', 'activeCases', 'totalCases', 'coverageArea', 'status', 'source', 'latitude', 'longitude', 'createdAt', 'updatedAt'];
     const parser = new Parser({ fields });
     const csv = parser.parse(data);
@@ -332,6 +407,7 @@ async function exportData(req, res) {
     res.attachment('dengue_data_export.csv');
     res.send(csv);
   } catch (err) {
+    console.error('Export failed:', err);
     res.status(500).json({ error: err.message });
   }
 }
@@ -357,10 +433,10 @@ async function getLocations(req, res) {
 // Generate report data combining dengue data and predictions
 async function generateReport(req, res) {
   try {
-    const { startDate, endDate, location, dataType, companyId } = req.query;
+    const { startDate, endDate, dataType, companyId } = req.query;
     
-    if (!startDate || !endDate || !location || !dataType) {
-      return res.status(400).json({ error: 'Missing required parameters: startDate, endDate, location, dataType' });
+    if (!startDate || !endDate || !dataType) {
+      return res.status(400).json({ error: 'Missing required parameters: startDate, endDate, dataType' });
     }
 
     // Build date range filter
@@ -372,8 +448,7 @@ async function generateReport(req, res) {
     // Fetch dengue data
     const dengueData = await prisma.dengueData.findMany({
       where: {
-        location: location,
-        date: dateFilter
+        date: dateFilter,
       },
       orderBy: { date: 'asc' }
     });
