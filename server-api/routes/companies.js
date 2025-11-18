@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /companies/:id - Get specific company by ID (with settings)
-router.get('/:id', authMiddleware.checkToken, companyController.getCompanyById);
+router.get('/:id/getcompanybyId', authMiddleware.checkToken, companyController.getCompanyById);
 
 // PATCH /companies/:id/settings - Update company settings
 router.patch('/:id/settings', authMiddleware.checkToken, companyController.updateCompanySettings);

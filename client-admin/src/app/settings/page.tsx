@@ -155,7 +155,7 @@ export default function SettingsPage() {
       setCompanySettingsLoading(true);
       setCompanySettingsError('');
       try {
-        const res = await fetch(`${API_URL}/companies/${company.id}`, {
+        const res = await fetch(`${API_URL}/companies/${company.id}/getcompanybyId`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!res.ok) throw new Error('Failed to fetch company settings');

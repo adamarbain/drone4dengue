@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Helper to fetch company info by ID
   const fetchCompanyById = async (id: string) => {
     try {
-      const res = await api.get(`/companies/${id}`);
+      const res = await api.get(`/companies/${id}/getcompanybyId`);
       setCompany(res.data);
       localStorage.setItem('company', JSON.stringify(res.data));
     } catch (err) {
