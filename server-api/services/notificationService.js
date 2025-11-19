@@ -364,14 +364,77 @@ async function notifyCompanyLocationChange(location, action = 'created') {
 }
 
 /**
- * Notify mobile user about daily prediction
+ * Get recommendations message based on risk level
+ * Returns a friendly, action-oriented message instead of alarming risk notification
+ */
+async function getRecommendationMessage(riskLevel) {
+  try {
+    // Fetch recommendations from database
+    const recommendations = await prisma.recommendation.findMany({
+      where: { 
+        risk: riskLevel.toLowerCase()
+      },
+      orderBy: { createdAt: 'asc' },
+      take: 2 // Get top 2 recommendations
+    });
+
+    if (recommendations.length > 0) {
+      // Create a friendly message with actionable recommendations
+      const primaryRecommendation = recommendations[0];
+      const secondaryRecommendation = recommendations.length > 1 ? recommendations[1] : null;
+      
+      // Create concise message for push notification (max ~100 chars for body)
+      let message = primaryRecommendation.title;
+      if (secondaryRecommendation && message.length < 60) {
+        message += `. Also: ${secondaryRecommendation.title}`;
+      }
+      
+      return {
+        title: 'Daily Health Tips',
+        message: message,
+        recommendations: recommendations.map(r => ({ title: r.title, details: r.details }))
+      };
+    } else {
+      // Fallback messages if no recommendations found in database
+      const fallbackMessages = {
+        high: {
+          title: 'Daily Health Tips',
+          message: 'Take preventive measures: Clear stagnant water and use mosquito repellent to stay protected.'
+        },
+        medium: {
+          title: 'Daily Health Tips',
+          message: 'Stay vigilant: Keep your surroundings clean and check for standing water regularly.'
+        },
+        low: {
+          title: 'Daily Health Tips',
+          message: 'Maintain good practices: Keep your area clean and stay hydrated for better health.'
+        }
+      };
+      
+      return fallbackMessages[riskLevel.toLowerCase()] || fallbackMessages.low;
+    }
+  } catch (error) {
+    console.error('[NOTIFICATION ERROR] Failed to fetch recommendations:', error);
+    // Return safe fallback message
+    return {
+      title: 'Daily Health Tips',
+      message: 'Stay proactive with preventive measures to maintain a healthy environment.'
+    };
+  }
+}
+
+/**
+ * Notify mobile user about daily prediction with recommendations
  */
 async function notifyDailyPrediction(userId, companyId, prediction) {
   try {
     const { riskLevel, riskScore, latitude, longitude } = prediction;
     
-    const title = `Daily Dengue Risk Update - ${riskLevel.toUpperCase()} Risk`;
-    const message = `Your daily dengue risk assessment: ${riskLevel.toUpperCase()} risk detected at your location`;
+    // Get recommendation-based message instead of risk alert
+    const recommendationMessage = await getRecommendationMessage(riskLevel);
+    
+    const title = recommendationMessage.title;
+    const message = recommendationMessage.message;
 
     await createNotification({
       title,
@@ -384,7 +447,8 @@ async function notifyDailyPrediction(userId, companyId, prediction) {
         riskScore,
         latitude,
         longitude,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        recommendations: recommendationMessage.recommendations || []
       }
     });
 
@@ -400,12 +464,13 @@ async function notifyDailyPrediction(userId, companyId, prediction) {
           riskScore,
           latitude,
           longitude,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          recommendations: recommendationMessage.recommendations || []
         }
       });
     }
 
-    console.log(`[NOTIFICATION] Sent daily prediction notification to user ${userId} (${pushTokens.length} push notifications)`);
+    console.log(`[NOTIFICATION] Sent daily recommendation notification to user ${userId} (${pushTokens.length} push notifications)`);
   } catch (error) {
     console.error('[NOTIFICATION ERROR] Failed to notify daily prediction:', error);
   }

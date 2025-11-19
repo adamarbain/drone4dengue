@@ -88,7 +88,7 @@ async function getMLThreeModelPrediction(latitude, longitude, weatherData = null
     }
 
     const response = await axios.post(`${ML_SERVICE_URL}/predict/three-models`, payload, {
-      timeout: 60000 // 60 second timeout for image processing
+      timeout: 10 * 60 * 1000 // 10 minute timeout for image processing
     });
 
     return response.data;
@@ -316,6 +316,11 @@ function validateCoordinates(latitude, longitude) {
  * POST /api/predict/company/three-models
  */
 async function predictCompanyThreeModels(req, res) {
+  // Set extended timeout for three-model prediction with image processing
+  const EXTENDED_TIMEOUT = 10 * 60 * 1000; // 10 minutes for image processing
+  req.setTimeout(EXTENDED_TIMEOUT);
+  res.setTimeout(EXTENDED_TIMEOUT);
+  
   try {
     const { companyId, companyLocationId, lat, lon, imageIds } = req.body;
 

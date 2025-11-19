@@ -19,7 +19,7 @@ router.get('/search', async (req, res) => {
       },
       headers: {
         // Identify this application per Nominatim policy
-        'User-Agent': 'drone4dengue-admin/1.0 (contact: example@example.com)',
+        'User-Agent': 'drone4dengue-admin/1.0 (contact: adamarbain2107@gmail.com)',
         'Accept': 'application/json',
       },
       timeout: 8000,
@@ -46,7 +46,7 @@ router.get('/reverse', async (req, res) => {
         addressdetails: 1,
       },
       headers: {
-        'User-Agent': 'drone4dengue-admin/1.0 (contact: example@example.com)',
+        'User-Agent': 'drone4dengue-admin/1.0 (contact: adamarbain2107@gmail.com)',
         'Accept': 'application/json',
       },
       timeout: 8000,
