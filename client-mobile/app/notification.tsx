@@ -98,6 +98,15 @@ export default function NotificationPage() {
       );
     }
 
+    // For daily_prediction (recommendation-based), use a friendly icon
+    if (type === 'daily_prediction') {
+      return (
+        <View className="w-12 h-12 bg-[#4CAF50] rounded-lg items-center justify-center">
+          <Feather name="heart" size={24} color="#FFFFFF" />
+        </View>
+      );
+    }
+
     switch (riskLevel) {
       case 'high':
         return (
@@ -198,8 +207,20 @@ export default function NotificationPage() {
                       {notification.message}
                     </Text>
 
+                    {/* Recommendations if available (for daily_prediction) */}
+                    {notification.metadata?.recommendations && notification.metadata.recommendations.length > 0 && (
+                      <View className="mt-2 mb-1">
+                        <Text className="text-xs text-gray-600 font-semibold mb-1">Recommendations:</Text>
+                        {notification.metadata.recommendations.slice(0, 2).map((rec: any, idx: number) => (
+                          <Text key={idx} className="text-xs text-gray-600 ml-2">
+                            • {rec.title}
+                          </Text>
+                        ))}
+                      </View>
+                    )}
+
                     {/* Location if available */}
-                    {notification.location && (
+                    {notification.location && notification.type !== 'daily_prediction' && (
                       <View className="flex-row items-center mb-1">
                         <Feather name="map-pin" size={14} color="#BF3131" />
                         <Text className="text-sm text-gray-700 ml-2">{notification.location}</Text>

@@ -56,8 +56,20 @@ async function createNotification({ title, message, type, companyId, userIds = n
  */
 async function getNotifications(req, res) {
   try {
-    const { userId, companyId } = req;
+    const userId = req.user?.userId;
+    const companyId = req.companyId || req.user?.companyId;
     const { limit = 50, offset = 0, unreadOnly = false } = req.query;
+
+    // Validate required fields
+    if (!companyId) {
+      console.error('[GET NOTIFICATIONS ERROR] Missing companyId. req.user:', req.user, 'req.companyId:', req.companyId);
+      return res.status(400).json({ error: 'Company ID is required' });
+    }
+
+    if (!userId) {
+      console.error('[GET NOTIFICATIONS ERROR] Missing userId. req.user:', req.user);
+      return res.status(400).json({ error: 'User ID is required' });
+    }
 
     const where = {
       companyId,
@@ -71,6 +83,9 @@ async function getNotifications(req, res) {
       where.isRead = false;
     }
 
+    // console.log('[GET NOTIFICATIONS] Query params:', { userId, companyId, limit, offset, unreadOnly });
+    // console.log('[GET NOTIFICATIONS] Where clause:', JSON.stringify(where, null, 2));
+
     const [notifications, total] = await Promise.all([
       prisma.notification.findMany({
         where,
@@ -80,6 +95,8 @@ async function getNotifications(req, res) {
       }),
       prisma.notification.count({ where })
     ]);
+
+    // console.log('[GET NOTIFICATIONS] Found notifications:', notifications.length, 'Total:', total);
 
     res.json({
       notifications,
@@ -100,7 +117,8 @@ async function getNotifications(req, res) {
 async function markAsRead(req, res) {
   try {
     const { id } = req.params;
-    const { userId, companyId } = req;
+    const userId = req.user?.userId;
+    const companyId = req.companyId || req.user?.companyId;
 
     // Verify notification belongs to user's company
     const notification = await prisma.notification.findFirst({
@@ -139,7 +157,8 @@ async function markAsRead(req, res) {
  */
 async function markAllAsRead(req, res) {
   try {
-    const { userId, companyId } = req;
+    const userId = req.user?.userId;
+    const companyId = req.companyId || req.user?.companyId;
 
     const where = {
       companyId,
@@ -171,18 +190,35 @@ async function markAllAsRead(req, res) {
  */
 async function getUnreadCount(req, res) {
   try {
-    const { userId, companyId } = req;
+    const userId = req.user?.userId;
+    const companyId = req.companyId || req.user?.companyId;
 
-    const count = await prisma.notification.count({
-      where: {
-        companyId,
-        isRead: false,
-        OR: [
-          { userId: null },
-          { userId }
-        ]
-      }
-    });
+    // Validate required fields
+    if (!companyId) {
+      console.error('[GET UNREAD COUNT ERROR] Missing companyId. req.user:', req.user, 'req.companyId:', req.companyId);
+      return res.status(400).json({ error: 'Company ID is required' });
+    }
+
+    if (!userId) {
+      console.error('[GET UNREAD COUNT ERROR] Missing userId. req.user:', req.user);
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    const where = {
+      companyId,
+      isRead: false,
+      OR: [
+        { userId: null },
+        { userId }
+      ]
+    };
+
+    console.log('[GET UNREAD COUNT] Query params:', { userId, companyId });
+    console.log('[GET UNREAD COUNT] Where clause:', JSON.stringify(where, null, 2));
+
+    const count = await prisma.notification.count({ where });
+
+    console.log('[GET UNREAD COUNT] Unread count:', count);
 
     res.json({ count });
   } catch (error) {
@@ -198,7 +234,8 @@ async function getUnreadCount(req, res) {
 async function deleteNotification(req, res) {
   try {
     const { id } = req.params;
-    const { userId, companyId } = req;
+    const userId = req.user?.userId;
+    const companyId = req.companyId || req.user?.companyId;
 
     // Verify notification belongs to user's company
     const notification = await prisma.notification.findFirst({

@@ -185,7 +185,7 @@ export default function AdminHeader() {
       <div className="flex items-center">
         <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FFF7E3] rounded-lg">
           <span className="text-[#A21C1C] font-medium text-sm">
-            {profileLoading ? 'Loading Company...' : userData?.organization || 'Company Portal'}
+            {profileLoading ? 'Loading Company...' : companyData?.name || 'Company Portal'}
           </span>
           <div className="w-2 h-2 rounded-full bg-[#A21C1C] animate-pulse"></div>
         </div>
@@ -204,12 +204,12 @@ export default function AdminHeader() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="relative p-2 rounded-full hover:bg-[#FFF7E3] transition-colors">
+          {/* <button className="relative p-2 rounded-full hover:bg-[#FFF7E3] transition-colors">
             <FiMail className="text-[#A21C1C] w-5 h-5" />
             <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#E2C275] rounded-full text-[10px] flex items-center justify-center font-bold">
               3
             </span>
-          </button>
+          </button> */}
 
           <div className="relative" ref={notificationRef}>
             <button
