@@ -373,7 +373,7 @@ export default function DroneManagementPage() {
 
   const createNewLocation = async (locationData: any) => {
     try {
-      const response = await fetch('http://localhost:4000/drones/locations', {
+      const response = await fetch(`${API_URL}/drones/locations`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${getToken()}`,
@@ -446,7 +446,7 @@ export default function DroneManagementPage() {
     try {
       setLoadingImages(true)
       console.log('Fetching drone images for drone:', droneId)
-      const response = await fetch(`http://localhost:4000/drones/${droneId}/images`, {
+      const response = await fetch(`${API_URL}/drones/${droneId}/images`, {
         headers: {
           'Authorization': `Bearer ${getToken()}`
         }
