@@ -5,6 +5,33 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { predictDengueRisk, checkPredictionServiceHealth } from '../utils/userApi';
 import * as Location from 'expo-location';
 
+/**
+ * Helper function to get userId from JWT token stored in AsyncStorage
+ */
+const getUserIdFromToken = async (): Promise<string | null> => {
+  try {
+    const token = await AsyncStorage.getItem('token');
+    if (!token) return null;
+
+    // Decode JWT to get userId
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(function (c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        })
+        .join('')
+    );
+    const { userId } = JSON.parse(jsonPayload);
+    return userId || null;
+  } catch (error) {
+    console.error('Error extracting userId from token:', error);
+    return null;
+  }
+};
+
 interface PredictionResult {
   latitude: number;
   longitude: number;
@@ -327,7 +354,16 @@ export default function DengueRiskCard({ onPredictionUpdate }: DengueRiskCardPro
 
     setLoading(true);
     try {
-      const result = await predictDengueRisk(location.latitude, location.longitude);
+      // Get userId from token if available
+      const userId = await getUserIdFromToken();
+      
+      // Call prediction API with userId (pass null if userId is not available)
+      // Type assertion needed because predictDengueRisk is a JS function without strict types
+      const result = await predictDengueRisk(
+        location.latitude, 
+        location.longitude, 
+        (userId ? userId : null) as any
+      );
       setPrediction(result);
       onPredictionUpdate?.(result);
       

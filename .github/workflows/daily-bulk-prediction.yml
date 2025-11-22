@@ -80,6 +80,47 @@ jobs:
             exit 1
           fi
       
+      - name: Trigger Daily User Predictions
+        id: daily-users-prediction
+        run: |
+          echo ""
+          echo "Triggering daily prediction for mobile users..."
+          echo "API URL: ${{ secrets.API_BASE_URL }}/api/predict/daily-users"
+          
+          # Make the API call with extended timeout (30 minutes)
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.API_BASE_URL }}/api/predict/daily-users" \
+            -H "Authorization: Bearer ${{ steps.login.outputs.token }}" \
+            -H "Content-Type: application/json" \
+            --max-time 1800) # 30 minute timeout
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          echo "HTTP Status Code: $HTTP_CODE"
+          echo "Response Body:"
+          echo "$BODY" | jq '.' || echo "$BODY"
+          
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ Daily user prediction triggered successfully"
+            
+            # Extract and display summary
+            if echo "$BODY" | jq -e '.summary' > /dev/null 2>&1; then
+              echo ""
+              echo "📊 Daily Prediction Summary:"
+              echo "$BODY" | jq '.summary'
+            fi
+            
+            # Display prediction count if available
+            if echo "$BODY" | jq -e '.predictions' > /dev/null 2>&1; then
+              PREDICTION_COUNT=$(echo "$BODY" | jq '.predictions | length')
+              echo "✅ Successfully created $PREDICTION_COUNT daily predictions for users"
+            fi
+          else
+            echo "❌ Daily user prediction failed with status code: $HTTP_CODE"
+            echo "Error response: $BODY"
+            exit 1
+          fi
+      
       - name: Notify on failure
         if: failure()
         run: |
