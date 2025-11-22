@@ -1,0 +1,88 @@
+name: Daily Bulk Prediction
+
+on:
+  schedule:
+    # Run daily at 12:00 PM Malaysian time (UTC+8) = 4:00 AM UTC
+    # Cron format: minute hour day month day-of-week
+    - cron: '0 4 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  trigger-bulk-prediction:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+      
+      - name: Login to API and get token
+        id: login
+        run: |
+          echo "Logging in to API..."
+          LOGIN_RESPONSE=$(curl -s -X POST "${{ secrets.API_BASE_URL }}/auth/login" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"email\": \"${{ secrets.API_ADMIN_EMAIL }}\",
+              \"password\": \"${{ secrets.API_ADMIN_PASSWORD }}\"
+            }")
+          
+          # Extract token from response using jq
+          TOKEN=$(echo "$LOGIN_RESPONSE" | jq -r '.token // empty')
+          
+          if [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; then
+            echo "❌ Error: Failed to get token"
+            echo "Response: $LOGIN_RESPONSE"
+            exit 1
+          fi
+          
+          echo "✅ Token obtained successfully"
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+      
+      - name: Trigger Bulk Prediction
+        id: bulk-prediction
+        run: |
+          echo "Triggering bulk prediction for all company locations..."
+          echo "API URL: ${{ secrets.API_BASE_URL }}/api/predict/bulk"
+          
+          # Make the API call with extended timeout (30 minutes)
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.API_BASE_URL }}/api/predict/bulk" \
+            -H "Authorization: Bearer ${{ steps.login.outputs.token }}" \
+            -H "Content-Type: application/json" \
+            --max-time 1800) # 30 minute timeout
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          echo "HTTP Status Code: $HTTP_CODE"
+          echo "Response Body:"
+          echo "$BODY" | jq '.' || echo "$BODY"
+          
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ Bulk prediction triggered successfully"
+            
+            # Extract and display summary
+            if echo "$BODY" | jq -e '.summary' > /dev/null 2>&1; then
+              echo ""
+              echo "📊 Prediction Summary:"
+              echo "$BODY" | jq '.summary'
+            fi
+            
+            # Display prediction count if available
+            if echo "$BODY" | jq -e '.predictions' > /dev/null 2>&1; then
+              PREDICTION_COUNT=$(echo "$BODY" | jq '.predictions | length')
+              echo "✅ Successfully created $PREDICTION_COUNT predictions"
+            fi
+          else
+            echo "❌ Bulk prediction failed with status code: $HTTP_CODE"
+            echo "Error response: $BODY"
+            exit 1
+          fi
+      
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Workflow failed. Please check the logs above for details."
+          # You can add additional notification logic here (e.g., Slack, email, etc.)
+
