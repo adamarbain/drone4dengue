@@ -11,6 +11,322 @@ const admin = require('firebase-admin');
 const { getStorage } = require('firebase-admin/storage');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+
+/**
+ * Normalize a PEM private key string so OpenSSL can decode it reliably.
+ * Handles different newline encodings and optional base64-encoded payloads.
+ *
+ * @param {string|undefined} rawKey
+ * @returns {string|null}
+ */
+function normalizePrivateKey(rawKey) {
+  if (!rawKey) {
+    return null;
+  }
+
+  // Handle non-string types
+  if (typeof rawKey !== 'string') {
+    console.warn('[firebase_storage_utils] Private key is not a string, attempting to convert...');
+    rawKey = String(rawKey);
+  }
+
+  let normalized = rawKey.trim();
+
+  // Return null if key is empty after trimming
+  if (normalized.length === 0) {
+    return null;
+  }
+
+  // If the key looks base64-encoded (no PEM header), try to decode it.
+  const looksBase64 = !normalized.includes('BEGIN') && /^[A-Za-z0-9+/=]+$/.test(normalized);
+  if (looksBase64) {
+    try {
+      normalized = Buffer.from(normalized, 'base64').toString('utf8').trim();
+      // If decoding resulted in empty string, return null
+      if (normalized.length === 0) {
+        return null;
+      }
+    } catch (error) {
+      throw new Error(`Failed to decode FIREBASE_PRIVATE_KEY_BASE64: ${error.message}`);
+    }
+  }
+
+  // Normalize line endings - handle various formats
+  normalized = normalized
+    .replace(/\\n/g, '\n') // Support escaped new lines (e.g. Render, Vercel)
+    .replace(/\\r/g, '\n')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n'); // Handle any remaining \r
+
+  // Extract PEM header and footer
+  const beginMatch = normalized.match(/-----BEGIN[^-]+-----/);
+  const endMatch = normalized.match(/-----END[^-]+-----/);
+  
+  if (!beginMatch || !endMatch) {
+    // If no proper PEM structure, try to find it without strict matching
+    const looseBeginMatch = normalized.match(/BEGIN[^E]+KEY/);
+    const looseEndMatch = normalized.match(/END[^E]+KEY/);
+    
+    if (looseBeginMatch && looseEndMatch) {
+      console.warn('[firebase_storage_utils] Found PEM markers but format may be non-standard');
+      // Try to extract and reformat anyway
+      const beginIdx = normalized.indexOf(looseBeginMatch[0]) - 5; // Account for "-----"
+      const endIdx = normalized.indexOf(looseEndMatch[0]) + looseEndMatch[0].length + 5;
+      
+      if (beginIdx >= 0 && endIdx > beginIdx) {
+        const extracted = normalized.substring(beginIdx, endIdx);
+        // Clean and return the extracted portion (don't recurse to avoid infinite loop)
+        return extracted.trim();
+      }
+    }
+    
+    // If we can't find proper structure, return as-is (will be caught by validation)
+    console.warn('[firebase_storage_utils] Could not find proper PEM BEGIN/END markers');
+    return normalized.trim();
+  }
+
+  const beginLine = beginMatch[0];
+  const endLine = endMatch[0];
+  
+  // Extract the base64 content between headers
+  const contentStart = normalized.indexOf(beginLine) + beginLine.length;
+  const contentEnd = normalized.indexOf(endLine);
+  
+  if (contentStart >= contentEnd) {
+    console.warn('[firebase_storage_utils] Invalid PEM structure: content area is empty or malformed');
+    return normalized.trim();
+  }
+
+  // Extract and clean the base64 content
+  let keyContent = normalized.substring(contentStart, contentEnd)
+    .replace(/\s/g, '') // Remove all whitespace
+    .trim();
+
+  // Validate base64 content
+  if (!/^[A-Za-z0-9+/=]+$/.test(keyContent)) {
+    console.warn('[firebase_storage_utils] Private key content does not appear to be valid base64');
+    // Still try to return something - Firebase will validate
+    return normalized.trim();
+  }
+
+  // Reformat the base64 content with proper line breaks (64 characters per line is standard)
+  // This ensures the PEM format is correct
+  const reformattedContent = keyContent.match(/.{1,64}/g)?.join('\n') || keyContent;
+
+  // Reconstruct the PEM key with proper formatting
+  // Ensure there's a newline after BEGIN and before END
+  let reformattedKey = `${beginLine}\n${reformattedContent}\n${endLine}`;
+  
+  // Ensure it ends with a newline
+  if (!reformattedKey.endsWith('\n')) {
+    reformattedKey += '\n';
+  }
+
+  return reformattedKey;
+}
+
+/**
+ * Validate that a private key can be parsed by Node.js crypto
+ * This helps catch format issues before passing to Firebase Admin SDK
+ * 
+ * @param {string} privateKey - PEM-formatted private key
+ * @returns {boolean} True if key is valid
+ */
+function validatePrivateKeyFormat(privateKey) {
+  if (!privateKey || typeof privateKey !== 'string') {
+    return false;
+  }
+
+  try {
+    // Try to create a private key object from the PEM string
+    // This will throw if the format is invalid
+    const keyObject = crypto.createPrivateKey({
+      key: privateKey,
+      format: 'pem',
+    });
+    
+    // If we get here, the key is valid
+    return true;
+  } catch (error) {
+    // Key format is invalid
+    console.warn('[firebase_storage_utils] Private key validation failed:', error.message);
+    return false;
+  }
+}
+
+/**
+ * Resolve Firebase service account fields from environment variables.
+ * Supports multiple formats to make production hosting easier.
+ */
+function resolveFirebaseCredentialFields() {
+  // 1. Full service account JSON (literal or base64) takes precedence if provided.
+  const serviceAccountJson =
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON ||
+    process.env.FIREBASE_SERVICE_ACCOUNT;
+
+  if (serviceAccountJson) {
+    let parsed;
+    try {
+      const maybeJsonString = serviceAccountJson.trim();
+      const jsonString = maybeJsonString.startsWith('{')
+        ? maybeJsonString
+        : Buffer.from(maybeJsonString, 'base64').toString('utf8');
+      parsed = JSON.parse(jsonString);
+    } catch (error) {
+      throw new Error(`Failed to parse Firebase service account JSON: ${error.message}`);
+    }
+
+    // Validate required fields in service account JSON
+    if (!parsed.private_key) {
+      throw new Error(
+        'FIREBASE_SERVICE_ACCOUNT_JSON is missing the "private_key" field. ' +
+        'Please ensure your service account JSON contains a valid private_key.'
+      );
+    }
+
+    const normalizedKey = normalizePrivateKey(parsed.private_key);
+    if (!normalizedKey) {
+      throw new Error(
+        'FIREBASE_SERVICE_ACCOUNT_JSON contains an invalid or empty "private_key" field. ' +
+        'Please check that the private_key is properly formatted as a PEM key.'
+      );
+    }
+
+    return {
+      projectId: parsed.project_id,
+      clientEmail: parsed.client_email,
+      privateKey: normalizedKey,
+      storageBucket:
+        process.env.FIREBASE_STORAGE_BUCKET ||
+        parsed.storageBucket || // non-standard but allow override
+        parsed.project_id ? `${parsed.project_id}.appspot.com` : undefined
+    };
+  }
+
+  // 2. Individual env vars (legacy/default path).
+  const privateKey =
+    normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY) ||
+    normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY_BASE64);
+
+  return {
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey,
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET
+  };
+}
+
+/**
+ * Validate Firebase configuration presence and throw descriptive errors to help operators.
+ */
+function getFirebaseConfigFromEnv() {
+  const { projectId, clientEmail, privateKey, storageBucket } = resolveFirebaseCredentialFields();
+
+  const missing = [];
+  if (!projectId) missing.push('FIREBASE_PROJECT_ID');
+  if (!clientEmail) missing.push('FIREBASE_CLIENT_EMAIL');
+  if (!privateKey) {
+    // Provide more specific error message for missing private key
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON || process.env.FIREBASE_SERVICE_ACCOUNT) {
+      missing.push('FIREBASE_SERVICE_ACCOUNT_JSON (private_key field is missing or invalid)');
+    } else {
+      missing.push('FIREBASE_PRIVATE_KEY or FIREBASE_PRIVATE_KEY_BASE64');
+    }
+  }
+  if (!storageBucket) missing.push('FIREBASE_STORAGE_BUCKET');
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing Firebase configuration value(s): ${missing.join(', ')}. ` +
+      'See docs/firebase-storage-migration.md for setup details.'
+    );
+  }
+
+  // Additional validation: ensure privateKey is a non-empty string
+  if (typeof privateKey !== 'string' || privateKey.trim().length === 0) {
+    throw new Error(
+      'Firebase private_key must be a non-empty string. ' +
+      'Please check your FIREBASE_PRIVATE_KEY, FIREBASE_PRIVATE_KEY_BASE64, or FIREBASE_SERVICE_ACCOUNT_JSON configuration.'
+    );
+  }
+
+  // The privateKey should already be normalized by normalizePrivateKey()
+  // But let's ensure it's properly formatted for Firebase
+  let formattedKey = privateKey;
+
+  // Validate PEM structure - should have BEGIN and END markers
+  const hasBegin = formattedKey.includes('BEGIN PRIVATE KEY') || 
+                   formattedKey.includes('BEGIN RSA PRIVATE KEY') ||
+                   formattedKey.includes('BEGIN EC PRIVATE KEY');
+  const hasEnd = formattedKey.includes('END PRIVATE KEY') || 
+                 formattedKey.includes('END RSA PRIVATE KEY') ||
+                 formattedKey.includes('END EC PRIVATE KEY');
+
+  if (!hasBegin || !hasEnd) {
+    throw new Error(
+      'Firebase private_key must be a valid PEM-formatted key with BEGIN and END markers. ' +
+      'Please check your FIREBASE_PRIVATE_KEY, FIREBASE_PRIVATE_KEY_BASE64, or FIREBASE_SERVICE_ACCOUNT_JSON configuration.'
+    );
+  }
+
+  // Ensure the key ends with a newline (PEM format requirement)
+  if (!formattedKey.endsWith('\n')) {
+    formattedKey = formattedKey + '\n';
+  }
+
+  // Validate key format before passing to Firebase Admin SDK
+  // Note: We'll let Firebase Admin SDK do the final validation since it's more strict
+  // but we can log warnings if Node.js crypto can't parse it
+  const isValidFormat = validatePrivateKeyFormat(formattedKey);
+  if (!isValidFormat) {
+    console.warn(
+      '[firebase_storage_utils] Warning: Private key failed Node.js crypto validation. ' +
+      'This may indicate a format issue, but Firebase Admin SDK will make the final determination.'
+    );
+    // Don't throw here - let Firebase Admin SDK provide the actual error message
+  }
+
+  // Try to create the credential with better error handling
+  try {
+    return {
+      credential: admin.credential.cert({
+        projectId,
+        privateKey: formattedKey,
+        clientEmail,
+      }),
+      storageBucket,
+    };
+  } catch (error) {
+    // Catch OpenSSL/decoder errors and provide helpful guidance
+    if (error.code === 'ERR_OSSL_UNSUPPORTED' || 
+        error.message.includes('DECODER') || 
+        error.message.includes('unsupported') ||
+        error.message.includes('Invalid PEM') ||
+        error.code === 'app/invalid-credential') {
+      
+      // Provide detailed troubleshooting guidance
+      const troubleshooting = [
+        '1. Ensure your private key is in PEM format with proper BEGIN/END markers',
+        '2. The key must have actual newline characters (\\n), not escaped \\\\n',
+        '3. Base64 content should be split into lines (64 characters per line is standard)',
+        '4. If using FIREBASE_SERVICE_ACCOUNT_JSON, verify the private_key field is correctly formatted',
+        '5. On Render/Vercel, consider using FIREBASE_PRIVATE_KEY_BASE64 to avoid newline issues',
+        '6. Verify the key is not truncated or corrupted'
+      ].join('\n   ');
+
+      throw new Error(
+        `Firebase private key format error: ${error.message}\n\n` +
+        `Troubleshooting steps:\n   ${troubleshooting}\n\n` +
+        `Key format check: Has BEGIN marker: ${formattedKey.includes('BEGIN')}, ` +
+        `Has END marker: ${formattedKey.includes('END')}, ` +
+        `Has newlines: ${formattedKey.includes('\n')}, ` +
+        `Key length: ${formattedKey.length} characters`
+      );
+    }
+    throw error;
+  }
+}
 
 // Initialize Firebase Admin SDK if not already initialized
 let firebaseInitialized = false;
@@ -32,24 +348,44 @@ function initializeFirebase() {
       return Promise.resolve(true);
     }
 
-    // Get Firebase configuration from environment variables
-    const firebaseConfig = {
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      }),
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-    };
+    // Get Firebase configuration from environment variables (supports multiple formats)
+    const firebaseConfig = getFirebaseConfigFromEnv();
+
+    // Log configuration status (without sensitive data)
+    console.log('[firebase_storage_utils] Initializing Firebase Admin SDK...');
+    console.log('[firebase_storage_utils] Storage Bucket:', firebaseConfig.storageBucket);
+    
+    // Check which environment variables are set (for debugging)
+    const hasServiceAccountJson = !!(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || process.env.FIREBASE_SERVICE_ACCOUNT);
+    const hasPrivateKey = !!process.env.FIREBASE_PRIVATE_KEY;
+    const hasPrivateKeyBase64 = !!process.env.FIREBASE_PRIVATE_KEY_BASE64;
+    console.log('[firebase_storage_utils] Config source:', 
+      hasServiceAccountJson ? 'FIREBASE_SERVICE_ACCOUNT_JSON' : 
+      hasPrivateKey ? 'FIREBASE_PRIVATE_KEY' : 
+      hasPrivateKeyBase64 ? 'FIREBASE_PRIVATE_KEY_BASE64' : 'none');
 
     // Initialize Firebase Admin
     admin.initializeApp(firebaseConfig);
     firebaseInitialized = true;
 
-    console.log('Firebase Admin SDK initialized successfully');
+    console.log('[firebase_storage_utils] Firebase Admin SDK initialized successfully');
     return Promise.resolve(true);
   } catch (error) {
-    console.error('Firebase initialization error:', error);
+    console.error('[firebase_storage_utils] Firebase initialization error:', error);
+    
+    // Provide more helpful error messages for common issues
+    if (error.message.includes('private_key') || error.code === 'ERR_OSSL_UNSUPPORTED') {
+      const errorMsg = error.message.includes('DECODER') || error.code === 'ERR_OSSL_UNSUPPORTED'
+        ? 'Private key format is not supported or corrupted. Firebase requires PKCS#8 format (BEGIN PRIVATE KEY).'
+        : error.message;
+      
+      throw new Error(
+        `Failed to initialize Firebase: ${errorMsg} ` +
+        'Please check your FIREBASE_PRIVATE_KEY, FIREBASE_PRIVATE_KEY_BASE64, or FIREBASE_SERVICE_ACCOUNT_JSON environment variable. ' +
+        'Ensure the private key is properly formatted with actual newlines (not \\n) and contains both BEGIN and END markers.'
+      );
+    }
+    
     throw new Error(`Failed to initialize Firebase: ${error.message}`);
   }
 }

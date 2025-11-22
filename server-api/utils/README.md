@@ -25,9 +25,15 @@ Set these environment variables:
 
 ```env
 FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 FIREBASE_CLIENT_EMAIL=service-account@project.iam.gserviceaccount.com
 FIREBASE_STORAGE_BUCKET=project.appspot.com
+
+# Use one of the options below for credentials
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+# or
+FIREBASE_PRIVATE_KEY_BASE64=LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0t...
+# or
+FIREBASE_SERVICE_ACCOUNT_JSON='{"type":"service_account","project_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n..."}'
 ```
 
 See [Firebase Storage Migration Guide](../../docs/firebase-storage-migration.md) for setup instructions.
