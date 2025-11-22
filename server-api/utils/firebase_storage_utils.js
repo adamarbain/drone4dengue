@@ -158,8 +158,25 @@ function validatePrivateKeyFormat(privateKey) {
 /**
  * Resolve Firebase service account fields from environment variables.
  * Supports multiple formats to make production hosting easier.
+ * 
+ * Priority order:
+ * 1. FIREBASE_SERVICE_ACCOUNT_JSON (with fallback to individual vars if parsing fails)
+ * 2. Individual environment variables (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, etc.)
  */
 function resolveFirebaseCredentialFields() {
+  // Check for multiple configuration methods and warn
+  const hasServiceAccountJson = !!(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || process.env.FIREBASE_SERVICE_ACCOUNT);
+  const hasIndividualVars = !!(process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && 
+                              (process.env.FIREBASE_PRIVATE_KEY || process.env.FIREBASE_PRIVATE_KEY_BASE64));
+  
+  if (hasServiceAccountJson && hasIndividualVars) {
+    console.warn(
+      '[firebase_storage_utils] Both FIREBASE_SERVICE_ACCOUNT_JSON and individual Firebase env vars are set. ' +
+      'FIREBASE_SERVICE_ACCOUNT_JSON will be used first. If it fails to parse, individual vars will be used as fallback. ' +
+      'Consider using only ONE method to avoid confusion.'
+    );
+  }
+
   // 1. Full service account JSON (literal or base64) takes precedence if provided.
   const serviceAccountJson =
     process.env.FIREBASE_SERVICE_ACCOUNT_JSON ||
@@ -169,42 +186,157 @@ function resolveFirebaseCredentialFields() {
     let parsed;
     try {
       const maybeJsonString = serviceAccountJson.trim();
-      const jsonString = maybeJsonString.startsWith('{')
-        ? maybeJsonString
-        : Buffer.from(maybeJsonString, 'base64').toString('utf8');
-      parsed = JSON.parse(jsonString);
+      let jsonString;
+      
+      // Log diagnostic info (without exposing sensitive data)
+      const inputLength = maybeJsonString.length;
+      const startsWithBrace = maybeJsonString.startsWith('{');
+      const firstChars = maybeJsonString.substring(0, Math.min(50, maybeJsonString.length));
+      console.log('[firebase_storage_utils] Parsing service account JSON:', {
+        length: inputLength,
+        startsWithBrace,
+        firstChars: startsWithBrace ? firstChars : '[hidden - likely base64]',
+        hasNewlines: maybeJsonString.includes('\n')
+      });
+      
+      // Determine if the string is base64 encoded or raw JSON
+      // Base64 strings typically don't start with '{' and contain only base64 characters
+      const looksLikeBase64 = !maybeJsonString.startsWith('{') && 
+                               !maybeJsonString.startsWith('[') &&
+                               /^[A-Za-z0-9+/=\s]+$/.test(maybeJsonString.replace(/\s/g, ''));
+      
+      if (looksLikeBase64) {
+        // Try to decode as base64
+        try {
+          const base64Clean = maybeJsonString.replace(/\s/g, '');
+          const decoded = Buffer.from(base64Clean, 'base64');
+          jsonString = decoded.toString('utf8');
+          
+          // Validate that decoded content looks like JSON
+          const decodedTrimmed = jsonString.trim();
+          if (!decodedTrimmed.startsWith('{') && !decodedTrimmed.startsWith('[')) {
+            // Check if it's valid UTF-8
+            const isValidUtf8 = Buffer.from(decodedTrimmed, 'utf8').toString('utf8') === decodedTrimmed;
+            if (!isValidUtf8) {
+              throw new Error('Decoded base64 contains invalid UTF-8 characters');
+            }
+            throw new Error('Decoded base64 does not appear to be valid JSON (does not start with { or [)');
+          }
+          
+          console.log('[firebase_storage_utils] Successfully decoded base64 JSON, length:', decodedTrimmed.length);
+        } catch (base64Error) {
+          // If base64 decoding fails, try treating it as raw JSON
+          console.warn('[firebase_storage_utils] Base64 decoding failed, trying as raw JSON:', base64Error.message);
+          jsonString = maybeJsonString;
+        }
+      } else {
+        // Treat as raw JSON
+        jsonString = maybeJsonString;
+      }
+      
+      // Validate JSON string before parsing
+      const trimmedJson = jsonString.trim();
+      if (!trimmedJson.startsWith('{') && !trimmedJson.startsWith('[')) {
+        throw new Error(
+          'Service account JSON must be a valid JSON object or array. ' +
+          'If using base64 encoding, ensure it decodes to valid JSON.'
+        );
+      }
+      
+      // Check for invalid characters that might indicate encoding issues
+      const hasInvalidChars = /[^\x20-\x7E\n\r\t]/.test(trimmedJson);
+      if (hasInvalidChars && trimmedJson.length < 1000) {
+        console.warn('[firebase_storage_utils] JSON contains non-printable characters, may indicate encoding issues');
+        
+        // Try to clean up common encoding issues
+        // Remove null bytes and other control characters (except newlines/tabs)
+        const cleaned = trimmedJson.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F]/g, '');
+        if (cleaned !== trimmedJson) {
+          console.warn('[firebase_storage_utils] Attempting to parse cleaned JSON (removed control characters)');
+          try {
+            parsed = JSON.parse(cleaned);
+            console.log('[firebase_storage_utils] Successfully parsed cleaned JSON');
+          } catch (cleanError) {
+            // If cleaned version also fails, try original
+            console.warn('[firebase_storage_utils] Cleaned JSON also failed, trying original');
+            parsed = JSON.parse(trimmedJson);
+          }
+        } else {
+          parsed = JSON.parse(trimmedJson);
+        }
+      } else {
+        parsed = JSON.parse(trimmedJson);
+      }
     } catch (error) {
-      throw new Error(`Failed to parse Firebase service account JSON: ${error.message}`);
+      // If JSON parsing fails and individual vars are available, log warning and fall through to use them
+      if (hasIndividualVars) {
+        console.warn(
+          '[firebase_storage_utils] Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON, ' +
+          'falling back to individual environment variables (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, etc.)'
+        );
+        // Set parsed to undefined to trigger fallback
+        parsed = undefined;
+      } else {
+        // No fallback available, provide detailed error
+        const diagnosticInfo = {
+          inputLength: serviceAccountJson.length,
+          startsWithBrace: serviceAccountJson.trim().startsWith('{'),
+          looksLikeBase64: /^[A-Za-z0-9+/=\s]+$/.test(serviceAccountJson.replace(/\s/g, '')),
+          hasInvalidChars: /[^\x20-\x7E\n\r\t]/.test(serviceAccountJson)
+        };
+        
+        console.error('[firebase_storage_utils] JSON parsing failed. Diagnostic info:', diagnosticInfo);
+        
+        let troubleshooting = 'Troubleshooting steps:\n';
+        troubleshooting += '1. Verify FIREBASE_SERVICE_ACCOUNT_JSON contains valid JSON or base64-encoded JSON\n';
+        troubleshooting += '2. If using base64, ensure it was encoded correctly: echo "$JSON" | base64 -w0\n';
+        troubleshooting += '3. Check that the environment variable is not truncated or corrupted\n';
+        troubleshooting += '4. On Render, ensure the environment variable is set as "Secret" type\n';
+        troubleshooting += '5. Try using individual env vars (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY) instead\n';
+        
+        throw new Error(
+          `Failed to parse Firebase service account JSON: ${error.message}\n\n` +
+          `${troubleshooting}\n` +
+          `Input info: length=${diagnosticInfo.inputLength}, ` +
+          `starts with {{=${diagnosticInfo.startsWithBrace}, ` +
+          `looks like base64=${diagnosticInfo.looksLikeBase64}, ` +
+          `has invalid chars=${diagnosticInfo.hasInvalidChars}`
+        );
+      }
     }
 
-    // Validate required fields in service account JSON
-    if (!parsed.private_key) {
-      throw new Error(
-        'FIREBASE_SERVICE_ACCOUNT_JSON is missing the "private_key" field. ' +
-        'Please ensure your service account JSON contains a valid private_key.'
-      );
-    }
+    // If parsing succeeded, use the parsed JSON
+    if (typeof parsed !== 'undefined' && parsed !== null) {
+      // Validate required fields in service account JSON
+      if (!parsed.private_key) {
+        throw new Error(
+          'FIREBASE_SERVICE_ACCOUNT_JSON is missing the "private_key" field. ' +
+          'Please ensure your service account JSON contains a valid private_key.'
+        );
+      }
 
-    const normalizedKey = normalizePrivateKey(parsed.private_key);
-    if (!normalizedKey) {
-      throw new Error(
-        'FIREBASE_SERVICE_ACCOUNT_JSON contains an invalid or empty "private_key" field. ' +
-        'Please check that the private_key is properly formatted as a PEM key.'
-      );
-    }
+      const normalizedKey = normalizePrivateKey(parsed.private_key);
+      if (!normalizedKey) {
+        throw new Error(
+          'FIREBASE_SERVICE_ACCOUNT_JSON contains an invalid or empty "private_key" field. ' +
+          'Please check that the private_key is properly formatted as a PEM key.'
+        );
+      }
 
-    return {
-      projectId: parsed.project_id,
-      clientEmail: parsed.client_email,
-      privateKey: normalizedKey,
-      storageBucket:
-        process.env.FIREBASE_STORAGE_BUCKET ||
-        parsed.storageBucket || // non-standard but allow override
-        parsed.project_id ? `${parsed.project_id}.appspot.com` : undefined
-    };
+      return {
+        projectId: parsed.project_id,
+        clientEmail: parsed.client_email,
+        privateKey: normalizedKey,
+        storageBucket:
+          process.env.FIREBASE_STORAGE_BUCKET ||
+          parsed.storageBucket || // non-standard but allow override
+          parsed.project_id ? `${parsed.project_id}.appspot.com` : undefined
+      };
+    }
+    // If parsed is undefined, fall through to use individual vars below
   }
 
-  // 2. Individual env vars (legacy/default path).
+  // 2. Individual env vars (legacy/default path or fallback).
   const privateKey =
     normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY) ||
     normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY_BASE64);
