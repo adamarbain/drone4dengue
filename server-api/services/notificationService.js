@@ -83,7 +83,7 @@ async function getPushTokensForUsers(userIds) {
 }
 
 /**
- * Notify mobile users when admin creates company prediction
+ * Notify mobile users and admins when company prediction is created
  */
 async function notifyCompanyPredictionCreated(prediction) {
   try {
@@ -106,7 +106,7 @@ async function notifyCompanyPredictionCreated(prediction) {
     }
 
     // Get all mobile users (role='user') in the company
-    const users = await prisma.user.findMany({
+    const mobileUsers = await prisma.user.findMany({
       where: {
         companyId,
         role: 'user'
@@ -114,21 +114,36 @@ async function notifyCompanyPredictionCreated(prediction) {
       select: { id: true }
     });
 
-    if (users.length === 0) {
-      console.log(`[NOTIFICATION] No mobile users found for company ${companyId}`);
+    // Get all admin users (role='admin') in the company
+    const adminUsers = await prisma.user.findMany({
+      where: {
+        companyId,
+        role: 'admin'
+      },
+      select: { id: true }
+    });
+
+    // Combine all user IDs (mobile users + admins)
+    const allUserIds = [
+      ...mobileUsers.map(u => u.id),
+      ...adminUsers.map(a => a.id)
+    ];
+
+    if (allUserIds.length === 0) {
+      console.log(`[NOTIFICATION] No users found for company ${companyId}`);
       return;
     }
 
-    const userIds = users.map(u => u.id);
     const title = `New Dengue Risk Prediction - ${riskLevel.toUpperCase()} Risk`;
     const message = `A new dengue risk prediction has been created for ${locationName}. Risk Level: ${riskLevel.toUpperCase()}`;
 
+    // Create notifications for all users (mobile + admin)
     await createNotification({
       title,
       message,
       type: 'prediction',
       companyId,
-      userIds,
+      userIds: allUserIds,
       metadata: {
         riskLevel,
         riskScore,
@@ -139,8 +154,9 @@ async function notifyCompanyPredictionCreated(prediction) {
       }
     });
 
-    // Send push notifications
-    const pushTokens = await getPushTokensForUsers(userIds);
+    // Send push notifications (only to mobile users who have push tokens)
+    const mobileUserIds = mobileUsers.map(u => u.id);
+    const pushTokens = await getPushTokensForUsers(mobileUserIds);
     if (pushTokens.length > 0) {
       await sendPushNotification(pushTokens, {
         title,
@@ -157,7 +173,7 @@ async function notifyCompanyPredictionCreated(prediction) {
       });
     }
 
-    console.log(`[NOTIFICATION] Sent prediction notification to ${userIds.length} users (${pushTokens.length} push notifications)`);
+    console.log(`[NOTIFICATION] Sent prediction notification to ${allUserIds.length} users (${mobileUsers.length} mobile, ${adminUsers.length} admin, ${pushTokens.length} push notifications)`);
   } catch (error) {
     console.error('[NOTIFICATION ERROR] Failed to notify company prediction:', error);
   }

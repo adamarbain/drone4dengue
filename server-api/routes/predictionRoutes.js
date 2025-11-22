@@ -9,6 +9,7 @@ const {
   getCompanyPredictions, 
   getCompanyLocations,
   getHistoricalDataEndpoint,
+  predictBulkAllLocations,
   healthCheck 
 } = require('../controllers/predictionController');
 const { checkToken } = require('../middleware/authMiddleware');
@@ -237,6 +238,12 @@ router.post('/company/three-models', checkToken, validateThreeModelPredictionInp
 // Input: { imageIds: string[], companyId: string, companyLocationId?: string }
 // Model 3 only: Breeding Area Detection from drone images
 router.post('/detect-breeding-areas', checkToken, validateBreedingAreaDetectionInput, detectBreedingAreas);
+
+// Bulk prediction endpoint (require authentication)
+// POST /api/predict/bulk
+// Generates predictions for all company locations across all companies
+// Automatically sends notifications to all admins and mobile users
+router.post('/bulk', checkToken, predictBulkAllLocations);
 
 router.get('/company/:companyId', checkToken, getCompanyPredictions);
 router.get('/company/:companyId/locations', checkToken, getCompanyLocations);

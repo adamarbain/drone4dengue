@@ -1068,6 +1068,238 @@ async function getCompanyLocations(req, res) {
 }
 
 /**
+ * Bulk prediction endpoint - Generate predictions for all company locations across all companies
+ * POST /api/predict/bulk
+ */
+async function predictBulkAllLocations(req, res) {
+  // Set extended timeout for bulk prediction
+  const EXTENDED_TIMEOUT = 30 * 60 * 1000; // 30 minutes for bulk processing
+  req.setTimeout(EXTENDED_TIMEOUT);
+  res.setTimeout(EXTENDED_TIMEOUT);
+  
+  try {
+    console.log('[BULK PREDICTION] Starting bulk prediction for all company locations');
+
+    // Get all active companies
+    const companies = await prisma.company.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        name: true
+      }
+    });
+
+    if (companies.length === 0) {
+      return res.status(404).json({ 
+        error: 'No active companies found' 
+      });
+    }
+
+    console.log(`[BULK PREDICTION] Found ${companies.length} active companies`);
+
+    const results = {
+      totalCompanies: companies.length,
+      totalLocations: 0,
+      successful: 0,
+      failed: 0,
+      predictions: [],
+      errors: []
+    };
+
+    // Process each company
+    for (const company of companies) {
+      try {
+        // Get all active locations for this company
+        const locations = await prisma.companyLocation.findMany({
+          where: {
+            companyId: company.id,
+            isActive: true,
+            latitude: { not: null },
+            longitude: { not: null }
+          },
+          select: {
+            id: true,
+            name: true,
+            latitude: true,
+            longitude: true
+          }
+        });
+
+        if (locations.length === 0) {
+          console.log(`[BULK PREDICTION] No active locations with coordinates found for company ${company.name}`);
+          continue;
+        }
+
+        console.log(`[BULK PREDICTION] Processing ${locations.length} locations for company ${company.name}`);
+
+        // Process each location
+        for (const location of locations) {
+          try {
+            results.totalLocations++;
+
+            // Get drone images for this location (optional)
+            const images = await prisma.image.findMany({
+              where: {
+                companyId: company.id,
+                companyLocationId: location.id
+              },
+              select: {
+                id: true,
+                url: true,
+                filename: true
+              },
+              take: 5 // Limit to 5 most recent images per location
+            });
+
+            // Convert image URLs to absolute URLs
+            const imageUrls = images.map(img => {
+              if (img.url && (img.url.startsWith('http://') || img.url.startsWith('https://'))) {
+                return img.url;
+              }
+              const baseUrl = process.env.API_BASE_URL || 'http://localhost:4000';
+              return `${baseUrl}${img.url}`;
+            });
+
+            // Get three-model prediction from ML service
+            const mlResult = await getMLThreeModelPrediction(
+              location.latitude,
+              location.longitude,
+              null, // weatherData - will be fetched by ML service
+              null, // historicalData - will be fetched by ML service
+              null, // targetDate
+              imageUrls.length > 0 ? imageUrls : null
+            );
+
+            if (!mlResult.success) {
+              throw new Error('ML prediction failed');
+            }
+
+            const prediction = mlResult.prediction;
+
+            // Store prediction in database
+            const companyPrediction = await prisma.companyPrediction.create({
+              data: {
+                companyId: company.id,
+                companyLocationId: location.id,
+                latitude: location.latitude,
+                longitude: location.longitude,
+                riskScore: prediction.combined_score,
+                model1Score: prediction.model1_score,
+                model2Score: prediction.model2_score,
+                model3Score: prediction.model3_score,
+                combinedScore: prediction.combined_score
+              },
+              include: {
+                companyLocation: {
+                  select: {
+                    id: true,
+                    name: true,
+                    address: true,
+                    latitude: true,
+                    longitude: true
+                  }
+                }
+              }
+            });
+
+            // Send notification to all users (admins + mobile users)
+            // This is automatically handled by notifyCompanyPredictionCreated
+            try {
+              const { notifyCompanyPredictionCreated } = require('../services/notificationService');
+              await notifyCompanyPredictionCreated({
+                ...companyPrediction,
+                riskLevel: prediction.risk_level
+              });
+            } catch (notifError) {
+              console.error(`[BULK PREDICTION] Failed to send notification for ${location.name}:`, notifError);
+              // Don't fail the prediction if notification fails
+            }
+
+            // Store breeding area detection results if available
+            if (prediction.breeding_area_detections && prediction.breeding_area_detections.length > 0) {
+              for (const image of images) {
+                await prisma.breedingAreaDetection.create({
+                  data: {
+                    imageId: image.id,
+                    companyId: company.id,
+                    companyLocationId: location.id,
+                    breedingAreaScore: prediction.model3_score,
+                    detectedObjects: prediction.breeding_area_detections,
+                    boundingBoxes: prediction.breeding_area_detections.map(d => d.bbox),
+                    riskLevel: prediction.model3_risk_level,
+                    processingStatus: 'completed',
+                    processedAt: new Date()
+                  }
+                });
+              }
+            }
+
+            results.successful++;
+            results.predictions.push({
+              companyId: company.id,
+              companyName: company.name,
+              locationId: location.id,
+              locationName: location.name,
+              predictionId: companyPrediction.id,
+              riskScore: prediction.combined_score,
+              riskLevel: prediction.risk_level,
+              latitude: location.latitude,
+              longitude: location.longitude
+            });
+
+            console.log(`[BULK PREDICTION] Successfully processed ${location.name} (${company.name})`);
+
+          } catch (locationError) {
+            results.failed++;
+            results.errors.push({
+              companyId: company.id,
+              companyName: company.name,
+              locationId: location.id,
+              locationName: location.name,
+              error: locationError.message
+            });
+            console.error(`[BULK PREDICTION] Error processing location ${location.name} (${company.name}):`, locationError);
+          }
+        }
+
+      } catch (companyError) {
+        console.error(`[BULK PREDICTION] Error processing company ${company.name}:`, companyError);
+        results.errors.push({
+          companyId: company.id,
+          companyName: company.name,
+          error: companyError.message
+        });
+      }
+    }
+
+    console.log(`[BULK PREDICTION] Completed. Success: ${results.successful}, Failed: ${results.failed}`);
+
+    res.json({
+      success: true,
+      message: `Bulk prediction completed. Processed ${results.totalLocations} locations across ${results.totalCompanies} companies.`,
+      summary: {
+        totalCompanies: results.totalCompanies,
+        totalLocations: results.totalLocations,
+        successful: results.successful,
+        failed: results.failed,
+        successRate: results.totalLocations > 0 
+          ? ((results.successful / results.totalLocations) * 100).toFixed(2) + '%'
+          : '0%'
+      },
+      predictions: results.predictions,
+      errors: results.errors.length > 0 ? results.errors : undefined
+    });
+
+  } catch (error) {
+    console.error('[BULK PREDICTION] Fatal error:', error);
+    res.status(500).json({ 
+      error: error.message || 'Internal server error',
+      message: 'Bulk prediction failed'
+    });
+  }
+}
+
+/**
  * Health check endpoint
  * GET /api/predict/health
  */
@@ -1116,5 +1348,6 @@ module.exports = {
   getCompanyPredictions,
   getCompanyLocations,
   getHistoricalDataEndpoint,
+  predictBulkAllLocations,
   healthCheck
 };
