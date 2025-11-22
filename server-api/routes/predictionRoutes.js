@@ -10,6 +10,7 @@ const {
   getCompanyLocations,
   getHistoricalDataEndpoint,
   predictBulkAllLocations,
+  predictDailyUsers,
   healthCheck 
 } = require('../controllers/predictionController');
 const { checkToken } = require('../middleware/authMiddleware');
@@ -244,6 +245,12 @@ router.post('/detect-breeding-areas', checkToken, validateBreedingAreaDetectionI
 // Generates predictions for all company locations across all companies
 // Automatically sends notifications to all admins and mobile users
 router.post('/bulk', checkToken, predictBulkAllLocations);
+
+// Daily prediction endpoint for mobile users (require authentication)
+// POST /api/predict/daily-users
+// Generates predictions for all mobile users based on their last known location
+// Automatically sends daily prediction notifications with recommendations
+router.post('/daily-users', checkToken, predictDailyUsers);
 
 router.get('/company/:companyId', checkToken, getCompanyPredictions);
 router.get('/company/:companyId/locations', checkToken, getCompanyLocations);

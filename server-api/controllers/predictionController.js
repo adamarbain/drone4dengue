@@ -1300,6 +1300,163 @@ async function predictBulkAllLocations(req, res) {
 }
 
 /**
+ * Daily prediction endpoint - Generate predictions for all mobile users
+ * POST /api/predict/daily-users
+ * This endpoint replicates the functionality of dailyPredictionJob.js
+ */
+async function predictDailyUsers(req, res) {
+  // Set extended timeout for daily prediction processing
+  const EXTENDED_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+  req.setTimeout(EXTENDED_TIMEOUT);
+  res.setTimeout(EXTENDED_TIMEOUT);
+  
+  try {
+    console.log('[DAILY PREDICTION API] Starting daily prediction for mobile users');
+
+    // Get all mobile users (role='user') with their company info
+    const users = await prisma.user.findMany({
+      where: {
+        role: 'user',
+        status: 'Verified' // Only verified users
+      },
+      select: {
+        id: true,
+        companyId: true,
+        email: true,
+        name: true
+      }
+    });
+
+    console.log(`[DAILY PREDICTION API] Found ${users.length} users to process`);
+
+    const results = {
+      totalUsers: users.length,
+      successful: 0,
+      failed: 0,
+      skipped: 0,
+      predictions: [],
+      errors: []
+    };
+
+    // Process each user
+    for (const user of users) {
+      try {
+        // Get user's last prediction to use their location
+        const lastPrediction = await prisma.predictionLog.findFirst({
+          where: {
+            userId: user.id
+          },
+          orderBy: {
+            requestedAt: 'desc'
+          }
+        });
+
+        if (!lastPrediction) {
+          console.log(`[DAILY PREDICTION API] No location found for user ${user.id}, skipping`);
+          results.skipped++;
+          continue;
+        }
+
+        const { latitude, longitude } = lastPrediction;
+
+        // Call prediction API
+        const mlResult = await getMLPrediction(latitude, longitude);
+        
+        if (!mlResult.success || !mlResult.prediction) {
+          console.error(`[DAILY PREDICTION API] Prediction failed for user ${user.id}`);
+          results.failed++;
+          results.errors.push({
+            userId: user.id,
+            email: user.email,
+            error: 'Prediction failed'
+          });
+          continue;
+        }
+
+        const prediction = mlResult.prediction;
+        
+        // Determine risk level
+        let riskLevel = 'low';
+        const riskScore = prediction.combined_score || prediction.risk_score || 0;
+        if (riskScore >= 0.7) riskLevel = 'high';
+        else if (riskScore >= 0.4) riskLevel = 'medium';
+
+        // Send notification to user
+        try {
+          const { notifyDailyPrediction } = require('../services/notificationService');
+          await notifyDailyPrediction(user.id, user.companyId, {
+            riskLevel,
+            riskScore,
+            latitude,
+            longitude
+          });
+        } catch (notifError) {
+          console.error(`[DAILY PREDICTION API] Failed to send notification for user ${user.id}:`, notifError);
+          // Don't fail the prediction if notification fails
+        }
+
+        // Log the prediction
+        await prisma.predictionLog.create({
+          data: {
+            latitude,
+            longitude,
+            userId: user.id,
+            riskScore
+          }
+        });
+
+        results.successful++;
+        results.predictions.push({
+          userId: user.id,
+          email: user.email,
+          companyId: user.companyId,
+          latitude,
+          longitude,
+          riskScore,
+          riskLevel
+        });
+
+        console.log(`[DAILY PREDICTION API] Successfully processed user ${user.id}`);
+
+      } catch (userError) {
+        console.error(`[DAILY PREDICTION API] Error processing user ${user.id}:`, userError);
+        results.failed++;
+        results.errors.push({
+          userId: user.id,
+          email: user.email,
+          error: userError.message
+        });
+      }
+    }
+
+    console.log(`[DAILY PREDICTION API] Completed. Success: ${results.successful}, Failed: ${results.failed}, Skipped: ${results.skipped}`);
+
+    res.json({
+      success: true,
+      message: `Daily prediction completed. Processed ${results.totalUsers} users.`,
+      summary: {
+        totalUsers: results.totalUsers,
+        successful: results.successful,
+        failed: results.failed,
+        skipped: results.skipped,
+        successRate: results.totalUsers > 0 
+          ? ((results.successful / results.totalUsers) * 100).toFixed(2) + '%'
+          : '0%'
+      },
+      predictions: results.predictions,
+      errors: results.errors.length > 0 ? results.errors : undefined
+    });
+
+  } catch (error) {
+    console.error('[DAILY PREDICTION API] Fatal error:', error);
+    res.status(500).json({ 
+      error: error.message || 'Internal server error',
+      message: 'Daily prediction failed'
+    });
+  }
+}
+
+/**
  * Health check endpoint
  * GET /api/predict/health
  */
@@ -1349,5 +1506,6 @@ module.exports = {
   getCompanyLocations,
   getHistoricalDataEndpoint,
   predictBulkAllLocations,
+  predictDailyUsers,
   healthCheck
 };
