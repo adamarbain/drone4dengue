@@ -587,6 +587,26 @@ async function uploadImage(fileData, destinationPath, metadata = {}) {
     return publicUrl;
   } catch (error) {
     console.error('Firebase upload error:', error);
+    
+    // Provide helpful error messages for common issues
+    if (error.message && error.message.includes('bucket does not exist')) {
+      const bucket = getStorage().bucket();
+      throw new Error(
+        `Firebase Storage bucket does not exist: ${bucket.name}\n\n` +
+        `To fix this:\n` +
+        `1. Go to Firebase Console: https://console.firebase.google.com/\n` +
+        `2. Select your project: ${process.env.FIREBASE_PROJECT_ID || 'your-project'}\n` +
+        `3. Navigate to Storage section\n` +
+        `4. Create a bucket or verify the bucket name\n` +
+        `5. Set FIREBASE_STORAGE_BUCKET environment variable with the correct bucket name\n\n` +
+        `Common bucket name formats:\n` +
+        `- ${process.env.FIREBASE_PROJECT_ID || 'project-id'}.appspot.com (default)\n` +
+        `- ${process.env.FIREBASE_PROJECT_ID || 'project-id'}.firebasestorage.app (newer format)\n` +
+        `- Custom bucket name you created\n\n` +
+        `Current bucket being used: ${bucket.name}`
+      );
+    }
+    
     throw new Error(`Failed to upload image to Firebase: ${error.message}`);
   }
 }
