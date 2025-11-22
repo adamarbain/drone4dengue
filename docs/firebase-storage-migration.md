@@ -59,9 +59,17 @@ Add the following to your `.env` file:
 ```env
 # Firebase Storage Configuration
 FIREBASE_PROJECT_ID=your-firebase-project-id
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour private key here\n-----END PRIVATE KEY-----\n"
 FIREBASE_CLIENT_EMAIL=your-service-account@your-project.iam.gserviceaccount.com
 FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+
+# Option 1: Multiline PEM (local/dev)
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour private key here\n-----END PRIVATE KEY-----\n"
+
+# Option 2: Base64 PEM (recommended for Render/Vercel/Netlify)
+FIREBASE_PRIVATE_KEY_BASE64=LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0t...
+
+# Option 3: Full service account JSON (literal or base64 encoded)
+FIREBASE_SERVICE_ACCOUNT_JSON='{"type":"service_account","project_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n..."}'
 ```
 
 ### Getting Firebase Credentials
@@ -71,9 +79,9 @@ FIREBASE_STORAGE_BUCKET=your-project.appspot.com
 3. Go to **Project Settings** → **Service Accounts**
 4. Click **Generate New Private Key**
 5. Download the JSON file
-6. Extract the following from the JSON:
+6. Extract the following from the JSON (or provide the JSON via `FIREBASE_SERVICE_ACCOUNT_JSON`):
    - `project_id` → `FIREBASE_PROJECT_ID`
-   - `private_key` → `FIREBASE_PRIVATE_KEY` (keep the `\n` characters)
+   - `private_key` → `FIREBASE_PRIVATE_KEY` (keep the `\n` characters) **or** base64-encode it for `FIREBASE_PRIVATE_KEY_BASE64`
    - `client_email` → `FIREBASE_CLIENT_EMAIL`
    - The storage bucket name (usually `your-project.appspot.com`)
 
