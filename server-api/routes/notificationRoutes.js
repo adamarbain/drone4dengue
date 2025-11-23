@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { checkToken } = require('../middleware/authMiddleware');
+const { checkToken, checkRole } = require('../middleware/authMiddleware');
 const {
   getNotifications,
   markAsRead,
   markAllAsRead,
   getUnreadCount,
-  deleteNotification
+  deleteNotification,
+  sendBroadcastNotification
 } = require('../controllers/notificationController');
 const {
   registerDevice,
@@ -36,6 +37,9 @@ router.delete('/:id', deleteNotification);
 router.post('/register-device', registerDevice);
 router.post('/unregister-device', unregisterDevice);
 router.get('/device-tokens', getDeviceTokens);
+
+// Broadcast notification to all mobile app users (admin only)
+router.post('/broadcast', checkToken, checkRole('admin'), sendBroadcastNotification);
 
 module.exports = router;
 

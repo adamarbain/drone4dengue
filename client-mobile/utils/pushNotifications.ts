@@ -92,9 +92,15 @@ export async function registerDeviceToken(token: string): Promise<boolean> {
   try {
     const authToken = await AsyncStorage.getItem('token');
     if (!authToken) {
-      console.log('No auth token found, skipping device registration');
+      console.log('[PUSH NOTIFICATIONS] No auth token found, skipping device registration');
       return false;
     }
+
+    console.log('[PUSH NOTIFICATIONS] Attempting to register device token:', {
+      apiUrl: API_URL,
+      platform: Platform.OS,
+      tokenLength: token.length,
+    });
 
     const response = await fetch(`${API_URL}/api/notifications/register-device`, {
       method: 'POST',
@@ -109,17 +115,35 @@ export async function registerDeviceToken(token: string): Promise<boolean> {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      console.error('Failed to register device token:', error);
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { message: errorText };
+      }
+      console.error('[PUSH NOTIFICATIONS] Failed to register device token:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData,
+        apiUrl: API_URL,
+      });
       return false;
     }
 
-    // Store token locally to avoid re-registering
+    const result = await response.json();
+    console.log('[PUSH NOTIFICATIONS] Device token registered successfully:', result);
+
+    // Store token locally only after successful registration
     await AsyncStorage.setItem('pushToken', token);
-    console.log('Device token registered successfully');
+    await AsyncStorage.setItem('pushTokenRegistered', 'true');
     return true;
   } catch (error) {
-    console.error('Error registering device token:', error);
+    console.error('[PUSH NOTIFICATIONS] Error registering device token:', {
+      error: error instanceof Error ? error.message : String(error),
+      apiUrl: API_URL,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return false;
   }
 }
@@ -133,9 +157,11 @@ export async function unregisterDeviceToken(): Promise<boolean> {
     const pushToken = await AsyncStorage.getItem('pushToken');
     
     if (!authToken || !pushToken) {
+      console.log('[PUSH NOTIFICATIONS] No auth token or push token found for unregistration');
       return false;
     }
 
+    console.log('[PUSH NOTIFICATIONS] Unregistering device token');
     const response = await fetch(`${API_URL}/api/notifications/unregister-device`, {
       method: 'POST',
       headers: {
@@ -149,11 +175,14 @@ export async function unregisterDeviceToken(): Promise<boolean> {
 
     if (response.ok) {
       await AsyncStorage.removeItem('pushToken');
+      await AsyncStorage.removeItem('pushTokenRegistered');
+      console.log('[PUSH NOTIFICATIONS] Device token unregistered successfully');
       return true;
     }
+    console.error('[PUSH NOTIFICATIONS] Failed to unregister device token:', response.status);
     return false;
   } catch (error) {
-    console.error('Error unregistering device token:', error);
+    console.error('[PUSH NOTIFICATIONS] Error unregistering device token:', error);
     return false;
   }
 }
@@ -161,24 +190,46 @@ export async function unregisterDeviceToken(): Promise<boolean> {
 /**
  * Initialize push notifications
  * Call this when user logs in
+ * Always attempts registration to ensure token is saved on server
  */
 export async function initializePushNotifications(): Promise<void> {
   try {
-    // Check if already registered
-    const storedToken = await AsyncStorage.getItem('pushToken');
-    if (storedToken) {
-      console.log('Push token already registered');
+    console.log('[PUSH NOTIFICATIONS] Initializing push notifications...');
+    
+    // Request permissions and get token
+    const token = await registerForPushNotificationsAsync();
+    if (!token) {
+      console.log('[PUSH NOTIFICATIONS] No push token obtained, skipping registration');
       return;
     }
 
-    // Request permissions and get token
-    const token = await registerForPushNotificationsAsync();
-    if (token) {
-      // Register with backend
-      await registerDeviceToken(token);
+    // Check if this exact token was already successfully registered
+    const storedToken = await AsyncStorage.getItem('pushToken');
+    const isRegistered = await AsyncStorage.getItem('pushTokenRegistered');
+    
+    if (storedToken === token && isRegistered === 'true') {
+      console.log('[PUSH NOTIFICATIONS] Token already registered, verifying with server...');
+      // Still attempt registration to ensure it's in the database
+      // The server will update if it exists or create if it doesn't
+    }
+
+    // Always attempt registration to ensure token is saved on server
+    // This handles cases where:
+    // 1. Token was stored locally but registration failed
+    // 2. Token changed but wasn't updated
+    // 3. Database was cleared or token was deleted
+    const success = await registerDeviceToken(token);
+    
+    if (!success) {
+      console.error('[PUSH NOTIFICATIONS] Failed to register device token. Will retry on next login.');
+      // Clear the registered flag so we try again next time
+      await AsyncStorage.removeItem('pushTokenRegistered');
     }
   } catch (error) {
-    console.error('Error initializing push notifications:', error);
+    console.error('[PUSH NOTIFICATIONS] Error initializing push notifications:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
   }
 }
 

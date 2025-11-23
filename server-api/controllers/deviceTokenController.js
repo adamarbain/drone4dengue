@@ -12,17 +12,31 @@ async function registerDevice(req, res) {
     const companyId = req.user?.companyId;
     const { pushToken, platform } = req.body;
 
+    console.log('[REGISTER DEVICE TOKEN] Request received:', {
+      userId,
+      companyId,
+      platform,
+      pushTokenLength: pushToken?.length,
+      hasUser: !!req.user,
+    });
+
     if (!pushToken) {
+      console.error('[REGISTER DEVICE TOKEN] Missing pushToken');
       return res.status(400).json({ error: 'Push token is required' });
     }
 
     if (!platform || !['ios', 'android'].includes(platform)) {
+      console.error('[REGISTER DEVICE TOKEN] Invalid platform:', platform);
       return res.status(400).json({ error: 'Valid platform (ios/android) is required' });
     }
 
     // Ensure we have a user id from token
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      console.error('[REGISTER DEVICE TOKEN] Missing userId from token:', {
+        user: req.user,
+        hasUser: !!req.user,
+      });
+      return res.status(401).json({ error: 'Unauthorized - userId not found in token' });
     }
 
     // Check if token already exists for this user
@@ -35,6 +49,7 @@ async function registerDevice(req, res) {
 
     if (existingToken) {
       // Update existing token
+      console.log('[REGISTER DEVICE TOKEN] Updating existing token:', existingToken.id);
       const updated = await prisma.deviceToken.update({
         where: { id: existingToken.id },
         data: {
@@ -43,10 +58,12 @@ async function registerDevice(req, res) {
           updatedAt: new Date()
         }
       });
+      console.log('[REGISTER DEVICE TOKEN] Token updated successfully');
       return res.json({ success: true, deviceToken: updated });
     }
 
     // Create new device token
+    console.log('[REGISTER DEVICE TOKEN] Creating new device token');
     const deviceToken = await prisma.deviceToken.create({
       data: {
         userId,
@@ -56,10 +73,16 @@ async function registerDevice(req, res) {
       }
     });
 
+    console.log('[REGISTER DEVICE TOKEN] Token created successfully:', deviceToken.id);
     res.json({ success: true, deviceToken });
   } catch (error) {
-    console.error('[REGISTER DEVICE TOKEN ERROR]', error);
-    res.status(500).json({ error: 'Failed to register device token' });
+    console.error('[REGISTER DEVICE TOKEN ERROR]', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?.userId,
+      platform: req.body?.platform,
+    });
+    res.status(500).json({ error: 'Failed to register device token', details: error.message });
   }
 }
 

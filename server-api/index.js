@@ -31,10 +31,6 @@ app.get('/', (req, res) => {
   res.json({ status: 'DengueEye API running' });
 });
 
-// Initialize scheduled jobs
-const { scheduleDailyPredictions } = require('./jobs/dailyPredictionJob');
-scheduleDailyPredictions();
-
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
