@@ -1,54 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-
-/**
- * Create notification for specific user(s) or company
- * @param {Object} data - Notification data
- * @param {string} data.title - Notification title
- * @param {string} data.message - Notification message
- * @param {string} data.type - Notification type
- * @param {string} data.companyId - Company ID
- * @param {string[]} [data.userIds] - Array of user IDs (optional, if not provided, sends to all company users)
- * @param {Object} [data.metadata] - Additional metadata
- */
-async function createNotification({ title, message, type, companyId, userIds = null, metadata = null }) {
-  try {
-    // If userIds is provided, create notifications for specific users
-    if (userIds && userIds.length > 0) {
-      const notifications = await Promise.all(
-        userIds.map(userId =>
-          prisma.notification.create({
-            data: {
-              title,
-              message,
-              type,
-              companyId,
-              userId,
-              metadata: metadata || {}
-            }
-          })
-        )
-      );
-      return notifications;
-    } else {
-      // Create company-wide notification (userId is null)
-      const notification = await prisma.notification.create({
-        data: {
-          title,
-          message,
-          type,
-          companyId,
-          userId: null,
-          metadata: metadata || {}
-        }
-      });
-      return [notification];
-    }
-  } catch (error) {
-    console.error('[CREATE NOTIFICATION ERROR]', error);
-    throw error;
-  }
-}
+const { sendPushNotification, createNotification } = require('../services/notificationService');
 
 /**
  * Get notifications for a user
@@ -264,12 +216,107 @@ async function deleteNotification(req, res) {
   }
 }
 
+/**
+ * Send broadcast push notification to all mobile app users
+ * POST /api/notifications/broadcast
+ * Requires admin role
+ */
+async function sendBroadcastNotification(req, res) {
+  try {
+    const { title, message, type = 'broadcast', metadata = {} } = req.body;
+
+    // Validate required fields
+    if (!title || !message) {
+      return res.status(400).json({ error: 'Title and message are required' });
+    }
+
+    // Get all active device tokens from all users
+    const deviceTokens = await prisma.deviceToken.findMany({
+      where: {
+        isActive: true
+      },
+      select: {
+        pushToken: true,
+        userId: true
+      }
+    });
+
+    if (deviceTokens.length === 0) {
+      return res.status(404).json({ 
+        error: 'No active device tokens found',
+        sent: 0,
+        total: 0
+      });
+    }
+
+    // Extract push tokens
+    const pushTokens = deviceTokens.map(dt => dt.pushToken);
+
+    // Send push notifications to all tokens
+    await sendPushNotification(pushTokens, {
+      title,
+      message,
+      type,
+      metadata
+    });
+
+    // Get unique user IDs and company IDs to create notification records
+    const userIds = [...new Set(deviceTokens.map(dt => dt.userId))];
+    const users = await prisma.user.findMany({
+      where: {
+        id: { in: userIds }
+      },
+      select: {
+        id: true,
+        companyId: true
+      }
+    });
+
+    // Group users by company
+    const companyUserMap = {};
+    users.forEach(user => {
+      if (!companyUserMap[user.companyId]) {
+        companyUserMap[user.companyId] = [];
+      }
+      companyUserMap[user.companyId].push(user.id);
+    });
+
+    // Create company-wide notifications for each company
+    const notificationPromises = Object.entries(companyUserMap).map(([companyId, userIds]) =>
+      createNotification({
+        title,
+        message,
+        type,
+        companyId,
+        userIds: null, // Company-wide notification
+        metadata
+      })
+    );
+
+    await Promise.all(notificationPromises);
+
+    console.log(`[BROADCAST NOTIFICATION] Sent to ${pushTokens.length} device tokens across ${Object.keys(companyUserMap).length} companies`);
+
+    res.json({
+      success: true,
+      sent: pushTokens.length,
+      total: pushTokens.length,
+      companies: Object.keys(companyUserMap).length,
+      message: `Broadcast notification sent to ${pushTokens.length} devices`
+    });
+  } catch (error) {
+    console.error('[BROADCAST NOTIFICATION ERROR]', error);
+    res.status(500).json({ error: 'Failed to send broadcast notification' });
+  }
+}
+
 module.exports = {
   createNotification,
   getNotifications,
   markAsRead,
   markAllAsRead,
   getUnreadCount,
-  deleteNotification
+  deleteNotification,
+  sendBroadcastNotification
 };
 

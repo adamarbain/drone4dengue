@@ -7,7 +7,7 @@ import AdminHeader from "@/components/AdminHeader"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { FiSave, FiEdit2, FiLock, FiMail, FiUser, FiSettings, FiSliders, FiRefreshCw, FiMapPin, FiPlus, FiEdit3, FiTrash2 } from "react-icons/fi"
+import { FiSave, FiEdit2, FiLock, FiMail, FiUser, FiSettings, FiSliders, FiRefreshCw, FiMapPin, FiPlus, FiEdit3, FiTrash2, FiSend, FiBell } from "react-icons/fi"
 import MapPicker from "@/components/MapPicker"
 import { useAuth } from '@/context/AuthContext';
 
@@ -96,6 +96,14 @@ export default function SettingsPage() {
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState('');
   const [locationSuccess, setLocationSuccess] = useState('');
+
+  // Broadcast notification state
+  const [broadcastTitle, setBroadcastTitle] = useState('');
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [broadcastLoading, setBroadcastLoading] = useState(false);
+  const [broadcastError, setBroadcastError] = useState('');
+  const [broadcastSuccess, setBroadcastSuccess] = useState('');
+  const [broadcastResult, setBroadcastResult] = useState<any>(null);
 
   // Fetch user on mount or when user/token changes
   useEffect(() => {
@@ -452,6 +460,54 @@ export default function SettingsPage() {
       setAdvancedSettingsError(err instanceof Error ? err.message : 'Failed to update advanced settings');
     } finally {
       setAdvancedSettingsLoading(false);
+    }
+  }
+
+  // Handle broadcast notification
+  async function handleBroadcastNotification() {
+    if (!token) {
+      setBroadcastError('No authentication token found.');
+      return;
+    }
+    if (!broadcastTitle.trim() || !broadcastMessage.trim()) {
+      setBroadcastError('Title and message are required.');
+      return;
+    }
+    setBroadcastLoading(true);
+    setBroadcastError('');
+    setBroadcastSuccess('');
+    setBroadcastResult(null);
+    try {
+      const res = await fetch(`${API_URL}/api/notifications/broadcast`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: broadcastTitle.trim(),
+          message: broadcastMessage.trim(),
+          type: 'broadcast',
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to send broadcast notification');
+      }
+      const data = await res.json();
+      setBroadcastResult(data);
+      setBroadcastSuccess(`Broadcast notification sent successfully to ${data.sent || 0} devices!`);
+      // Clear form after successful send
+      setBroadcastTitle('');
+      setBroadcastMessage('');
+      setTimeout(() => {
+        setBroadcastSuccess('');
+        setBroadcastResult(null);
+      }, 5000);
+    } catch (err) {
+      setBroadcastError(err instanceof Error ? err.message : 'Failed to send broadcast notification');
+    } finally {
+      setBroadcastLoading(false);
     }
   }
 
@@ -1081,6 +1137,75 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Broadcast Notification */}
+          <motion.div variants={item} className="mt-8">
+            <Card className="bg-white shadow-md rounded-xl overflow-hidden">
+              <div className="bg-[#F3EAD8] px-6 py-4 border-b border-[#E2C275]">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <FiBell className="text-[#A21C1C]" />
+                  Broadcast Notification
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">Send push notifications to all mobile app users</p>
+              </div>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="broadcast-title">Notification Title *</Label>
+                    <Input
+                      id="broadcast-title"
+                      value={broadcastTitle}
+                      onChange={(e) => setBroadcastTitle(e.target.value)}
+                      placeholder="Enter notification title"
+                      className="border-[#E2C275] focus:border-[#A21C1C]"
+                      disabled={broadcastLoading}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="broadcast-message">Notification Message *</Label>
+                    <textarea
+                      id="broadcast-message"
+                      value={broadcastMessage}
+                      onChange={(e) => setBroadcastMessage(e.target.value)}
+                      placeholder="Enter notification message"
+                      rows={4}
+                      className="w-full rounded-lg border border-[#E2C275] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#A21C1C] resize-none"
+                      disabled={broadcastLoading}
+                    />
+                  </div>
+                  {broadcastError && (
+                    <div className="text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
+                      {broadcastError}
+                    </div>
+                  )}
+                  {broadcastSuccess && (
+                    <div className="text-green-600 bg-green-50 p-3 rounded-lg border border-green-200">
+                      {broadcastSuccess}
+                      {broadcastResult && (
+                        <div className="mt-2 text-sm text-gray-600">
+                          <p>Sent to: {broadcastResult.sent} device(s)</p>
+                          <p>Companies affected: {broadcastResult.companies}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className="pt-2">
+                    <button
+                      className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleBroadcastNotification}
+                      disabled={broadcastLoading || !broadcastTitle.trim() || !broadcastMessage.trim()}
+                    >
+                      <FiSend />
+                      {broadcastLoading ? 'Sending...' : 'Send Broadcast Notification'}
+                    </button>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-2">
+                    <p>⚠️ This will send a push notification to all active mobile app users across all companies.</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </motion.div>

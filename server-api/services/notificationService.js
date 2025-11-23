@@ -1,7 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const axios = require('axios');
-const { createNotification } = require('../controllers/notificationController');
 
 // Expo Push Notification API endpoint
 const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send';
@@ -9,6 +8,55 @@ const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send';
 /**
  * Notification service - Helper functions for creating notifications
  */
+
+/**
+ * Create notification for specific user(s) or company
+ * @param {Object} data - Notification data
+ * @param {string} data.title - Notification title
+ * @param {string} data.message - Notification message
+ * @param {string} data.type - Notification type
+ * @param {string} data.companyId - Company ID
+ * @param {string[]} [data.userIds] - Array of user IDs (optional, if not provided, sends to all company users)
+ * @param {Object} [data.metadata] - Additional metadata
+ */
+async function createNotification({ title, message, type, companyId, userIds = null, metadata = null }) {
+  try {
+    // If userIds is provided, create notifications for specific users
+    if (userIds && userIds.length > 0) {
+      const notifications = await Promise.all(
+        userIds.map(userId =>
+          prisma.notification.create({
+            data: {
+              title,
+              message,
+              type,
+              companyId,
+              userId,
+              metadata: metadata || {}
+            }
+          })
+        )
+      );
+      return notifications;
+    } else {
+      // Create company-wide notification (userId is null)
+      const notification = await prisma.notification.create({
+        data: {
+          title,
+          message,
+          type,
+          companyId,
+          userId: null,
+          metadata: metadata || {}
+        }
+      });
+      return [notification];
+    }
+  } catch (error) {
+    console.error('[CREATE NOTIFICATION ERROR]', error);
+    throw error;
+  }
+}
 
 /**
  * Send push notification via Expo Push API
@@ -493,6 +541,9 @@ async function notifyDailyPrediction(userId, companyId, prediction) {
 }
 
 module.exports = {
+  createNotification,
+  sendPushNotification,
+  getPushTokensForUsers,
   notifyCompanyPredictionCreated,
   notifyDengueCaseAdded,
   notifyDroneChange,
