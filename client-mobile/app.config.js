@@ -70,6 +70,7 @@ module.exports = {
       eas: {
         projectId: "4b73eff3-4b69-4f15-ab29-5f1ee9dd3c33",
       },
+      apiUrl: process.env.EXPO_PUBLIC_API_URL || "http://localhost:4000",
     },
   },
 };

@@ -2,8 +2,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
+import { API_URL } from './apiConfig';
 
 // Configure how notifications are handled when app is in foreground
 Notifications.setNotificationHandler({
@@ -195,6 +194,7 @@ export async function unregisterDeviceToken(): Promise<boolean> {
 export async function initializePushNotifications(): Promise<void> {
   try {
     console.log('[PUSH NOTIFICATIONS] Initializing push notifications...');
+    console.log('[PUSH NOTIFICATIONS] API URL:', API_URL);
     
     // Request permissions and get token
     const token = await registerForPushNotificationsAsync();
