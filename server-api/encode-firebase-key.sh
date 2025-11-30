@@ -1,0 +1,41 @@
+#!/bin/bash
+# Script to encode Firebase private key to base64
+# Usage: ./encode-firebase-key.sh
+
+# The private key from your JSON (copy the value from the "private_key" field)
+PRIVATE_KEY='-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDgZYM2cHoaBuLI
+6FNL2RewCfX9I9cPlIywJ9IginXwko2Zn/+y31tp4nhACihTdgjwiN8j3tuiHdEz
+FO4nEZBOZCjgu5e+rJOj58NgnTxWeAcig5FLlbJptKJp12/VOZNrLKLSOGFGEjHw
++1Ix7BMe8HXa6WPojBNG9mxRr8D8dI1fSxGVVK03rCEKaT2+9O0vu7uWtnRCZjVd
+oDlZDRzEYxlYkvNthL5scW4AJXNhIksHFlqHDmrTekLcE6P7Wp2a1/DiqUYPNCIF
+e6sUhFCzPOSHdXkeyZX9DFE3wU2u33a+hiR66+113B44TNiOr/JfCha3Wd6D1rhU
+/tCX17tbAgMBAAECggEAHJx6OKM/wPjMIBTApiT13bwaEXQ+lB3QkGy2C0XMQufU
+xoKS45eSEXP5pCSyE+4ytpn6ZZmhRHrrynO/59sCnNQtgstjI5c1M0q2QSfbN8/n
+DPyx4RgjCaepUQ3R6bcvzOmskFmgTC2+u2ditBB8jE8u9RduuzRnstPHEjqdbzLK
+DIq2neQIRIcoXDX3HGbMnXCFOZsERE44SJoZN2DcKpN+BOX+qQk7svzHAg/3kh8a
+SVaergFqWXdjXL861iZu25XII52DAUaXGgT+RGwFyuaUkQ27oCvovoaMu7MoISn5
+5pNe5A1tVBNM4c0+XAtEHR0yNQQVmJrHKb8URb2fYQKBgQD5Kad9niKhZqzp5HgT
+f97wM2BVd+2uiQzrqilpcHkK79TDVjF1Ex8W/xHrWF9V/bpUFn0NBlyGlKgC9JSj
+VxsTyiA6cxdGOWBOXR2O+boeQGheGSsyx+NFgeTwEr8UCX7lRFMPCJXMPN7pTa6Z
+vLy95YyFmD6fIBgCpYfE80mbewKBgQDmjeDLT8KAInH3WPjEqpxp4788nWARPLTV
+/n2Fm0gCWIF4lJDCErt+gDxDg6ZOLbn2/3CU7pQSYw0lyGxXs+Zq9YmzXCxN7EFW
+0Ud3T4/QQIuD6iCRiJHiTOzbTvPsYdtykGB43OzEDE68VG+0S6SOsPPjiUWZOV0k
+F4c9vP7poQKBgQC4kLRzBsqcSFRZxVV1DEl2IHiBlx7HJNofT6LxadEf2tv9/kEQ
+eiOTg0ogzQuBxTtawnXLSiULw95YohfgjsuN8zHAWjSpXiMKqUsV98J4Wjl1SquH
+KC4f9MJDW3+TNh17cwsbnb5o1cZBh7uIQhiFih53b3kjokBm5XsW1yh1NQKBgHnl
+ZYbZAsLwc0UNm2mPsuchbMjFhDdY21uRFBiBww7KcJmqIucZNFxrvHENt+35qyr2
+XzW+9jbKe/cQAohUK209qLJV926zjNA0Eg7419aJabozHUkU5dy6Qziog7rk+juW
+Lgt48w2sXCyij/TJUZXH5QrWVx/t/lrIvc5ckIJBAoGBAKMHtI5hiELV0hMSJL7g
+Sice5NKcg9TY8dF3RcqdFJAYJwZXicmt1dsKlnZBP31ADdE3MhgicjQUb0m62WXC
+bwQbm1O2M4cRvTOwzclQXmB/BYYokxy6Autqu8iXqcS53vCD9SRsg/NhIRz5wmbW
+EAyiYz1QLJtRg3f5VJnlilki
+-----END PRIVATE KEY-----'
+
+# Encode to base64 (removes newline issues)
+echo "Base64 encoded private key:"
+echo "$PRIVATE_KEY" | base64 -w0
+echo ""
+echo ""
+echo "Copy the output above and set it as FIREBASE_PRIVATE_KEY_BASE64 in Render"
+
