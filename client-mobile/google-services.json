@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "93522668734",
+    "project_id": "dengueeye-notifications",
+    "storage_bucket": "dengueeye-notifications.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:93522668734:android:002c826cb32a80fd0382ef",
+        "android_client_info": {
+          "package_name": "com.adamarbain.dengueeyemobileapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCb11uzyT6Ni29GJfxf-pCe4urVd5kxUuI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
