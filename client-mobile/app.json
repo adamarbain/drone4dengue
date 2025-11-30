@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.adamarbain.dengueeyemobileapp"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +18,8 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.adamarbain.dengueeyemobileapp"
+      "package": "com.adamarbain.dengueeyemobileapp",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
