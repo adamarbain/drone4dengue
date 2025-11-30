@@ -17,7 +17,7 @@ Notifications.setNotificationHandler({
 });
 
 /**
- * Request notification permissions
+ * Request notification permissions with retry logic for Firebase initialization
  */
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
   let token: string | null = null;
@@ -56,24 +56,77 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
       return null;
     }
     
-    try {
-      // Use Constants.expoConfig?.extra?.eas?.projectId if available, otherwise use a fallback
-      const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
-      
-      const tokenData = await Notifications.getExpoPushTokenAsync(
-        projectId ? { projectId } : undefined
-      );
-      token = tokenData.data;
-      console.log('Push token:', token);
-    } catch (e) {
-      console.error('Error getting push token:', e);
-      // Try without projectId as fallback
+    // Add a small delay on Android to ensure Firebase is initialized
+    // This is a workaround for timing issues
+    if (Platform.OS === 'android') {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    // Retry logic for getting push token (handles Firebase initialization timing issues)
+    const maxRetries = 3;
+    const retryDelays = [1000, 2000, 3000]; // Exponential backoff
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        // Use Constants.expoConfig?.extra?.eas?.projectId if available, otherwise use a fallback
+        const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
+        
+        const tokenData = await Notifications.getExpoPushTokenAsync(
+          projectId ? { projectId } : undefined
+        );
+        token = tokenData.data;
+        console.log('Notification Push token:', token);
+        break; // Success, exit retry loop
+      } catch (e: any) {
+        const errorMessage = e?.message || String(e);
+        const isFirebaseError = errorMessage.includes('FirebaseApp is not initialized') || 
+                                errorMessage.includes('E_REGISTRATION_FAILED') ||
+                                errorMessage.includes('Make sure to complete the guide');
+        
+        if (isFirebaseError && attempt < maxRetries - 1) {
+          // Firebase not ready yet, wait and retry
+          console.log(`[PUSH NOTIFICATIONS] Firebase not ready, retrying in ${retryDelays[attempt]}ms (attempt ${attempt + 1}/${maxRetries})...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]));
+          continue;
+        } else if (isFirebaseError) {
+          // Final attempt failed with Firebase error
+          console.error('[PUSH NOTIFICATIONS] Firebase is not initialized after retries. This usually means:');
+          console.error('1. FCM credentials are not configured in EAS');
+          console.error('2. The app was not rebuilt after configuring FCM credentials');
+          console.error('3. google-services.json is missing or incorrectly configured');
+          console.error('');
+          console.error('To fix this:');
+          console.error('1. Run: eas credentials (select Android → FCM)');
+          console.error('2. Configure FCM credentials (upload service account JSON or enter server key)');
+          console.error('3. Rebuild the app: eas build --profile preview --platform android');
+          console.error('4. Install the new build and test again');
+          console.error('');
+          console.error('See FCM_SETUP_GUIDE.md for detailed instructions.');
+          return null;
+        } else {
+          // Different error, try fallback
+          console.error('Error getting push token:', e);
+          break; // Exit retry loop to try fallback
+        }
+      }
+    }
+    
+    // If we still don't have a token, try without projectId as fallback
+    if (!token) {
       try {
         const tokenData = await Notifications.getExpoPushTokenAsync();
         token = tokenData.data;
         console.log('Push token (fallback):', token);
-      } catch (e2) {
+      } catch (e2: any) {
+        const errorMessage2 = e2?.message || String(e2);
         console.error('Error getting push token (fallback):', e2);
+        
+        if (errorMessage2.includes('FirebaseApp is not initialized') || 
+            errorMessage2.includes('E_REGISTRATION_FAILED') ||
+            errorMessage2.includes('Make sure to complete the guide')) {
+          console.error('[PUSH NOTIFICATIONS] Firebase initialization error persists.');
+          console.error('Please ensure FCM credentials are configured in EAS and rebuild the app.');
+        }
         return null;
       }
     }
@@ -243,13 +296,13 @@ export function setupNotificationListeners(
 ): () => void {
   // Listener for notifications received while app is foregrounded
   const receivedListener = Notifications.addNotificationReceivedListener((notification) => {
-    console.log('Notification received:', notification);
+    console.log('Notification received while the app is running.:', notification);
     onNotificationReceived?.(notification);
   });
 
   // Listener for when user taps on notification
   const responseListener = Notifications.addNotificationResponseReceivedListener((response) => {
-    console.log('Notification tapped:', response);
+    console.log('Notification tapped  user interacts with a notification:', response);
     onNotificationTapped?.(response);
   });
 
