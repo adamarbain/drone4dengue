@@ -58,12 +58,6 @@
     "experiments": {
       "typedRoutes": true
     },
-    "owner": "adamarbain",
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "4b73eff3-4b69-4f15-ab29-5f1ee9dd3c33"
-      }
-    }
+    "owner": "adamarbain"
   }
 }
