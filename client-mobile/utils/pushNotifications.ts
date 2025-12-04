@@ -1,4 +1,5 @@
 import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
@@ -17,11 +18,11 @@ Notifications.setNotificationHandler({
 });
 
 /**
- * Request notification permissions with retry logic for Firebase initialization
+ * Request notification permissions and get Expo push token
+ * (pattern aligned with notifications-tutorial implementation)
  */
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
-  let token: string | null = null;
-
+  // Configure Android notification channel like the tutorial
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
       name: 'default',
@@ -34,107 +35,54 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
 
   // Expo Go does not support remote push notifications on Android starting from SDK 53
   if (Constants.appOwnership === 'expo') {
-    console.warn('Push notifications are not supported in Expo Go. Use a development build instead.');
+    console.warn(
+      '[PUSH NOTIFICATIONS] Push notifications are not supported in Expo Go. Use a development build instead.'
+    );
     return null;
   }
 
-  // Check if running on a physical device
-  // Constants.isDevice is true for physical devices, false for simulators
-  const isDevice = Constants.isDevice !== false;
-  
-  if (isDevice) {
+  // Only physical devices can receive push notifications
+  if (Device.isDevice) {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
-    
+
     if (existingStatus !== 'granted') {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
-    
+
     if (finalStatus !== 'granted') {
-      console.log('Failed to get push token for push notification!');
+      console.log('[PUSH NOTIFICATIONS] Permission not granted to get push token for push notification!');
       return null;
     }
-    
-    // Add a small delay on Android to ensure Firebase is initialized
-    // This is a workaround for timing issues
-    if (Platform.OS === 'android') {
-      await new Promise(resolve => setTimeout(resolve, 500));
+
+    const projectId =
+      // Match tutorial: prefer expoConfig.extra.eas.projectId then easConfig.projectId
+      Constants?.expoConfig?.extra?.eas?.projectId ??
+      // Fallback for managed / EAS builds
+      Constants?.easConfig?.projectId;
+
+    if (!projectId) {
+      console.error('[PUSH NOTIFICATIONS] Project ID not found in Constants. Cannot request Expo push token.');
+      return null;
     }
-    
-    // Retry logic for getting push token (handles Firebase initialization timing issues)
-    const maxRetries = 3;
-    const retryDelays = [1000, 2000, 3000]; // Exponential backoff
-    
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        // Use Constants.expoConfig?.extra?.eas?.projectId if available, otherwise use a fallback
-        const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
-        
-        const tokenData = await Notifications.getExpoPushTokenAsync(
-          projectId ? { projectId } : undefined
-        );
-        token = tokenData.data;
-        console.log('Notification Push token:', token);
-        break; // Success, exit retry loop
-      } catch (e: any) {
-        const errorMessage = e?.message || String(e);
-        const isFirebaseError = errorMessage.includes('FirebaseApp is not initialized') || 
-                                errorMessage.includes('E_REGISTRATION_FAILED') ||
-                                errorMessage.includes('Make sure to complete the guide');
-        
-        if (isFirebaseError && attempt < maxRetries - 1) {
-          // Firebase not ready yet, wait and retry
-          console.log(`[PUSH NOTIFICATIONS] Firebase not ready, retrying in ${retryDelays[attempt]}ms (attempt ${attempt + 1}/${maxRetries})...`);
-          await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]));
-          continue;
-        } else if (isFirebaseError) {
-          // Final attempt failed with Firebase error
-          console.error('[PUSH NOTIFICATIONS] Firebase is not initialized after retries. This usually means:');
-          console.error('1. FCM credentials are not configured in EAS');
-          console.error('2. The app was not rebuilt after configuring FCM credentials');
-          console.error('3. google-services.json is missing or incorrectly configured');
-          console.error('');
-          console.error('To fix this:');
-          console.error('1. Run: eas credentials (select Android → FCM)');
-          console.error('2. Configure FCM credentials (upload service account JSON or enter server key)');
-          console.error('3. Rebuild the app: eas build --profile preview --platform android');
-          console.error('4. Install the new build and test again');
-          console.error('');
-          console.error('See FCM_SETUP_GUIDE.md for detailed instructions.');
-          return null;
-        } else {
-          // Different error, try fallback
-          console.error('Error getting push token:', e);
-          break; // Exit retry loop to try fallback
-        }
-      }
-    }
-    
-    // If we still don't have a token, try without projectId as fallback
-    if (!token) {
-      try {
-        const tokenData = await Notifications.getExpoPushTokenAsync();
-        token = tokenData.data;
-        console.log('Push token (fallback):', token);
-      } catch (e2: any) {
-        const errorMessage2 = e2?.message || String(e2);
-        console.error('Error getting push token (fallback):', e2);
-        
-        if (errorMessage2.includes('FirebaseApp is not initialized') || 
-            errorMessage2.includes('E_REGISTRATION_FAILED') ||
-            errorMessage2.includes('Make sure to complete the guide')) {
-          console.error('[PUSH NOTIFICATIONS] Firebase initialization error persists.');
-          console.error('Please ensure FCM credentials are configured in EAS and rebuild the app.');
-        }
-        return null;
-      }
+
+    try {
+      const pushTokenString = (
+        await Notifications.getExpoPushTokenAsync({
+          projectId,
+        })
+      ).data;
+      console.log('[PUSH NOTIFICATIONS] Expo push token:', pushTokenString);
+      return pushTokenString;
+    } catch (e: any) {
+      console.error('[PUSH NOTIFICATIONS] Error while getting Expo push token:', e);
+      return null;
     }
   } else {
-    console.log('Must use physical device for Push Notifications');
+    console.log('[PUSH NOTIFICATIONS] Must use physical device for Push Notifications');
+    return null;
   }
-
-  return token;
 }
 
 /**

@@ -44,8 +44,5 @@ package-lock.json
 .expo
 
 # Firebase credentials (sensitive - do not commit)
-google-services.json
-firebase-service-account.json
-*-service-account.json
 /ios
 /android
