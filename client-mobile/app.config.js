@@ -69,7 +69,7 @@ module.exports = {
     extra: {
       router: {},
       eas: {
-        projectId: "4b73eff3-4b69-4f15-ab29-5f1ee9dd3c33",
+        projectId: "fd6296bb-8c6f-4a3d-adbf-a42b3c032bea",
       },
       apiUrl: process.env.EXPO_PUBLIC_API_URL || "http://localhost:4000",
     },
