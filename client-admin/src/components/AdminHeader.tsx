@@ -20,6 +20,7 @@ export default function AdminHeader() {
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState('');
   const [profileSuccess, setProfileSuccess] = useState('');
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -181,6 +182,7 @@ export default function AdminHeader() {
   }, [user?.id, token, companyId]);
 
   return (
+    <>
     <header className="sticky top-0 z-10 flex items-center justify-between px-8 py-4 bg-white border-b border-[#E2C275]/50 shadow-sm">
       <div className="flex items-center">
         <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FFF7E3] rounded-lg">
@@ -297,7 +299,10 @@ export default function AdminHeader() {
 
           <div className="h-6 w-px bg-gray-300 mx-1"></div>
 
-          <button className="flex items-center gap-2 bg-[#A21C1C] text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-[#7C1D1D] transition-colors" onClick={logout}>
+          <button
+            className="flex items-center gap-2 bg-[#A21C1C] text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-[#7C1D1D] transition-colors"
+            onClick={() => setShowLogoutConfirm(true)}
+          >
             <FiLogOut className="w-4 h-4" />
             <span>Logout</span>
           </button>
@@ -322,5 +327,38 @@ export default function AdminHeader() {
         </div>
       </div>
     </header>
+    {showLogoutConfirm && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4">
+        <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="mt-1">
+              <FiAlertCircle className="w-6 h-6 text-[#A21C1C]" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Logout Account</h3>
+              <p className="text-sm text-gray-600 mt-1">Are you sure you want to log out?</p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              onClick={() => setShowLogoutConfirm(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="px-4 py-2 rounded-lg bg-[#A21C1C] text-white text-sm font-semibold hover:bg-[#7C1D1D] transition-colors"
+              onClick={() => {
+                setShowLogoutConfirm(false)
+                logout()
+              }}
+            >
+              Yes
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }

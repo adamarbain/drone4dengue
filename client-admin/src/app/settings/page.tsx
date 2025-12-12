@@ -7,7 +7,7 @@ import AdminHeader from "@/components/AdminHeader"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { FiSave, FiEdit2, FiLock, FiMail, FiUser, FiSettings, FiSliders, FiRefreshCw, FiMapPin, FiPlus, FiEdit3, FiTrash2, FiSend, FiBell } from "react-icons/fi"
+import { FiSave, FiEdit2, FiLock, FiMail, FiUser, FiSettings, FiSliders, FiRefreshCw, FiMapPin, FiPlus, FiEdit3, FiTrash2, FiSend, FiBell, FiEye, FiEyeOff } from "react-icons/fi"
 import MapPicker from "@/components/MapPicker"
 import { useAuth } from '@/context/AuthContext';
 
@@ -45,6 +45,7 @@ export default function SettingsPage() {
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState('');
   const [profileSuccess, setProfileSuccess] = useState('');
+  const [profileFieldErrors, setProfileFieldErrors] = useState<Record<string, string>>({});
   const company = useAuth().company;
 
   // Company settings state
@@ -82,9 +83,13 @@ export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
+  const isPasswordValid = (value: string) => /^(?=.*\d).{8,}$/.test(value);
+  const isEmailValid = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
   // Company locations state
   const [locations, setLocations] = useState([]);
@@ -197,13 +202,31 @@ export default function SettingsPage() {
 
   // Handle profile form changes
   function handleProfileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setProfileForm({ ...profileForm, [e.target.name]: e.target.value });
+  setProfileForm({ ...profileForm, [e.target.name]: e.target.value });
+  setProfileFieldErrors((prev) => {
+    const next = { ...prev };
+    delete next[e.target.name];
+    return next;
+  });
   }
 
   // Handle profile save
   async function handleProfileSave() {
     setProfileError('');
     setProfileSuccess('');
+  const fieldErrors: Record<string, string> = {};
+  if (!profileForm.name.trim()) fieldErrors.name = 'Please fill out this field';
+  if (!profileForm.username.trim()) fieldErrors.username = 'Please fill out this field';
+  if (!profileForm.email.trim()) fieldErrors.email = 'Please fill out this field';
+  else if (!isEmailValid(profileForm.email)) fieldErrors.email = 'Invalid email format.';
+  if (!profileForm.phone.trim()) fieldErrors.phone = 'Please fill out this field';
+
+  if (Object.keys(fieldErrors).length > 0) {
+    setProfileFieldErrors(fieldErrors);
+    return;
+  } else {
+    setProfileFieldErrors({});
+  }
     try {
       if (!user?.id || !token) throw new Error('No user ID or token found');
       const res = await fetch(`${API_URL}/users/${user.id}`, {
@@ -235,12 +258,12 @@ export default function SettingsPage() {
   async function handlePasswordUpdate() {
     setPasswordError('');
     setPasswordSuccess('');
-    if (!newPassword || newPassword.length < 6) {
-      setPasswordError('New password must be at least 6 characters.');
+    if (!isPasswordValid(newPassword)) {
+      setPasswordError('Password must be at least 8 characters, including a number.');
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError('Passwords do not match.');
+      setPasswordError('The passwords do not match.');
       return;
     }
     if (!user?.id || !token) {
@@ -566,6 +589,7 @@ export default function SettingsPage() {
                             disabled={!profileEditable}
                             className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#A21C1C]"}`}
                           />
+                          {profileFieldErrors.name && <p className="text-xs text-red-600">{profileFieldErrors.name}</p>}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="username">Username</Label>
@@ -577,6 +601,7 @@ export default function SettingsPage() {
                             disabled={!profileEditable}
                             className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#A21C1C]"}`}
                           />
+                          {profileFieldErrors.username && <p className="text-xs text-red-600">{profileFieldErrors.username}</p>}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="email">Email</Label>
@@ -588,6 +613,7 @@ export default function SettingsPage() {
                             disabled={true}
                             className={"bg-gray-100 text-gray-700"}
                           />
+                          {profileFieldErrors.email && <p className="text-xs text-red-600">{profileFieldErrors.email}</p>}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="phone">Phone</Label>
@@ -599,6 +625,7 @@ export default function SettingsPage() {
                             disabled={!profileEditable}
                             className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#A21C1C]"}`}
                           />
+                          {profileFieldErrors.phone && <p className="text-xs text-red-600">{profileFieldErrors.phone}</p>}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="company">Company</Label>
@@ -658,27 +685,47 @@ export default function SettingsPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="new-password">New Password</Label>
-                      <Input
-                        id="new-password"
-                        type="password"
-                        value={newPassword}
-                        onChange={e => setNewPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="border-[#E2C275] focus:border-[#A21C1C]"
-                        autoComplete="new-password"
-                      />
+                      <div className="relative">
+                        <Input
+                          id="new-password"
+                          type={showNewPassword ? "text" : "password"}
+                          value={newPassword}
+                          onChange={e => setNewPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="border-[#E2C275] focus:border-[#A21C1C] pr-12"
+                          autoComplete="new-password"
+                        />
+                        <button
+                          type="button"
+                          className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-[#A21C1C]"
+                          onClick={() => setShowNewPassword((prev) => !prev)}
+                          aria-label={showNewPassword ? "Hide password" : "Show password"}
+                        >
+                          {showNewPassword ? <FiEyeOff /> : <FiEye />}
+                        </button>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="confirm-password">Confirm New Password</Label>
-                      <Input
-                        id="confirm-password"
-                        type="password"
-                        value={confirmPassword}
-                        onChange={e => setConfirmPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="border-[#E2C275] focus:border-[#A21C1C]"
-                        autoComplete="new-password"
-                      />
+                      <div className="relative">
+                        <Input
+                          id="confirm-password"
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={confirmPassword}
+                          onChange={e => setConfirmPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="border-[#E2C275] focus:border-[#A21C1C] pr-12"
+                          autoComplete="new-password"
+                        />
+                        <button
+                          type="button"
+                          className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-[#A21C1C]"
+                          onClick={() => setShowConfirmPassword((prev) => !prev)}
+                          aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                        >
+                          {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                        </button>
+                      </div>
                     </div>
                     {passwordError && <div className="text-red-600 mt-2">{passwordError}</div>}
                     {passwordSuccess && <div className="text-green-600 mt-2">{passwordSuccess}</div>}
