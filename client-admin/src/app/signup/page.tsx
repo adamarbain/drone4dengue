@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { User, Lock, Mail, Eye, EyeOff, AlertCircle, Phone, CheckCircle } from "lucide-react"
+import { User, Lock, Mail, Eye, EyeOff, AlertCircle, Phone, CheckCircle, Circle } from "lucide-react"
 import { api } from "@/lib/api"
 import { motion } from "framer-motion"
 import Image from "next/image"
@@ -19,6 +19,7 @@ export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [formData, setFormData] = useState({
     email: "",
     username: "",
@@ -33,11 +34,13 @@ export default function SignUpPage() {
   const [errors, setErrors] = useState<string[]>([])
   const router = useRouter()
 
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
   // Fetch companies on component mount
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        const response = await fetch('http://localhost:4000/companies')
+        const response = await fetch(`${API_URL}/companies`)
         if (response.ok) {
           const data = await response.json()
           setCompanies(data)
@@ -51,10 +54,24 @@ export default function SignUpPage() {
     fetchCompanies()
   }, [])
 
+  // Email validation function
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
+
+  // Phone number validation function
+  const validatePhone = (phone: string): boolean => {
+    // Remove all non-digit characters for validation
+    const digitsOnly = phone.replace(/\D/g, "")
+    // Check if it has between 8 and 15 digits (international format)
+    return digitsOnly.length >= 8 && digitsOnly.length <= 15
+  }
+
   const validateForm = () => {
     const newErrors: string[] = []
 
-    if (!formData.email.includes("@")) {
+    if (!formData.email || !validateEmail(formData.email)) {
       newErrors.push("Please enter a valid email address")
     }
 
@@ -66,8 +83,8 @@ export default function SignUpPage() {
       newErrors.push("Please enter a name")
     }
 
-    if (!formData.phone || formData.phone.replace(/\D/g, "").length < 8) {
-      newErrors.push("Please enter a valid phone number (at least 8 digits)")
+    if (!formData.phone || !validatePhone(formData.phone)) {
+      newErrors.push("Please enter a valid phone number (8-15 digits)")
     }
 
     if (formData.password.length < 6) {
@@ -80,6 +97,10 @@ export default function SignUpPage() {
 
     if (!formData.companyId) {
       newErrors.push("Please select a company")
+    }
+
+    if (!acceptedTerms) {
+      newErrors.push("You must accept the Terms and Privacy Policy to continue")
     }
 
     setErrors(newErrors)
@@ -112,8 +133,16 @@ export default function SignUpPage() {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+    // Clear related errors when user starts typing
     if (errors.length > 0) {
-      setErrors([])
+      setErrors((prevErrors) => {
+        const filteredErrors = prevErrors.filter((error) => {
+          if (field === "email" && error.includes("email")) return false
+          if (field === "phone" && error.includes("phone")) return false
+          return true
+        })
+        return filteredErrors
+      })
     }
   }
 
@@ -219,10 +248,23 @@ export default function SignUpPage() {
                     <Input
                       id="email"
                       type="email"
-                      placeholder=""
+                      placeholder="example@email.com"
                       required
                       value={formData.email}
                       onChange={(e) => handleInputChange("email", e.target.value)}
+                      onBlur={(e) => {
+                        if (e.target.value && !validateEmail(e.target.value)) {
+                          setErrors((prevErrors) => {
+                            const errorMsg = "Please enter a valid email address"
+                            if (prevErrors.includes(errorMsg)) return prevErrors
+                            return [...prevErrors, errorMsg]
+                          })
+                        } else {
+                          setErrors((prevErrors) =>
+                            prevErrors.filter((error) => !error.includes("email"))
+                          )
+                        }
+                      }}
                       className="pl-12 pr-4 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                   </div>
@@ -274,10 +316,23 @@ export default function SignUpPage() {
                     <Input
                       id="phone"
                       type="tel"
-                      placeholder=""
+                      placeholder="+1234567890"
                       required
                       value={formData.phone}
                       onChange={(e) => handleInputChange("phone", e.target.value)}
+                      onBlur={(e) => {
+                        if (e.target.value && !validatePhone(e.target.value)) {
+                          setErrors((prevErrors) => {
+                            const errorMsg = "Please enter a valid phone number (8-15 digits)"
+                            if (prevErrors.includes(errorMsg)) return prevErrors
+                            return [...prevErrors, errorMsg]
+                          })
+                        } else {
+                          setErrors((prevErrors) =>
+                            prevErrors.filter((error) => !error.includes("phone"))
+                          )
+                        }
+                      }}
                       className="pl-12 pr-4 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                   </div>
@@ -363,10 +418,28 @@ export default function SignUpPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 mt-2">
-                  <CheckCircle className="text-white h-4 w-4" />
-                  <span className="text-white/70 text-xs">
-                    By signing up, you agree to our Terms and Privacy Policy
+                <div className="flex items-start gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setAcceptedTerms(!acceptedTerms)}
+                    className="mt-0.5 focus:outline-none focus:ring-2 focus:ring-white/40 rounded"
+                    aria-label="Accept Terms and Privacy Policy"
+                  >
+                    {acceptedTerms ? (
+                      <CheckCircle className="text-white h-5 w-5 cursor-pointer hover:text-gray-200 transition-colors" />
+                    ) : (
+                      <Circle className="text-white/70 h-5 w-5 cursor-pointer hover:text-white transition-colors" />
+                    )}
+                  </button>
+                  <span className="text-white/70 text-xs leading-relaxed">
+                    By signing up, you agree to our{" "}
+                    <Link
+                      href="/terms"
+                      target="_blank"
+                      className="text-white underline hover:text-gray-200 transition-colors font-semibold"
+                    >
+                      Terms and Privacy Policy
+                    </Link>
                   </span>
                 </div>
 
