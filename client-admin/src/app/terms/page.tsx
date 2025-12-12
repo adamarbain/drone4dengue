@@ -25,17 +25,8 @@ export default function TermsPage() {
             transition={{ duration: 0.5 }}
             className="mb-8"
           >
-            <Link href="/signup">
-              <Button
-                variant="ghost"
-                className="text-white hover:text-gray-200 mb-4 flex items-center gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Sign Up
-              </Button>
-            </Link>
             <h1 className="text-white text-4xl font-bold mb-2">
-              Terms and Privacy Policy
+              Drone4Dengue Terms and Privacy Policy
             </h1>
             <p className="text-white/70 text-sm">Last updated: {new Date().toLocaleDateString()}</p>
           </motion.div>

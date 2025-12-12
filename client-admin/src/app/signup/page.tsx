@@ -31,7 +31,8 @@ export default function SignUpPage() {
   })
   const [companies, setCompanies] = useState<any[]>([])
   const [loadingCompanies, setLoadingCompanies] = useState(true)
-  const [errors, setErrors] = useState<string[]>([])
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [submitErrors, setSubmitErrors] = useState<string[]>([])
   const router = useRouter()
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
@@ -68,43 +69,49 @@ export default function SignUpPage() {
     return digitsOnly.length >= 8 && digitsOnly.length <= 15
   }
 
+  // Password validation: minimum 8 characters and at least one number
+  const validatePassword = (password: string): boolean => {
+    const passwordRegex = /^(?=.*\d).{8,}$/
+    return passwordRegex.test(password)
+  }
+
   const validateForm = () => {
-    const newErrors: string[] = []
+    const newErrors: Record<string, string> = {}
 
     if (!formData.email || !validateEmail(formData.email)) {
-      newErrors.push("Please enter a valid email address")
+      newErrors.email = "Please enter a valid email address"
     }
 
     if (formData.username.length < 3) {
-      newErrors.push("Username must be at least 3 characters long")
+      newErrors.username = "Username must be at least 3 characters long"
     }
 
     if (!formData.name) {
-      newErrors.push("Please enter a name")
+      newErrors.name = "Please enter a name"
     }
 
     if (!formData.phone || !validatePhone(formData.phone)) {
-      newErrors.push("Please enter a valid phone number (8-15 digits)")
+      newErrors.phone = "Please enter a valid phone number (8-15 digits)"
     }
 
-    if (formData.password.length < 6) {
-      newErrors.push("Password must be at least 6 characters long")
+    if (!validatePassword(formData.password)) {
+      newErrors.password = "Password must be at least 8 characters and include a number"
     }
 
     if (formData.password !== formData.confirmPassword) {
-      newErrors.push("Passwords do not match")
+      newErrors.confirmPassword = "The passwords do not match."
     }
 
     if (!formData.companyId) {
-      newErrors.push("Please select a company")
+      newErrors.companyId = "Please select a company"
     }
 
     if (!acceptedTerms) {
-      newErrors.push("You must accept the Terms and Privacy Policy to continue")
+      newErrors.terms = "You must accept the Terms and Privacy Policy to continue"
     }
 
-    setErrors(newErrors)
-    return newErrors.length === 0
+    setFieldErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -113,7 +120,7 @@ export default function SignUpPage() {
     if (!validateForm()) return
 
     setIsLoading(true)
-    setErrors([])
+    setSubmitErrors([])
     try {
       await api.post("/auth/register-admin", {
         email: formData.email,
@@ -125,7 +132,7 @@ export default function SignUpPage() {
       })
       router.push("/")
     } catch (err: any) {
-      setErrors([err?.response?.data?.error || "Registration failed. Please try again."])
+      setSubmitErrors([err?.response?.data?.error || "Registration failed. Please try again."])
     } finally {
       setIsLoading(false)
     }
@@ -133,17 +140,23 @@ export default function SignUpPage() {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
-    // Clear related errors when user starts typing
-    if (errors.length > 0) {
-      setErrors((prevErrors) => {
-        const filteredErrors = prevErrors.filter((error) => {
-          if (field === "email" && error.includes("email")) return false
-          if (field === "phone" && error.includes("phone")) return false
-          return true
-        })
-        return filteredErrors
-      })
-    }
+    // Clear related errors and re-check password match
+    setFieldErrors((prev) => {
+      const updated = { ...prev }
+      delete updated[field]
+
+      // Handle password mismatch dynamically
+      const password = field === "password" ? value : formData.password
+      const confirm = field === "confirmPassword" ? value : formData.confirmPassword
+      if (password && confirm && password !== confirm) {
+        updated.confirmPassword = "The passwords do not match."
+      } else {
+        delete updated.confirmPassword
+      }
+
+      return updated
+    })
+    if (submitErrors.length > 0) setSubmitErrors([])
   }
 
   return (
@@ -219,14 +232,14 @@ export default function SignUpPage() {
                 <p className="text-white/70 text-sm">Join the Drone4Dengue admin platform</p>
               </div>
 
-              {/* Error messages */}
-              {errors.length > 0 && (
+              {/* Submit/server errors */}
+              {submitErrors.length > 0 && (
                 <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
                   <Alert className="bg-red-500/20 backdrop-blur-sm border border-red-500/30 text-white rounded-lg">
                     <AlertCircle className="h-4 w-4 text-red-300" />
                     <AlertDescription>
                       <ul className="list-disc list-inside space-y-1 ml-1">
-                        {errors.map((error, index) => (
+                        {submitErrors.map((error, index) => (
                           <li key={index} className="text-sm">
                             {error}
                           </li>
@@ -252,22 +265,29 @@ export default function SignUpPage() {
                       required
                       value={formData.email}
                       onChange={(e) => handleInputChange("email", e.target.value)}
+                    onInvalid={(e) => {
+                      // Custom message replaces native browser copy
+                      e.currentTarget.setCustomValidity("Invalid email format.")
+                    }}
+                    onInput={(e) => {
+                      // Clear custom message once user starts fixing input
+                      e.currentTarget.setCustomValidity("")
+                    }}
                       onBlur={(e) => {
                         if (e.target.value && !validateEmail(e.target.value)) {
-                          setErrors((prevErrors) => {
-                            const errorMsg = "Please enter a valid email address"
-                            if (prevErrors.includes(errorMsg)) return prevErrors
-                            return [...prevErrors, errorMsg]
-                          })
+                          setFieldErrors((prev) => ({ ...prev, email: "Please enter a valid email address" }))
                         } else {
-                          setErrors((prevErrors) =>
-                            prevErrors.filter((error) => !error.includes("email"))
-                          )
+                          setFieldErrors((prev) => {
+                            const next = { ...prev }
+                            delete next.email
+                            return next
+                          })
                         }
                       }}
                       className="pl-12 pr-4 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                   </div>
+                  {fieldErrors.email && <p className="text-xs text-yellow-200">{fieldErrors.email}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -286,6 +306,7 @@ export default function SignUpPage() {
                       className="pl-12 pr-4 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                   </div>
+                  {fieldErrors.name && <p className="text-xs text-yellow-200">{fieldErrors.name}</p>}
                 </div>
                 
 
@@ -305,6 +326,7 @@ export default function SignUpPage() {
                       className="pl-12 pr-4 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                   </div>
+                  {fieldErrors.username && <p className="text-xs text-yellow-200">{fieldErrors.username}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -322,20 +344,19 @@ export default function SignUpPage() {
                       onChange={(e) => handleInputChange("phone", e.target.value)}
                       onBlur={(e) => {
                         if (e.target.value && !validatePhone(e.target.value)) {
-                          setErrors((prevErrors) => {
-                            const errorMsg = "Please enter a valid phone number (8-15 digits)"
-                            if (prevErrors.includes(errorMsg)) return prevErrors
-                            return [...prevErrors, errorMsg]
-                          })
+                          setFieldErrors((prev) => ({ ...prev, phone: "Please enter a valid phone number (8-15 digits)" }))
                         } else {
-                          setErrors((prevErrors) =>
-                            prevErrors.filter((error) => !error.includes("phone"))
-                          )
+                          setFieldErrors((prev) => {
+                            const next = { ...prev }
+                            delete next.phone
+                            return next
+                          })
                         }
                       }}
                       className="pl-12 pr-4 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                   </div>
+                  {fieldErrors.phone && <p className="text-xs text-yellow-200">{fieldErrors.phone}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -362,6 +383,7 @@ export default function SignUpPage() {
                       ))}
                     </select>
                   </div>
+                  {fieldErrors.companyId && <p className="text-xs text-yellow-200">{fieldErrors.companyId}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -377,6 +399,33 @@ export default function SignUpPage() {
                       required
                       value={formData.password}
                       onChange={(e) => handleInputChange("password", e.target.value)}
+                      onInvalid={(e) => {
+                        e.currentTarget.setCustomValidity("Password must be at least 8 characters, including a number")
+                      }}
+                      onInput={(e) => {
+                        e.currentTarget.setCustomValidity("")
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value && !validatePassword(e.target.value)) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            password: "Password must be at least 8 characters and include a number",
+                          }))
+                          // Also check mismatch if confirm password already filled
+                          if (formData.confirmPassword && formData.confirmPassword !== e.target.value) {
+                            setFieldErrors((prev) => ({
+                              ...prev,
+                              confirmPassword: "The passwords do not match.",
+                            }))
+                          }
+                        } else {
+                          setFieldErrors((prev) => {
+                            const next = { ...prev }
+                            delete next.password
+                            return next
+                          })
+                        }
+                      }}
                       className="pl-12 pr-12 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                     <Button
@@ -389,6 +438,7 @@ export default function SignUpPage() {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
+                  {fieldErrors.password && <p className="text-xs text-yellow-200">{fieldErrors.password}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -404,6 +454,20 @@ export default function SignUpPage() {
                       required
                       value={formData.confirmPassword}
                       onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                      onBlur={(e) => {
+                        if (e.target.value && formData.password !== e.target.value) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            confirmPassword: "The passwords do not match.",
+                          }))
+                        } else {
+                          setFieldErrors((prev) => {
+                            const next = { ...prev }
+                            delete next.confirmPassword
+                            return next
+                          })
+                        }
+                      }}
                       className="pl-12 pr-12 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                     <Button
@@ -416,6 +480,7 @@ export default function SignUpPage() {
                       {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
+                  {fieldErrors.confirmPassword && <p className="text-xs text-yellow-200">{fieldErrors.confirmPassword}</p>}
                 </div>
 
                 <div className="flex items-start gap-2 mt-2">
@@ -442,6 +507,7 @@ export default function SignUpPage() {
                     </Link>
                   </span>
                 </div>
+                {fieldErrors.terms && <p className="text-xs text-yellow-200">{fieldErrors.terms}</p>}
 
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="pt-2">
                   <Button
