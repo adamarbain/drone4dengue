@@ -6,58 +6,58 @@ Grouped by module, each requirement supports one or more use cases.
 
 ## Authentication & User Account
 
-* **REQ-1**: Allow users to register using full name, email, phone, password
-* **REQ-2**: Validate login credentials for all user roles
-* **REQ-3**: Reset password via email
-* **REQ-4**: Edit profile details
-* **REQ-5**: Secure password update
-* **REQ-6**: Configure notification preferences
-* **REQ-7**: Admin can Prevent duplicate email registrations
+* **REQ-1**: The system shall allow users to register using full name, email, phone number, and password.
+* **REQ-2**: The system shall validate login credentials for all user roles.
+* **REQ-3**: The system shall allow users to reset forgotten passwords via email verification.
+* **REQ-4**: The system shall allow users to edit their profile information.
+* **REQ-5**: The system shall allow users to update their password securely.
+* **REQ-6**: The system shall allow users to configure their notification preferences.
+* **REQ-7**: The system shall prevent users from registering with an email address that is already in use.
 
 ---
 
 ## Drone & Surveillance Management
 
-* **REQ-8**: Admins can register drones with ID, model, and location
-* **REQ-9**: Admins can add/edit/remove drone records
-* **REQ-10**: Admin Assign drones to monitoring zones via map/form
-* **REQ-11**: Admin can View, delete, and download drone images
-* **REQ-12**: Admin can Display registered drones and assigned zones
+* **REQ-8**: The system shall allow users to register a drone with basic metadata (ID, model, location).
+* **REQ-9**: The system shall allow admins to add, edit, or remove drone records.
+* **REQ-10**: The system shall allow admins to assign drones to monitoring zones via a map or form interface.
+* **REQ-11**: The system shall allow admins to view and manage images captured by drones, including deleting or downloading them.
+* **REQ-12**: The system shall display a list of registered drones along with their assigned locations and current status.
 
 ---
 
 ## User Management & Access Control
 
-* **REQ-13**: Admin View and filter user list
-* **REQ-14**: Admin can Add new users
-* **REQ-15**: Admin canUpdate user roles and status
-* **REQ-16**: Admin Remove inactive/unwanted users
+* **REQ-13**: The system shall display a list of registered users with filter and search functionality.
+* **REQ-14**: The system shall allow admins to add new users.
+* **REQ-15**: The system shall allow admins to modify user roles and account status.
+* **REQ-16**: The system shall allow admins to delete inactive or unwanted users.
 
 ---
 
 ## Dengue Data Analytics
 
-* **REQ-17**: Admin can Upload dengue case data
-* **REQ-18**: Admin Show analytics: case trends, heatmaps
-* **REQ-19**: Admin can Filter data by date and location
-* **REQ-20**: Admin can Export reports in PDF or CSV
-* **REQ-21**: Admin can Integrate weather data for prediction
-* **REQ-22**: Admin can Validate uploaded weather data format
-* **REQ-23**: Admin can View and filter historical weather records
+* **REQ-17**: The system shall allow uploading dengue case data via CSV or form.
+* **REQ-18**: The system shall display data analytics, including case trends and geographical heatmaps.
+* **REQ-19**: The system shall allow filtering dengue data by date and location.
+* **REQ-20**: The system shall allow generating and exporting reports in PDF or CSV format.
+* **REQ-21**: The system shall integrate the latest weather data with the prediction engine to support dengue outbreak forecasting.
+* **REQ-22**: The system shall validate the format and content of uploaded weather data (e.g., temperature, humidity, rainfall).
+* **REQ-23**: The system shall allow administrators to view and filter historical weather data entries.
 
 ---
 
 ## Prediction & Alert Management
 
-* **REQ-24**: Admin can Display predicted outbreak zones with risk levels
-* **REQ-25**: Admin can Configure alert rules based on thresholds
-* **REQ-26**: Admin can Send notifications to relevant users
-* **REQ-27**: Admin can Log and display alert history
+* **REQ-24**: The system shall display predicted dengue outbreak areas with risk levels.
+* **REQ-25**: The system shall allow configuring alert rules based on risk thresholds.
+* **REQ-26**: The system shall send notifications to relevant users based on alert rules.
+* **REQ-27**: The system shall log and display alert history.
 
 ---
 
 ## Public Awareness & Prevention
 
-* **REQ-28**: Admin can Show tips categorized by risk level
-* **REQ-29**: Admin can Display detailed advice upon user tap
-* **REQ-30**: Admin can Allow navigation between categories or return to menu
+* **REQ-28**: The system shall allow users to view recommendations categorized by risk level (High, Medium, Low).
+* **REQ-29**: The system shall display detailed preventive tips upon user selection.
+* **REQ-30**: The system shall allow navigating between categories or returning to the main menu.
