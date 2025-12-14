@@ -61,33 +61,59 @@ const sendEmailWithRetry = async (mailOptions, maxRetries = 3) => {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     // Try each configuration
     for (let configIndex = 0; configIndex < configs.length; configIndex++) {
+      let transporter = null;
       try {
-        const transporter = nodemailer.createTransport(configs[configIndex]);
+        transporter = nodemailer.createTransport(configs[configIndex]);
         console.log(`[EMAIL] Attempt ${attempt}/${maxRetries} using config ${configIndex + 1} (port ${configs[configIndex].port})`);
         
-        // Verify connection before sending (with shorter timeout)
-        await Promise.race([
-          transporter.verify(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Verification timeout')), 8000))
-        ]);
-        console.log(`[EMAIL] Connection verified with config ${configIndex + 1}`);
+        // Try to verify connection (optional - skip if it times out)
+        try {
+          await Promise.race([
+            transporter.verify(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Verification timeout')), 5000))
+          ]);
+          console.log(`[EMAIL] Connection verified with config ${configIndex + 1}`);
+        } catch (verifyErr) {
+          // Verification failed/timed out, but we'll still try to send
+          console.log(`[EMAIL] Verification skipped for config ${configIndex + 1} (${verifyErr.message}), attempting to send directly...`);
+        }
         
-        // Send email
-        const info = await Promise.race([
-          transporter.sendMail(mailOptions),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Send timeout')), 15000))
-        ]);
-        console.log(`[EMAIL] Email sent successfully:`, info.messageId);
+        // Send email with timeout protection
+        const sendPromise = transporter.sendMail(mailOptions);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Send timeout')), 20000)
+        );
         
-        // Close connection
-        transporter.close();
+        const info = await Promise.race([sendPromise, timeoutPromise]);
+        console.log(`[EMAIL] Email sent successfully:`, info.messageId || 'messageId not available');
+        
+        // Close connection if possible
+        if (transporter && transporter.close) {
+          transporter.close();
+        }
         return info;
       } catch (err) {
         lastError = err;
-        console.error(`[EMAIL] Config ${configIndex + 1} failed:`, err.message);
+        const errorCode = err.code || (err.message && err.message.includes('timeout') ? 'ETIMEDOUT' : undefined);
+        console.error(`[EMAIL] Config ${configIndex + 1} failed:`, {
+          message: err.message,
+          code: errorCode,
+          command: err.command
+        });
         
-        // If it's a connection timeout and we have more configs to try, continue
-        if (err.code === 'ETIMEDOUT' || err.code === 'ECONNREFUSED' || err.code === 'ESOCKETTIMEDOUT' || err.message === 'Verification timeout' || err.message === 'Send timeout') {
+        // Clean up transporter
+        if (transporter && transporter.close) {
+          try {
+            transporter.close();
+          } catch (closeErr) {
+            // Ignore close errors
+          }
+        }
+        
+        // If it's a connection/timeout error and we have more configs to try, continue
+        if (errorCode === 'ETIMEDOUT' || err.code === 'ECONNREFUSED' || err.code === 'ESOCKETTIMEDOUT' || 
+            err.message === 'Verification timeout' || err.message === 'Send timeout' ||
+            err.message?.includes('timeout')) {
           if (configIndex < configs.length - 1) {
             console.log(`[EMAIL] Trying next configuration...`);
             continue; // Try next config
@@ -312,14 +338,16 @@ exports.resetRequest = async (req, res) => {
     res.json({ message: 'Reset code sent to email.' });
   } catch (err) {
     console.error('[RESET REQUEST ERROR] Failed to send reset code:', err);
+    const errorCode = err.code || (err.message?.includes('timeout') ? 'ETIMEDOUT' : undefined);
     console.error('[RESET REQUEST ERROR] Error details:', {
-      code: err.code,
+      code: errorCode,
       command: err.command,
       message: err.message,
     });
     
     // Return error response
-    if (err.code === 'ETIMEDOUT' || err.code === 'ECONNREFUSED' || err.code === 'ESOCKETTIMEDOUT') {
+    if (errorCode === 'ETIMEDOUT' || err.code === 'ECONNREFUSED' || err.code === 'ESOCKETTIMEDOUT' || 
+        err.message?.includes('timeout') || err.message === 'Verification timeout' || err.message === 'Send timeout') {
       console.error('[RESET REQUEST ERROR] Connection timeout or network error - email service may be unavailable');
       res.status(503).json({ error: 'Email service temporarily unavailable. Please try again later.' });
     } else if (err.code === 'EAUTH') {
