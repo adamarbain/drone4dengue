@@ -15,6 +15,105 @@ const twilioClient = twilio(
 
 const twilio_phone_number = process.env.TWILIO_PHONE_NUMBER;
 
+// SMTP configurations for production compatibility
+const getEmailConfigs = () => [
+  // Configuration 1: Port 587 with STARTTLS (most common)
+  {
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: email_sender_email,
+      pass: email_sender_password,
+    },
+    connectionTimeout: 10000, // 10 seconds - shorter for faster failure
+    greetingTimeout: 5000,
+    socketTimeout: 10000,
+    tls: {
+      rejectUnauthorized: false,
+      ciphers: 'SSLv3'
+    },
+    requireTLS: true,
+  },
+  // Configuration 2: Port 465 with SSL (alternative)
+  {
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: {
+      user: email_sender_email,
+      pass: email_sender_password,
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 5000,
+    socketTimeout: 10000,
+    tls: {
+      rejectUnauthorized: false,
+    },
+  },
+];
+
+// Helper function to send email with retry logic
+const sendEmailWithRetry = async (mailOptions, maxRetries = 3) => {
+  let lastError;
+  const configs = getEmailConfigs();
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    // Try each configuration
+    for (let configIndex = 0; configIndex < configs.length; configIndex++) {
+      try {
+        const transporter = nodemailer.createTransport(configs[configIndex]);
+        console.log(`[EMAIL] Attempt ${attempt}/${maxRetries} using config ${configIndex + 1} (port ${configs[configIndex].port})`);
+        
+        // Verify connection before sending (with shorter timeout)
+        await Promise.race([
+          transporter.verify(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Verification timeout')), 8000))
+        ]);
+        console.log(`[EMAIL] Connection verified with config ${configIndex + 1}`);
+        
+        // Send email
+        const info = await Promise.race([
+          transporter.sendMail(mailOptions),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Send timeout')), 15000))
+        ]);
+        console.log(`[EMAIL] Email sent successfully:`, info.messageId);
+        
+        // Close connection
+        transporter.close();
+        return info;
+      } catch (err) {
+        lastError = err;
+        console.error(`[EMAIL] Config ${configIndex + 1} failed:`, err.message);
+        
+        // If it's a connection timeout and we have more configs to try, continue
+        if (err.code === 'ETIMEDOUT' || err.code === 'ECONNREFUSED' || err.code === 'ESOCKETTIMEDOUT' || err.message === 'Verification timeout' || err.message === 'Send timeout') {
+          if (configIndex < configs.length - 1) {
+            console.log(`[EMAIL] Trying next configuration...`);
+            continue; // Try next config
+          }
+          // If this was the last config, break and retry with delay
+          break;
+        }
+        
+        // For auth errors, don't retry other configs
+        if (err.code === 'EAUTH' || err.code === 'EENVELOPE') {
+          throw err;
+        }
+      }
+    }
+    
+    // If all configs failed and we have retries left, wait and retry
+    if (attempt < maxRetries) {
+      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff, max 5s
+      console.log(`[EMAIL] All configs failed. Retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError || new Error('Failed to send email after all retries');
+};
+
 exports.registerUser = async (req, res) => {
   const { email, password, name, phone, username, companyId } = req.body;
 
@@ -197,43 +296,38 @@ exports.resetRequest = async (req, res) => {
     const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 min
     await prisma.user.update({ where: { email }, data: { resetCode: code, resetCodeExpiry: expiry } });
     
-    // Send email with improved connection settings
+    // Send email with retry logic
     console.log(`[RESET REQUEST] Sending reset code to ${email} from ${email_sender_email}`);
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: email_sender_email,
-        pass: email_sender_password, // Use an App Password if 2FA is enabled
-      },
-      connectionTimeout: 60000, // 60 seconds
-      greetingTimeout: 30000, // 30 seconds
-      socketTimeout: 60000, // 60 seconds
-      tls: {
-        rejectUnauthorized: false // Allow self-signed certificates if needed
-      }
-    });
-
+    
     const mailOptions = {
       from: email_sender_email,
       to: email,
       subject: 'DengueEye - Your Password Reset Code',
       text: `Your reset code is: ${code}`,
-      html: `<p>Your reset code is: ${code}</p>`,
+      html: `<p>Your reset code is: <strong>${code}</strong></p><p>This code will expire in 15 minutes.</p>`,
     };
 
-    await transporter.sendMail(mailOptions);
+    await sendEmailWithRetry(mailOptions, 3);
     console.log(`[RESET REQUEST SUCCESS] Reset code sent to ${email}`);
     res.json({ message: 'Reset code sent to email.' });
   } catch (err) {
     console.error('[RESET REQUEST ERROR] Failed to send reset code:', err);
-    // Still return success to user for security (don't reveal if email exists)
-    // But log the error for debugging
+    console.error('[RESET REQUEST ERROR] Error details:', {
+      code: err.code,
+      command: err.command,
+      message: err.message,
+    });
+    
+    // Return error response
     if (err.code === 'ETIMEDOUT' || err.code === 'ECONNREFUSED' || err.code === 'ESOCKETTIMEDOUT') {
-      console.error('[RESET REQUEST ERROR] Connection timeout or network error:', err.message);
+      console.error('[RESET REQUEST ERROR] Connection timeout or network error - email service may be unavailable');
+      res.status(503).json({ error: 'Email service temporarily unavailable. Please try again later.' });
+    } else if (err.code === 'EAUTH') {
+      console.error('[RESET REQUEST ERROR] Authentication failed - check email credentials');
+      res.status(500).json({ error: 'Email configuration error. Please contact support.' });
+    } else {
+      res.status(500).json({ error: 'Failed to send reset code. Please try again later.' });
     }
-    res.status(500).json({ error: 'Failed to send reset code. Please try again later.' });
   }
 };
 
@@ -277,30 +371,16 @@ exports.sendOtp = async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
     await prisma.user.update({ where: { email }, data: { otpCode: otp, otpExpiry: expiry } });
-    // Send OTP via email with improved connection settings
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: email_sender_email,
-        pass: email_sender_password,
-      },
-      connectionTimeout: 60000, // 60 seconds
-      greetingTimeout: 30000, // 30 seconds
-      socketTimeout: 60000, // 60 seconds
-      tls: {
-        rejectUnauthorized: false // Allow self-signed certificates if needed
-      }
-    });
+    // Send OTP via email with retry logic
     const mailOptions = {
       from: email_sender_email,
       to: email,
       subject: 'DengueEye - Your OTP Code',
       text: `Your OTP code is: ${otp}`,
-      html: `<p>Your OTP code is: <b>${otp}</b></p>`,
+      html: `<p>Your OTP code is: <strong>${otp}</strong></p><p>This code will expire in 10 minutes.</p>`,
     };
-    await transporter.sendMail(mailOptions);
+    
+    await sendEmailWithRetry(mailOptions, 3);
     console.log(`[SEND OTP SUCCESS] OTP sent to ${email}`);
     res.json({ message: 'OTP sent to email.' });
   } catch (err) {
