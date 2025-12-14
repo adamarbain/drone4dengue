@@ -187,32 +187,54 @@ exports.adminLogin = async (req, res) => {
 exports.resetRequest = async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email is required.' });
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) return res.status(404).json({ error: 'User not found.' });
-  // Generate code and expiry
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 min
-  await prisma.user.update({ where: { email }, data: { resetCode: code, resetCodeExpiry: expiry } });
-  // Simulate email
-  console.log(`[RESET REQUEST] Sending reset code to ${email} from ${email_sender_email} with app password ${email_sender_password}`);
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: email_sender_email,
-      pass: email_sender_password, // Use an App Password if 2FA is enabled
-    },
-  });
+  
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+    
+    // Generate code and expiry
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 min
+    await prisma.user.update({ where: { email }, data: { resetCode: code, resetCodeExpiry: expiry } });
+    
+    // Send email with improved connection settings
+    console.log(`[RESET REQUEST] Sending reset code to ${email} from ${email_sender_email}`);
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false, // true for 465, false for other ports
+      auth: {
+        user: email_sender_email,
+        pass: email_sender_password, // Use an App Password if 2FA is enabled
+      },
+      connectionTimeout: 60000, // 60 seconds
+      greetingTimeout: 30000, // 30 seconds
+      socketTimeout: 60000, // 60 seconds
+      tls: {
+        rejectUnauthorized: false // Allow self-signed certificates if needed
+      }
+    });
 
-  const mailOptions = {
-    from: email_sender_email,
-    to: email,
-    subject: 'DengueEye - Your Password Reset Code',
-    text: `Your reset code is: ${code}`,
-    html: `<p>Your reset code is: ${code}</p>`,
-  };
+    const mailOptions = {
+      from: email_sender_email,
+      to: email,
+      subject: 'DengueEye - Your Password Reset Code',
+      text: `Your reset code is: ${code}`,
+      html: `<p>Your reset code is: ${code}</p>`,
+    };
 
-  await transporter.sendMail(mailOptions);
-  res.json({ message: 'Reset code sent to email.' });
+    await transporter.sendMail(mailOptions);
+    console.log(`[RESET REQUEST SUCCESS] Reset code sent to ${email}`);
+    res.json({ message: 'Reset code sent to email.' });
+  } catch (err) {
+    console.error('[RESET REQUEST ERROR] Failed to send reset code:', err);
+    // Still return success to user for security (don't reveal if email exists)
+    // But log the error for debugging
+    if (err.code === 'ETIMEDOUT' || err.code === 'ECONNREFUSED' || err.code === 'ESOCKETTIMEDOUT') {
+      console.error('[RESET REQUEST ERROR] Connection timeout or network error:', err.message);
+    }
+    res.status(500).json({ error: 'Failed to send reset code. Please try again later.' });
+  }
 };
 
 exports.resetVerify = async (req, res) => {
@@ -255,13 +277,21 @@ exports.sendOtp = async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
     await prisma.user.update({ where: { email }, data: { otpCode: otp, otpExpiry: expiry } });
-    // Send OTP via email
+    // Send OTP via email with improved connection settings
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false, // true for 465, false for other ports
       auth: {
         user: email_sender_email,
         pass: email_sender_password,
       },
+      connectionTimeout: 60000, // 60 seconds
+      greetingTimeout: 30000, // 30 seconds
+      socketTimeout: 60000, // 60 seconds
+      tls: {
+        rejectUnauthorized: false // Allow self-signed certificates if needed
+      }
     });
     const mailOptions = {
       from: email_sender_email,
@@ -271,6 +301,7 @@ exports.sendOtp = async (req, res) => {
       html: `<p>Your OTP code is: <b>${otp}</b></p>`,
     };
     await transporter.sendMail(mailOptions);
+    console.log(`[SEND OTP SUCCESS] OTP sent to ${email}`);
     res.json({ message: 'OTP sent to email.' });
   } catch (err) {
     console.error('[SEND OTP ERROR]', err);
