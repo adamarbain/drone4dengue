@@ -18,9 +18,14 @@ const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
 // POST /auth/register
 router.post('/register', async (req, res) => {
   const { email, password, name, phone } = req.body;
-  if (!email || !password || !name || !phone) {
-    console.log(`[REGISTER ERROR] Missing required fields for ${email}`);
-    return res.status(400).json({ error: 'Email, password, name, and phone are required.' });
+  const missingFields = [];
+  if (!email) missingFields.push("email");
+  if (!password) missingFields.push("password");
+  if (!name) missingFields.push("name");
+  if (!phone) missingFields.push("phone");
+  if (missingFields.length > 0) {
+    console.log(`[REGISTER ERROR] Missing required fields for ${email || '[no email provided]'}: ${missingFields.join(', ')}`);
+    return res.status(400).json({ error: `Missing required fields: ${missingFields.join(', ')}` });
   }
   try {
     const existing = await prisma.user.findUnique({ where: { email } });
