@@ -143,10 +143,17 @@ const sendEmailWithRetry = async (mailOptions, maxRetries = 3) => {
 exports.registerUser = async (req, res) => {
   const { email, password, name, phone, username, companyId } = req.body;
 
-  // Validate required fields
-  if (!email || !password || !name || !phone || !username || !companyId) {
-    console.log(`[REGISTER ERROR] Missing required fields for ${email}`);
-    return res.status(400).json({ error: 'Email, password, name, phone, username, and companyId are required.' });
+  // Validate required fields individually and report which are missing
+  const missingFields = [];
+  if (!email) missingFields.push('email');
+  if (!password) missingFields.push('password');
+  if (!name) missingFields.push('name');
+  if (!phone) missingFields.push('phone');
+  if (!username) missingFields.push('username');
+  if (!companyId) missingFields.push('companyId');
+  if (missingFields.length > 0) {
+    console.log(`[REGISTER ERROR] Missing required fields for ${email || '[no email provided]'}: ${missingFields.join(', ')}`);
+    return res.status(400).json({ error: `Missing required fields: ${missingFields.join(', ')}` });
   }
 
   try {
