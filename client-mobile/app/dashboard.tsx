@@ -57,8 +57,14 @@ export default function Dashboard() {
       try {
         const user = await fetchCurrentUser();
         if (isMounted) {
-          setHasCompany(Boolean(user?.companyId));
-          setCompanyId(user?.companyId || null);
+          // If companyId is 'comp-999', treated as NO company
+          if (user?.companyId === 'comp-999') {
+            setHasCompany(false);
+            setCompanyId(user?.companyId || null); // Still store the companyId, but indicate "no company"
+          } else {
+            setHasCompany(Boolean(user?.companyId));
+            setCompanyId(user?.companyId || null);
+          }
         }
       } catch (e) {
         if (isMounted) {

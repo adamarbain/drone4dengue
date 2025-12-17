@@ -175,6 +175,13 @@ async function main() {
       description: 'Urban health monitoring services',
       isActive: true,
     },
+    {
+      id: 'comp-999',
+      name: 'Public Mobile User',
+      code: 'COMP999',
+      description: 'Public Mobile user for Drone4Dengue operations',
+      isActive: true,
+    },
   ];
 
   await prisma.company.createMany({ data: companies });
@@ -337,6 +344,19 @@ async function main() {
       address: 'Klang',
       organization: 'Urban Health Monitoring',
       companyId: 'comp-003',
+    },
+    {
+      userId: 'U-008',
+      email: 'admin@malaysiapublicuser.com',
+      password: 'adminpass4',
+      name: 'Malaysia Public User',
+      role: 'admin',
+      status: 'Verified',
+      username: 'malaysia_public_user',
+      phone: '60118888888',
+      address: 'Kuala Lumpur',
+      organization: 'Malaysia Public User',
+      companyId: 'comp-999',
     },
   ];
 
