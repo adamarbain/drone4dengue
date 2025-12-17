@@ -62,6 +62,7 @@ export default function RegisterScreen() {
                     email,
                     password,
                     phone,
+                    companyId: 'comp-999', // Public Mobile User
                 }),
             });
             const data = await response.json();
