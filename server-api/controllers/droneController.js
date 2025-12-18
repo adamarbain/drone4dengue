@@ -3,6 +3,14 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { uploadImage, deleteImage: deleteFirebaseImage, generateStoragePath } = require('../utils/firebase_storage_utils');
+const logger = require('../utils/logger');
+const {
+  sendErrorResponse,
+  sendValidationError,
+  sendNotFoundError,
+  sendConflictError,
+  sendInternalError
+} = require('../utils/errorResponse');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -56,8 +64,8 @@ exports.getCompanyLocations = async (req, res) => {
 
     res.json(locations);
   } catch (err) {
-    console.error('[GET COMPANY LOCATIONS ERROR]', err);
-    res.status(500).json({ error: 'Failed to fetch company locations' });
+    logger.error('[GET COMPANY LOCATIONS ERROR]', { error: err.message, stack: err.stack, companyId: req.companyId });
+    return sendInternalError(res, 'Failed to fetch company locations', err);
   }
 };
 
@@ -68,7 +76,7 @@ exports.createCompanyLocation = async (req, res) => {
     const companyId = req.companyId;
 
     if (!name || !latitude || !longitude) {
-      return res.status(400).json({ error: 'Name, latitude, and longitude are required' });
+      return sendValidationError(res, ['Name, latitude, and longitude are required']);
     }
 
     // Check if location with same name already exists for this company
@@ -80,7 +88,7 @@ exports.createCompanyLocation = async (req, res) => {
     });
 
     if (existingLocation) {
-      return res.status(409).json({ error: 'Location with this name already exists' });
+      return sendConflictError(res, 'Location with this name already exists');
     }
 
     const location = await prisma.companyLocation.create({
@@ -98,8 +106,8 @@ exports.createCompanyLocation = async (req, res) => {
       location
     });
   } catch (err) {
-    console.error('[CREATE COMPANY LOCATION ERROR]', err);
-    res.status(500).json({ error: 'Failed to create location' });
+    logger.error('[CREATE COMPANY LOCATION ERROR]', { error: err.message, stack: err.stack, companyId: req.companyId });
+    return sendInternalError(res, 'Failed to create location', err);
   }
 };
 
@@ -188,8 +196,8 @@ exports.getAllDrones = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('[GET ALL DRONES ERROR]', err);
-    res.status(500).json({ error: 'Failed to fetch drones' });
+    logger.error('[GET ALL DRONES ERROR]', { error: err.message, stack: err.stack, companyId: req.companyId });
+    return sendInternalError(res, 'Failed to fetch drones', err);
   }
 };
 
@@ -245,8 +253,8 @@ exports.getDroneStats = async (req, res) => {
       }).then(areas => areas.length)
     });
   } catch (err) {
-    console.error('[GET DRONE STATS ERROR]', err);
-    res.status(500).json({ error: 'Failed to fetch drone statistics' });
+    logger.error('[GET DRONE STATS ERROR]', { error: err.message, stack: err.stack, companyId: req.companyId });
+    return sendInternalError(res, 'Failed to fetch drone statistics', err);
   }
 };
 
@@ -275,13 +283,13 @@ exports.getDroneById = async (req, res) => {
     });
 
     if (!drone) {
-      return res.status(404).json({ error: 'Drone not found' });
+      return sendNotFoundError(res, 'Drone');
     }
 
     res.json(drone);
   } catch (err) {
-    console.error('[GET DRONE BY ID ERROR]', err);
-    res.status(500).json({ error: 'Failed to fetch drone' });
+    logger.error('[GET DRONE BY ID ERROR]', { error: err.message, stack: err.stack, droneId: req.params.id });
+    return sendInternalError(res, 'Failed to fetch drone', err);
   }
 };
 
@@ -291,7 +299,7 @@ exports.registerDrone = async (req, res) => {
     const { name, model, serial, operationalArea, status = 'Operational', companyLocationId } = req.body;
     
     if (!name || !model || !serial || !operationalArea) {
-      return res.status(400).json({ error: 'Name, model, serial, and operational area are required' });
+      return sendValidationError(res, ['Name, model, serial, and operational area are required']);
     }
 
     // Check if serial already exists
@@ -300,7 +308,7 @@ exports.registerDrone = async (req, res) => {
     });
     
     if (existingDrone) {
-      return res.status(409).json({ error: 'Drone with this serial already exists' });
+      return sendConflictError(res, 'Drone with this serial already exists');
     }
 
     // Create new drone
@@ -339,7 +347,7 @@ exports.registerDrone = async (req, res) => {
       const { notifyDroneChange } = require('../services/notificationService');
       await notifyDroneChange(drone, 'created');
     } catch (notifError) {
-      console.error('Failed to send drone notification:', notifError);
+      logger.error('Failed to send drone notification', { error: notifError.message });
       // Don't fail the request if notification fails
     }
 
@@ -348,8 +356,8 @@ exports.registerDrone = async (req, res) => {
       drone 
     });
   } catch (err) {
-    console.error('[DRONE REGISTER ERROR]', err);
-    res.status(500).json({ error: 'Failed to register drone' });
+    logger.error('[DRONE REGISTER ERROR]', { error: err.message, stack: err.stack, companyId: req.companyId });
+    return sendInternalError(res, 'Failed to register drone', err);
   }
 };
 
@@ -368,7 +376,7 @@ exports.updateDrone = async (req, res) => {
     });
 
     if (!existingDrone) {
-      return res.status(404).json({ error: 'Drone not found' });
+      return sendNotFoundError(res, 'Drone');
     }
 
     // Update drone
@@ -395,7 +403,7 @@ exports.updateDrone = async (req, res) => {
       const { notifyDroneChange } = require('../services/notificationService');
       await notifyDroneChange(updatedDrone, 'updated');
     } catch (notifError) {
-      console.error('Failed to send drone notification:', notifError);
+      logger.error('Failed to send drone notification', { error: notifError.message });
       // Don't fail the request if notification fails
     }
 
@@ -404,8 +412,8 @@ exports.updateDrone = async (req, res) => {
       drone: updatedDrone
     });
   } catch (err) {
-    console.error('[UPDATE DRONE ERROR]', err);
-    res.status(500).json({ error: 'Failed to update drone' });
+    logger.error('[UPDATE DRONE ERROR]', { error: err.message, stack: err.stack, droneId: req.params.id });
+    return sendInternalError(res, 'Failed to update drone', err);
   }
 };
 
@@ -423,7 +431,7 @@ exports.deleteDrone = async (req, res) => {
     });
 
     if (!existingDrone) {
-      return res.status(404).json({ error: 'Drone not found' });
+      return sendNotFoundError(res, 'Drone');
     }
 
     // Delete associated images from Firebase Storage
@@ -439,7 +447,7 @@ exports.deleteDrone = async (req, res) => {
             await deleteFirebaseImage(filePath);
           }
         } catch (error) {
-          console.error(`Error deleting image from Firebase: ${error.message}`);
+          logger.error('Error deleting image from Firebase', { error: error.message, imageId });
           // Continue with other images
         }
       } else {
@@ -458,8 +466,8 @@ exports.deleteDrone = async (req, res) => {
 
     res.json({ message: 'Drone deleted successfully' });
   } catch (err) {
-    console.error('[DELETE DRONE ERROR]', err);
-    res.status(500).json({ error: 'Failed to delete drone' });
+    logger.error('[DELETE DRONE ERROR]', { error: err.message, stack: err.stack, droneId: req.params.id });
+    return sendInternalError(res, 'Failed to delete drone', err);
   }
 };
 
@@ -474,7 +482,7 @@ exports.uploadImages = async (req, res) => {
     const files = req.files;
 
     if (!files || files.length === 0) {
-      return res.status(400).json({ error: 'No files uploaded' });
+      return sendValidationError(res, ['No files uploaded']);
     }
 
     // Check if drone exists and belongs to company
@@ -486,7 +494,7 @@ exports.uploadImages = async (req, res) => {
     });
 
     if (!drone) {
-      return res.status(404).json({ error: 'Drone not found' });
+      return sendNotFoundError(res, 'Drone');
     }
 
     const uploadedFiles = [];
@@ -530,7 +538,7 @@ exports.uploadImages = async (req, res) => {
         uploadedFiles.push({ type: 'image', ...image });
         console.log(`Image uploaded to Firebase: ${firebaseUrl}`);
       } catch (fileError) {
-        console.error(`Error uploading file ${file.originalname}:`, fileError);
+        logger.error('Error uploading file', { error: fileError.message, filename: file.originalname });
         // Clean up local file even on error
         if (fs.existsSync(file.path)) {
           fs.unlinkSync(file.path);
@@ -540,7 +548,7 @@ exports.uploadImages = async (req, res) => {
     }
 
     if (uploadedFiles.length === 0) {
-      return res.status(500).json({ error: 'Failed to upload any images' });
+      return sendErrorResponse(res, 500, 'Failed to upload any images', 'UPLOAD_FAILED');
     }
 
     // Send notification to admin users
@@ -548,7 +556,7 @@ exports.uploadImages = async (req, res) => {
       const { notifyDroneImagesUploaded } = require('../services/notificationService');
       await notifyDroneImagesUploaded(uploadedFiles, drone);
     } catch (notifError) {
-      console.error('Failed to send drone image notification:', notifError);
+      logger.error('Failed to send drone image notification', { error: notifError.message });
       // Don't fail the request if notification fails
     }
 
@@ -557,8 +565,8 @@ exports.uploadImages = async (req, res) => {
       files: uploadedFiles
     });
   } catch (err) {
-    console.error('[UPLOAD IMAGES ERROR]', err);
-    res.status(500).json({ error: 'Failed to upload images: ' + err.message });
+    logger.error('[UPLOAD IMAGES ERROR]', { error: err.message, stack: err.stack, droneId: req.params.id });
+    return sendInternalError(res, 'Failed to upload images', err);
   }
 };
 
@@ -573,7 +581,7 @@ exports.uploadVideoFrames = async (req, res) => {
     const { frames } = req.body; // Array of base64 images
 
     if (!frames || !Array.isArray(frames) || frames.length === 0) {
-      return res.status(400).json({ error: 'No frames provided' });
+      return sendValidationError(res, ['No frames provided']);
     }
 
     // Check if drone exists and belongs to company
@@ -585,7 +593,7 @@ exports.uploadVideoFrames = async (req, res) => {
     });
 
     if (!drone) {
-      return res.status(404).json({ error: 'Drone not found' });
+      return sendNotFoundError(res, 'Drone');
     }
 
     const uploadedFrames = [];
@@ -631,13 +639,13 @@ exports.uploadVideoFrames = async (req, res) => {
         uploadedFrames.push({ type: 'image', ...image });
         console.log(`Video frame ${i + 1}/${frames.length} uploaded to Firebase: ${firebaseUrl}`);
       } catch (frameError) {
-        console.error(`Error uploading frame ${i}:`, frameError);
+        logger.error('Error uploading frame', { error: frameError.message, frameIndex: i });
         // Continue with other frames
       }
     }
 
     if (uploadedFrames.length === 0) {
-      return res.status(500).json({ error: 'Failed to upload any video frames' });
+      return sendErrorResponse(res, 500, 'Failed to upload any video frames', 'UPLOAD_FAILED');
     }
 
     // Send notification to admin users
@@ -645,7 +653,7 @@ exports.uploadVideoFrames = async (req, res) => {
       const { notifyDroneImagesUploaded } = require('../services/notificationService');
       await notifyDroneImagesUploaded(uploadedFrames, drone);
     } catch (notifError) {
-      console.error('Failed to send drone image notification:', notifError);
+      logger.error('Failed to send drone image notification', { error: notifError.message });
       // Don't fail the request if notification fails
     }
 
@@ -655,8 +663,8 @@ exports.uploadVideoFrames = async (req, res) => {
       count: uploadedFrames.length
     });
   } catch (err) {
-    console.error('[UPLOAD VIDEO FRAMES ERROR]', err);
-    res.status(500).json({ error: 'Failed to upload video frames: ' + err.message });
+    logger.error('[UPLOAD VIDEO FRAMES ERROR]', { error: err.message, stack: err.stack, droneId: req.params.id });
+    return sendInternalError(res, 'Failed to upload video frames', err);
   }
 };
 
@@ -676,7 +684,7 @@ exports.getDroneImages = async (req, res) => {
     });
 
     if (!drone) {
-      return res.status(404).json({ error: 'Drone not found' });
+      return sendNotFoundError(res, 'Drone');
     }
 
     const [images, total] = await Promise.all([
@@ -717,8 +725,8 @@ exports.getDroneImages = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('[GET DRONE IMAGES ERROR]', err);
-    res.status(500).json({ error: 'Failed to fetch images' });
+    logger.error('[GET DRONE IMAGES ERROR]', { error: err.message, stack: err.stack, droneId: req.params.id });
+    return sendInternalError(res, 'Failed to fetch images', err);
   }
 };
 
@@ -737,7 +745,7 @@ exports.deleteImage = async (req, res) => {
     });
 
     if (!image || image.drone.companyId !== req.companyId) {
-      return res.status(404).json({ error: 'Image not found' });
+      return sendNotFoundError(res, 'Image');
     }
 
     // Delete from Firebase Storage if URL is a Firebase URL
@@ -750,7 +758,7 @@ exports.deleteImage = async (req, res) => {
           console.log(`Image deleted from Firebase: ${filePath}`);
         }
       } catch (firebaseError) {
-        console.error('Error deleting from Firebase (continuing with DB delete):', firebaseError);
+        logger.error('Error deleting from Firebase (continuing with DB delete)', { error: firebaseError.message });
         // Continue with database deletion even if Firebase delete fails
       }
     } else {
@@ -769,8 +777,8 @@ exports.deleteImage = async (req, res) => {
 
     res.json({ message: 'Image deleted successfully' });
   } catch (err) {
-    console.error('[DELETE IMAGE ERROR]', err);
-    res.status(500).json({ error: 'Failed to delete image: ' + err.message });
+    logger.error('[DELETE IMAGE ERROR]', { error: err.message, stack: err.stack, imageId: req.params.id });
+    return sendInternalError(res, 'Failed to delete image', err);
   }
 };
 
@@ -789,7 +797,7 @@ exports.downloadImage = async (req, res) => {
     });
 
     if (!image || image.drone.companyId !== req.companyId) {
-      return res.status(404).json({ error: 'Image not found' });
+      return sendNotFoundError(res, 'Image');
     }
 
     // If it's a Firebase URL, redirect to Firebase or download via proxy
@@ -802,13 +810,13 @@ exports.downloadImage = async (req, res) => {
     const filePath = path.join('uploads/drones', path.basename(image.url));
     
     if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: 'File not found on server' });
+      return sendNotFoundError(res, 'File');
     }
 
     res.download(filePath, image.filename);
   } catch (err) {
-    console.error('[DOWNLOAD IMAGE ERROR]', err);
-    res.status(500).json({ error: 'Failed to download image' });
+    logger.error('[DOWNLOAD IMAGE ERROR]', { error: err.message, stack: err.stack, imageId: req.params.id });
+    return sendInternalError(res, 'Failed to download image', err);
   }
 };
 
@@ -857,8 +865,8 @@ exports.getRecentDroneImages = async (req, res) => {
       count: images.length
     });
   } catch (err) {
-    console.error('[GET RECENT DRONE IMAGES ERROR]', err);
-    res.status(500).json({ error: 'Failed to fetch recent drone images' });
+    logger.error('[GET RECENT DRONE IMAGES ERROR]', { error: err.message, stack: err.stack, companyId: req.companyId });
+    return sendInternalError(res, 'Failed to fetch recent drone images', err);
   }
 };
 
@@ -881,7 +889,7 @@ exports.getLocationImages = async (req, res) => {
     });
     
     if (!location) {
-      return res.status(404).json({ error: 'Location not found' });
+      return sendNotFoundError(res, 'Location');
     }
 
     const images = await prisma.image.findMany({
@@ -923,8 +931,8 @@ exports.getLocationImages = async (req, res) => {
       images: images
     });
   } catch (err) {
-    console.error('[GET LOCATION IMAGES ERROR]', err);
-    res.status(500).json({ error: 'Failed to fetch location images' });
+    logger.error('[GET LOCATION IMAGES ERROR]', { error: err.message, stack: err.stack, locationId: req.params.locationId });
+    return sendInternalError(res, 'Failed to fetch location images', err);
   }
 };
 

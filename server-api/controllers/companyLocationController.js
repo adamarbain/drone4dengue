@@ -1,5 +1,13 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const logger = require('../utils/logger');
+const {
+  sendErrorResponse,
+  sendValidationError,
+  sendNotFoundError,
+  sendConflictError,
+  sendInternalError
+} = require('../utils/errorResponse');
 
 // Get all company locations for a company
 async function getAll(req, res) {
@@ -24,10 +32,11 @@ async function getOne(req, res) {
         companyId: req.companyId 
       }
     });
-    if (!location) return res.status(404).json({ error: 'Location not found' });
+    if (!location) return sendNotFoundError(res, 'Location');
     res.json(location);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    logger.error('[GET COMPANY LOCATION ERROR]', { error: err.message, stack: err.stack, locationId: req.params.id });
+    return sendInternalError(res, 'Failed to fetch company location', err);
   }
 }
 
@@ -37,7 +46,7 @@ async function create(req, res) {
     const { name, address, latitude, longitude } = req.body;
     
     if (!name) {
-      return res.status(400).json({ error: 'Name is required.' });
+      return sendValidationError(res, ['Name is required']);
     }
     
     const location = await prisma.companyLocation.create({
@@ -52,10 +61,11 @@ async function create(req, res) {
     
     res.status(201).json(location);
   } catch (err) {
+    logger.error('[CREATE COMPANY LOCATION ERROR]', { error: err.message, stack: err.stack, companyId: req.companyId });
     if (err.code === 'P2002') {
-      res.status(400).json({ error: 'A location with this name already exists for your company.' });
+      return sendConflictError(res, 'A location with this name already exists for your company');
     } else {
-      res.status(400).json({ error: err.message });
+      return sendInternalError(res, 'Failed to create company location', err);
     }
   }
 }
@@ -75,7 +85,7 @@ async function update(req, res) {
     });
     
     if (!existingLocation) {
-      return res.status(404).json({ error: 'Location not found' });
+      return sendNotFoundError(res, 'Location');
     }
     
     const location = await prisma.companyLocation.update({
@@ -94,16 +104,17 @@ async function update(req, res) {
       const { notifyCompanyLocationChange } = require('../services/notificationService');
       await notifyCompanyLocationChange(location, 'updated');
     } catch (notifError) {
-      console.error('Failed to send location notification:', notifError);
+      logger.error('Failed to send location notification', { error: notifError.message });
       // Don't fail the request if notification fails
     }
     
     res.json(location);
   } catch (err) {
+    logger.error('[CREATE COMPANY LOCATION ERROR]', { error: err.message, stack: err.stack, companyId: req.companyId });
     if (err.code === 'P2002') {
-      res.status(400).json({ error: 'A location with this name already exists for your company.' });
+      return sendConflictError(res, 'A location with this name already exists for your company');
     } else {
-      res.status(400).json({ error: err.message });
+      return sendInternalError(res, 'Failed to create company location', err);
     }
   }
 }
@@ -122,7 +133,7 @@ async function remove(req, res) {
     });
     
     if (!existingLocation) {
-      return res.status(404).json({ error: 'Location not found' });
+      return sendNotFoundError(res, 'Location');
     }
     
     // Check if location has associated data
@@ -132,9 +143,11 @@ async function remove(req, res) {
     ]);
     
     if (weatherCount > 0 || dengueCount > 0) {
-      return res.status(400).json({ 
-        error: 'Cannot delete location with associated weather or dengue data. Please delete the data first or deactivate the location instead.' 
-      });
+      return sendErrorResponse(res, 400, 
+        'Cannot delete location with associated weather or dengue data. Please delete the data first or deactivate the location instead.',
+        'LOCATION_HAS_DATA',
+        { weatherCount, dengueCount }
+      );
     }
     
     await prisma.companyLocation.delete({
@@ -160,7 +173,7 @@ async function toggleStatus(req, res) {
     });
     
     if (!existingLocation) {
-      return res.status(404).json({ error: 'Location not found' });
+      return sendNotFoundError(res, 'Location');
     }
     
     const location = await prisma.companyLocation.update({
@@ -170,7 +183,8 @@ async function toggleStatus(req, res) {
     
     res.json(location);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    logger.error('[TOGGLE LOCATION STATUS ERROR]', { error: err.message, stack: err.stack, locationId: req.params.id });
+    return sendInternalError(res, 'Failed to toggle location status', err);
   }
 }
 
