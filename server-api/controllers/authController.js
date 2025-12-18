@@ -3,6 +3,16 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const prisma = require('../prisma/client');
 const twilio = require('twilio');
+const logger = require('../utils/logger');
+const {
+  sendErrorResponse,
+  sendValidationError,
+  sendNotFoundError,
+  sendUnauthorizedError,
+  sendForbiddenError,
+  sendConflictError,
+  sendInternalError
+} = require('../utils/errorResponse');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
 const email_sender_email = process.env.SENDER_EMAIL;
@@ -152,23 +162,23 @@ exports.registerUser = async (req, res) => {
   if (!username) missingFields.push('username');
   if (!companyId) missingFields.push('companyId');
   if (missingFields.length > 0) {
-    console.log(`[REGISTER ERROR] Missing required fields for ${email || '[no email provided]'}: ${missingFields.join(', ')}`);
-    return res.status(400).json({ error: `Missing required fields: ${missingFields.join(', ')}` });
+    logger.warn('[REGISTER ERROR] Missing required fields', { email: email || '[no email provided]', missingFields });
+    return sendValidationError(res, [`Missing required fields: ${missingFields.join(', ')}`]);
   }
 
   try {
     // Check if email already exists
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      console.log(`[REGISTER ERROR] Email already exists: ${email}`);
-      return res.status(409).json({ error: 'Email already registered.' });
+      logger.warn('[REGISTER ERROR] Email already exists', { email });
+      return sendConflictError(res, 'Email already registered');
     }
 
     // Check if company exists
     const company = await prisma.company.findUnique({ where: { id: companyId } });
     if (!company) {
-      console.log(`[REGISTER ERROR] Company not found: ${companyId}`);
-      return res.status(400).json({ error: 'Invalid company ID.' });
+      logger.warn('[REGISTER ERROR] Company not found', { companyId });
+      return sendNotFoundError(res, 'Company');
     }
 
     // Hash password
@@ -198,8 +208,8 @@ exports.registerUser = async (req, res) => {
     res.json({ token, user: userWithoutPassword });
 
   } catch (err) {
-    console.error('[REGISTER ERROR] Registration failed:', err);
-    res.status(500).json({ error: 'Registration failed.' });
+    logger.error('[REGISTER ERROR] Registration failed', { error: err.message, stack: err.stack, email });
+    return sendInternalError(res, 'Registration failed', err);
   }
 };
 
@@ -208,23 +218,30 @@ exports.registerAdmin = async (req, res) => {
 
   // Validate required fields
   if (!email || !password || !name || !phone || !username || !companyId) {
-    console.log(`[REGISTER ADMIN ERROR] Missing required fields for ${email}`);
-    return res.status(400).json({ error: 'Email, password, name, phone, username, and companyId are required.' });
+    logger.warn('[REGISTER ADMIN ERROR] Missing required fields', { email });
+    const missingFields = [];
+    if (!email) missingFields.push('email');
+    if (!password) missingFields.push('password');
+    if (!name) missingFields.push('name');
+    if (!phone) missingFields.push('phone');
+    if (!username) missingFields.push('username');
+    if (!companyId) missingFields.push('companyId');
+    return sendValidationError(res, [`Missing required fields: ${missingFields.join(', ')}`]);
   }
 
   try {
     // Check if email already exists
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      console.log(`[REGISTER ADMIN ERROR] Email already exists: ${email}`);
-      return res.status(409).json({ error: 'Email already registered.' });
+      logger.warn('[REGISTER ADMIN ERROR] Email already exists', { email });
+      return sendConflictError(res, 'Email already registered');
     }
 
     // Check if company exists
     const company = await prisma.company.findUnique({ where: { id: companyId } });
     if (!company) {
-      console.log(`[REGISTER ADMIN ERROR] Company not found: ${companyId}`);
-      return res.status(400).json({ error: 'Invalid company ID.' });
+      logger.warn('[REGISTER ADMIN ERROR] Company not found', { companyId });
+      return sendNotFoundError(res, 'Company');
     }
 
     // Hash password
@@ -254,8 +271,8 @@ exports.registerAdmin = async (req, res) => {
     res.json({ token, user: userWithoutPassword });
 
   } catch (err) {
-    console.error('[REGISTER ADMIN ERROR] Registration failed:', err);
-    res.status(500).json({ error: 'Registration failed.' });
+    logger.error('[REGISTER ADMIN ERROR] Registration failed', { error: err.message, stack: err.stack, email });
+    return sendInternalError(res, 'Registration failed', err);
   }
 };
 
@@ -280,8 +297,8 @@ exports.login = async (req, res) => {
     console.log(`[LOGIN SUCCESS] User logged in: ${email}`);
     res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role, companyId: user.companyId } });
   } catch (err) {
-    console.error('[LOGIN ERROR] Login failed:', err);
-    res.status(500).json({ error: 'Login failed.' });
+    logger.error('[LOGIN ERROR] Login failed', { error: err.message, stack: err.stack, email });
+    return sendInternalError(res, 'Login failed', err);
   }
 };
 
@@ -318,11 +335,11 @@ exports.adminLogin = async (req, res) => {
 
 exports.resetRequest = async (req, res) => {
   const { email } = req.body;
-  if (!email) return res.status(400).json({ error: 'Email is required.' });
+  if (!email) return sendValidationError(res, ['Email is required']);
   
   try {
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.status(404).json({ error: 'User not found.' });
+    if (!user) return sendNotFoundError(res, 'User');
     
     // Generate code and expiry
     const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -353,44 +370,67 @@ exports.resetRequest = async (req, res) => {
     });
     
     // Return error response
+    logger.error('[RESET REQUEST ERROR] Failed to send reset code', { 
+      error: err.message, 
+      code: errorCode,
+      email 
+    });
+    
     if (errorCode === 'ETIMEDOUT' || err.code === 'ECONNREFUSED' || err.code === 'ESOCKETTIMEDOUT' || 
         err.message?.includes('timeout') || err.message === 'Verification timeout' || err.message === 'Send timeout') {
-      console.error('[RESET REQUEST ERROR] Connection timeout or network error - email service may be unavailable');
-      res.status(503).json({ error: 'Email service temporarily unavailable. Please try again later.' });
+      return sendErrorResponse(res, 503, 'Email service temporarily unavailable. Please try again later.', 'SERVICE_UNAVAILABLE');
     } else if (err.code === 'EAUTH') {
-      console.error('[RESET REQUEST ERROR] Authentication failed - check email credentials');
-      res.status(500).json({ error: 'Email configuration error. Please contact support.' });
+      return sendErrorResponse(res, 500, 'Email configuration error. Please contact support.', 'EMAIL_CONFIG_ERROR');
     } else {
-      res.status(500).json({ error: 'Failed to send reset code. Please try again later.' });
+      return sendInternalError(res, 'Failed to send reset code. Please try again later.', err);
     }
   }
 };
 
 exports.resetVerify = async (req, res) => {
   const { email, code } = req.body;
-  if (!email || !code) return res.status(400).json({ error: 'Email and code required.' });
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || user.resetCode !== code || !user.resetCodeExpiry || new Date() > user.resetCodeExpiry) {
-    return res.status(400).json({ error: 'Invalid or expired code.' });
+  if (!email || !code) return sendValidationError(res, ['Email and code are required']);
+  
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || user.resetCode !== code || !user.resetCodeExpiry || new Date() > user.resetCodeExpiry) {
+      return sendValidationError(res, ['Invalid or expired code']);
+    }
+    res.json({ message: 'Code verified.' });
+  } catch (err) {
+    logger.error('[RESET VERIFY ERROR]', { error: err.message, stack: err.stack, email });
+    return sendInternalError(res, 'Failed to verify code', err);
   }
-  res.json({ message: 'Code verified.' });
 };
 
 exports.reset = async (req, res) => {
   const { email, code, newPassword } = req.body;
-  if (!email || !code || !newPassword) return res.status(400).json({ error: 'Email, code, and new password required.' });
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || user.resetCode !== code || !user.resetCodeExpiry || new Date() > user.resetCodeExpiry) {
-    return res.status(400).json({ error: 'Invalid or expired code.' });
+  if (!email || !code || !newPassword) {
+    return sendValidationError(res, ['Email, code, and new password are required']);
   }
-  const hash = await bcrypt.hash(newPassword, 10);
-  await prisma.user.update({ where: { email }, data: { password: hash, resetCode: null, resetCodeExpiry: null } });
-  res.json({ message: 'Password reset successful.' });
+  
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || user.resetCode !== code || !user.resetCodeExpiry || new Date() > user.resetCodeExpiry) {
+      return sendValidationError(res, ['Invalid or expired code']);
+    }
+    
+    if (newPassword.length < 6) {
+      return sendValidationError(res, ['Password must be at least 6 characters']);
+    }
+    
+    const hash = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({ where: { email }, data: { password: hash, resetCode: null, resetCodeExpiry: null } });
+    res.json({ message: 'Password reset successful.' });
+  } catch (err) {
+    logger.error('[RESET ERROR]', { error: err.message, stack: err.stack, email });
+    return sendInternalError(res, 'Failed to reset password', err);
+  }
 };
 
 exports.forgotPassword = (req, res) => {
   // Not implemented in original auth.js, kept for compatibility
-  res.status(501).json({ error: 'Not implemented' });
+  return sendErrorResponse(res, 501, 'Not implemented', 'NOT_IMPLEMENTED');
 };
 
 // --- EMAIL OTP VERIFICATION ---
@@ -398,10 +438,11 @@ exports.forgotPassword = (req, res) => {
 // POST /auth/send-otp
 exports.sendOtp = async (req, res) => {
   let { email } = req.body;
-  if (!email) return res.status(400).json({ error: 'Email is required.' });
+  if (!email) return sendValidationError(res, ['Email is required']);
+  
   try {
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.status(404).json({ error: 'User not found.' });
+    if (!user) return sendNotFoundError(res, 'User');
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
@@ -419,25 +460,34 @@ exports.sendOtp = async (req, res) => {
     console.log(`[SEND OTP SUCCESS] OTP sent to ${email}`);
     res.json({ message: 'OTP sent to email.' });
   } catch (err) {
-    console.error('[SEND OTP ERROR]', err);
-    res.status(500).json({ error: 'Failed to send OTP.' });
+    logger.error('[SEND OTP ERROR]', { error: err.message, stack: err.stack, email });
+    const errorCode = err.code || (err.message?.includes('timeout') ? 'ETIMEDOUT' : undefined);
+    
+    if (errorCode === 'ETIMEDOUT' || err.code === 'ECONNREFUSED' || err.code === 'ESOCKETTIMEDOUT') {
+      return sendErrorResponse(res, 503, 'Email service temporarily unavailable. Please try again later.', 'SERVICE_UNAVAILABLE');
+    } else if (err.code === 'EAUTH') {
+      return sendErrorResponse(res, 500, 'Email configuration error. Please contact support.', 'EMAIL_CONFIG_ERROR');
+    } else {
+      return sendInternalError(res, 'Failed to send OTP', err);
+    }
   }
 };
 
 // POST /auth/verify-otp
 exports.verifyOtp = async (req, res) => {
   const { email, otp } = req.body;
-  if (!email || !otp) return res.status(400).json({ error: 'Email and OTP are required.' });
+  if (!email || !otp) return sendValidationError(res, ['Email and OTP are required']);
+  
   try {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !user.otpCode || !user.otpExpiry) {
-      return res.status(400).json({ error: 'OTP not requested or expired.' });
+      return sendValidationError(res, ['OTP not requested or expired']);
     }
     if (user.otpCode !== otp) {
-      return res.status(400).json({ error: 'Invalid OTP.' });
+      return sendValidationError(res, ['Invalid OTP']);
     }
     if (new Date() > user.otpExpiry) {
-      return res.status(400).json({ error: 'OTP expired.' });
+      return sendValidationError(res, ['OTP expired']);
     }
     // Mark user as Verified and clear OTP fields
     await prisma.user.update({
@@ -446,7 +496,7 @@ exports.verifyOtp = async (req, res) => {
     });
     res.json({ message: 'Account verified.' });
   } catch (err) {
-    console.error('[VERIFY OTP ERROR]', err);
-    res.status(500).json({ error: 'Failed to verify OTP.' });
+    logger.error('[VERIFY OTP ERROR]', { error: err.message, stack: err.stack, email });
+    return sendInternalError(res, 'Failed to verify OTP', err);
   }
 }; 

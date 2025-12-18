@@ -1,4 +1,12 @@
 const prisma = require('../prisma/client');
+const logger = require('../utils/logger');
+const {
+  sendErrorResponse,
+  sendValidationError,
+  sendNotFoundError,
+  sendForbiddenError,
+  sendInternalError
+} = require('../utils/errorResponse');
 
 // GET /companies/:id - Get company with settings
 exports.getCompanyById = async (req, res) => {
@@ -6,7 +14,7 @@ exports.getCompanyById = async (req, res) => {
     const { id } = req.params;
     
     // Log for debugging
-    console.log('[GET COMPANY] Request details:', {
+    logger.debug('[GET COMPANY] Request details', {
       requestedCompanyId: id,
       tokenCompanyId: req.companyId,
       userId: req.user?.userId,
@@ -19,16 +27,13 @@ exports.getCompanyById = async (req, res) => {
     const requestedId = String(id || '');
     
     if (!req.companyId) {
-      console.error('[GET COMPANY ERROR] No companyId in token');
-      return res.status(403).json({ error: 'Access denied. No company associated with your account.' });
+      logger.warn('[GET COMPANY ERROR] No companyId in token');
+      return sendForbiddenError(res, 'No company associated with your account');
     }
     
     if (tokenCompanyId !== requestedId) {
-      console.error('[GET COMPANY ERROR] Company ID mismatch:', {
-        tokenCompanyId,
-        requestedId
-      });
-      return res.status(403).json({ error: 'Access denied. You can only view your own company.' });
+      logger.warn('[GET COMPANY ERROR] Company ID mismatch', { tokenCompanyId, requestedId });
+      return sendForbiddenError(res, 'You can only view your own company');
     }
     
     const company = await prisma.company.findUnique({
@@ -57,13 +62,13 @@ exports.getCompanyById = async (req, res) => {
     });
     
     if (!company) {
-      return res.status(404).json({ error: 'Company not found.' });
+      return sendNotFoundError(res, 'Company');
     }
     
     res.json(company);
   } catch (err) {
-    console.error('[GET COMPANY ERROR]', err);
-    res.status(500).json({ error: 'Failed to fetch company.' });
+    logger.error('[GET COMPANY ERROR]', { error: err.message, stack: err.stack, companyId: req.params.id });
+    return sendInternalError(res, 'Failed to fetch company', err);
   }
 };
 
@@ -74,7 +79,7 @@ exports.updateCompanySettings = async (req, res) => {
     
     // Verify the user can access this company
     if (req.companyId !== id) {
-      return res.status(403).json({ error: 'Access denied. You can only update your own company.' });
+      return sendForbiddenError(res, 'You can only update your own company');
     }
     
     const {
@@ -90,7 +95,7 @@ exports.updateCompanySettings = async (req, res) => {
       advancedSettings,
     } = req.body;
     
-    console.log('[UPDATE COMPANY SETTINGS] Request received:', {
+    logger.debug('[UPDATE COMPANY SETTINGS] Request received', {
       companyId: id,
       settings: {
         emailNotifications,
@@ -105,17 +110,17 @@ exports.updateCompanySettings = async (req, res) => {
     
     // Validate alertFrequency if provided
     if (alertFrequency && !['immediate', 'daily', 'weekly'].includes(alertFrequency)) {
-      return res.status(400).json({ error: 'Invalid alertFrequency. Must be "immediate", "daily", or "weekly".' });
+      return sendValidationError(res, ['Invalid alertFrequency. Must be "immediate", "daily", or "weekly"']);
     }
     
     // Validate alertThreshold if provided
     if (alertThreshold && !['low', 'medium', 'high'].includes(alertThreshold)) {
-      return res.status(400).json({ error: 'Invalid alertThreshold. Must be "low", "medium", or "high".' });
+      return sendValidationError(res, ['Invalid alertThreshold. Must be "low", "medium", or "high"']);
     }
     
     // Validate syncMode if provided
     if (syncMode && !['automatic', 'manual'].includes(syncMode)) {
-      return res.status(400).json({ error: 'Invalid syncMode. Must be "automatic" or "manual".' });
+      return sendValidationError(res, ['Invalid syncMode. Must be "automatic" or "manual"']);
     }
     
     // Build update data object
@@ -130,7 +135,7 @@ exports.updateCompanySettings = async (req, res) => {
     if (advancedSettings !== undefined) updateData.advancedSettings = advancedSettings;
     
     if (Object.keys(updateData).length === 0) {
-      return res.status(400).json({ error: 'No settings provided to update.' });
+      return sendValidationError(res, ['No settings provided to update']);
     }
     
     const company = await prisma.company.update({
@@ -156,11 +161,11 @@ exports.updateCompanySettings = async (req, res) => {
       }
     });
     
-    console.log('[UPDATE COMPANY SETTINGS] Update successful:', company);
+    logger.debug('[UPDATE COMPANY SETTINGS] Update successful', { companyId: company.id });
     res.json(company);
   } catch (err) {
-    console.error('[UPDATE COMPANY SETTINGS ERROR]', err);
-    res.status(500).json({ error: 'Failed to update company settings.' });
+    logger.error('[UPDATE COMPANY SETTINGS ERROR]', { error: err.message, stack: err.stack, companyId: req.params.id });
+    return sendInternalError(res, 'Failed to update company settings', err);
   }
 };
 

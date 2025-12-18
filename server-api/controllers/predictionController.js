@@ -1,6 +1,13 @@
 const { PrismaClient } = require('@prisma/client');
 const redis = require('redis');
 const axios = require('axios');
+const logger = require('../utils/logger');
+const {
+  sendErrorResponse,
+  sendValidationError,
+  sendNotFoundError,
+  sendInternalError
+} = require('../utils/errorResponse');
 
 const prisma = new PrismaClient();
 
@@ -34,22 +41,22 @@ try {
   }
 
   redisClient.on('error', (err) => {
-    console.error('Redis Client Error:', err);
+    logger.error('Redis Client Error', { error: err.message });
     redisConnected = false;
   });
 
   redisClient.on('connect', () => {
-    console.log('Connected to Redis');
+    logger.info('Connected to Redis');
     redisConnected = true;
   });
 
   // Connect to Redis (non-blocking)
   redisClient.connect().catch((err) => {
-    console.error('Redis connection failed:', err);
+    logger.error('Redis connection failed', { error: err.message });
     redisConnected = false;
   });
 } catch (error) {
-  console.error('Failed to create Redis client:', error);
+  logger.error('Failed to create Redis client', { error: error.message });
   redisConnected = false;
 }
 
@@ -93,7 +100,7 @@ async function getMLThreeModelPrediction(latitude, longitude, weatherData = null
 
     return response.data;
   } catch (error) {
-    console.error('ML Three-Model Service Error:', error.message);
+    logger.error('ML Three-Model Service Error', { error: error.message, code: error.code });
     if (error.code === 'ECONNREFUSED') {
       throw new Error('ML service is not running or not accessible');
     } else if (error.code === 'ETIMEDOUT') {
@@ -123,7 +130,7 @@ async function getMLBreedingAreaDetection(imageUrls) {
 
     return response.data;
   } catch (error) {
-    console.error('ML Breeding Area Detection Error:', error.message);
+    logger.error('ML Breeding Area Detection Error', { error: error.message, code: error.code });
     if (error.code === 'ECONNREFUSED') {
       throw new Error('ML service is not running or not accessible');
     } else if (error.code === 'ETIMEDOUT') {
@@ -169,7 +176,7 @@ async function getMLPrediction(latitude, longitude, weatherData = null, historic
 
     return response.data;
   } catch (error) {
-    console.error('ML Service Error:', error.message);
+    logger.error('ML Service Error', { error: error.message, code: error.code });
     if (error.code === 'ECONNREFUSED') {
       throw new Error('ML service is not running or not accessible');
     } else if (error.code === 'ETIMEDOUT') {
@@ -211,7 +218,7 @@ async function getMLModel1Prediction(latitude, longitude, historicalData = null,
 
     return response.data;
   } catch (error) {
-    console.error('ML Service Model 1 Error:', error.message);
+    logger.error('ML Service Model 1 Error', { error: error.message, code: error.code });
     throw new Error('Model 1 prediction service unavailable');
   }
 }
@@ -236,7 +243,7 @@ async function getHistoricalData(latitude, longitude, daysBack = 30) {
 
     return response.data;
   } catch (error) {
-    console.error('ML Service Historical Data Error:', error.message);
+    logger.error('ML Service Historical Data Error', { error: error.message, code: error.code });
     throw new Error('Historical data service unavailable');
   }
 }
@@ -268,7 +275,7 @@ async function getCachedPrediction(cacheKey) {
     const cached = await redisClient.get(cacheKey);
     return cached ? JSON.parse(cached) : null;
   } catch (error) {
-    console.error('Redis get error:', error);
+    logger.error('Redis get error', { error: error.message, cacheKey });
     return null;
   }
 }
@@ -287,7 +294,7 @@ async function cachePrediction(cacheKey, prediction, ttl = 10800) {
   try {
     await redisClient.setEx(cacheKey, ttl, JSON.stringify(prediction));
   } catch (error) {
-    console.error('Redis set error:', error);
+    logger.error('Redis set error', { error: error.message, cacheKey });
   }
 }
 
@@ -326,11 +333,11 @@ async function predictCompanyThreeModels(req, res) {
 
     // Validate input
     if (!companyId) {
-      return res.status(400).json({ error: 'Company ID is required' });
+      return sendValidationError(res, ['Company ID is required']);
     }
 
     if (!companyLocationId) {
-      return res.status(400).json({ error: 'Company Location ID is required' });
+      return sendValidationError(res, ['Company Location ID is required']);
     }
 
     validateCoordinates(lat, lon);
@@ -341,7 +348,7 @@ async function predictCompanyThreeModels(req, res) {
     });
 
     if (!company) {
-      return res.status(404).json({ error: 'Company not found' });
+      return sendNotFoundError(res, 'Company');
     }
 
     // Verify company location exists and belongs to the company
@@ -354,7 +361,7 @@ async function predictCompanyThreeModels(req, res) {
     });
 
     if (!companyLocation) {
-      return res.status(404).json({ error: 'Company location not found or does not belong to the specified company' });
+      return sendNotFoundError(res, 'Company location');
     }
 
     // Get drone images for this location if imageIds are provided
@@ -389,7 +396,7 @@ async function predictCompanyThreeModels(req, res) {
     const mlResult = await getMLThreeModelPrediction(lat, lon, null, null, null, imageUrls);
     
     if (!mlResult.success) {
-      return res.status(500).json({ error: 'Three-model prediction failed' });
+      return sendErrorResponse(res, 500, 'Three-model prediction failed', 'PREDICTION_FAILED');
     }
 
     const prediction = mlResult.prediction;
@@ -428,7 +435,7 @@ async function predictCompanyThreeModels(req, res) {
         riskLevel: prediction.risk_level
       });
     } catch (notifError) {
-      console.error('Failed to send prediction notification:', notifError);
+      logger.error('Failed to send prediction notification', { error: notifError.message });
       // Don't fail the request if notification fails
     }
 
@@ -493,10 +500,8 @@ async function predictCompanyThreeModels(req, res) {
     });
 
   } catch (error) {
-    console.error('Three-model company prediction error:', error);
-    res.status(500).json({ 
-      error: error.message || 'Internal server error' 
-    });
+    logger.error('Three-model company prediction error', { error: error.message, stack: error.stack, companyId: req.body.companyId });
+    return sendInternalError(res, 'Three-model prediction failed', error);
   }
 }
 
@@ -509,11 +514,11 @@ async function detectBreedingAreas(req, res) {
     const { imageIds, companyId, companyLocationId } = req.body;
 
     if (!imageIds || imageIds.length === 0) {
-      return res.status(400).json({ error: 'Image IDs are required' });
+      return sendValidationError(res, ['Image IDs are required']);
     }
 
     if (!companyId) {
-      return res.status(400).json({ error: 'Company ID is required' });
+      return sendValidationError(res, ['Company ID is required']);
     }
 
     // Verify company exists
@@ -522,7 +527,7 @@ async function detectBreedingAreas(req, res) {
     });
 
     if (!company) {
-      return res.status(404).json({ error: 'Company not found' });
+      return sendNotFoundError(res, 'Company');
     }
 
     // Get images
@@ -541,7 +546,7 @@ async function detectBreedingAreas(req, res) {
     });
 
     if (images.length === 0) {
-      return res.status(404).json({ error: 'No images found for the specified criteria' });
+      return sendNotFoundError(res, 'Images');
     }
 
     // Convert relative URLs to absolute URLs (or use Firebase URLs as-is)
@@ -559,7 +564,7 @@ async function detectBreedingAreas(req, res) {
     const mlResult = await getMLBreedingAreaDetection(imageUrls);
     
     if (!mlResult.success) {
-      return res.status(500).json({ error: 'Breeding area detection failed' });
+      return sendErrorResponse(res, 500, 'Breeding area detection failed', 'DETECTION_FAILED');
     }
 
     // Store detection results in database
@@ -598,10 +603,8 @@ async function detectBreedingAreas(req, res) {
     });
 
   } catch (error) {
-    console.error('Breeding area detection error:', error);
-    res.status(500).json({ 
-      error: error.message || 'Internal server error' 
-    });
+    logger.error('Breeding area detection error', { error: error.message, stack: error.stack, companyId: req.body.companyId });
+    return sendInternalError(res, 'Breeding area detection failed', error);
   }
 }
 
@@ -615,11 +618,11 @@ async function predictCompany(req, res) {
 
     // Validate input
     if (!companyId) {
-      return res.status(400).json({ error: 'Company ID is required' });
+      return sendValidationError(res, ['Company ID is required']);
     }
 
     if (!companyLocationId) {
-      return res.status(400).json({ error: 'Company Location ID is required' });
+      return sendValidationError(res, ['Company Location ID is required']);
     }
 
     validateCoordinates(lat, lon);
@@ -630,7 +633,7 @@ async function predictCompany(req, res) {
     });
 
     if (!company) {
-      return res.status(404).json({ error: 'Company not found' });
+      return sendNotFoundError(res, 'Company');
     }
 
     // Verify company location exists and belongs to the company
@@ -643,14 +646,14 @@ async function predictCompany(req, res) {
     });
 
     if (!companyLocation) {
-      return res.status(404).json({ error: 'Company location not found or does not belong to the specified company' });
+      return sendNotFoundError(res, 'Company location');
     }
 
     // Get prediction from ML service
     const mlResult = await getMLPrediction(lat, lon);
     
     if (!mlResult.success) {
-      return res.status(500).json({ error: 'Prediction failed' });
+      return sendErrorResponse(res, 500, 'Prediction failed', 'PREDICTION_FAILED');
     }
 
     const prediction = mlResult.prediction;
@@ -687,7 +690,7 @@ async function predictCompany(req, res) {
         riskLevel: prediction.risk_level
       });
     } catch (notifError) {
-      console.error('Failed to send prediction notification:', notifError);
+      logger.error('Failed to send prediction notification', { error: notifError.message });
       // Don't fail the request if notification fails
     }
 
@@ -709,10 +712,8 @@ async function predictCompany(req, res) {
     });
 
   } catch (error) {
-    console.error('Company prediction error:', error);
-    res.status(500).json({ 
-      error: error.message || 'Internal server error' 
-    });
+    logger.error('Company prediction error', { error: error.message, stack: error.stack, companyId: req.body.companyId });
+    return sendInternalError(res, 'Company prediction failed', error);
   }
 }
 
@@ -736,7 +737,7 @@ async function predictPublic(req, res) {
       const mlResult = await getMLPrediction(lat, lon);
       
       if (!mlResult.success) {
-        return res.status(500).json({ error: 'Prediction failed' });
+        return sendErrorResponse(res, 500, 'Prediction failed', 'PREDICTION_FAILED');
       }
 
       prediction = {
@@ -767,7 +768,7 @@ async function predictPublic(req, res) {
         }
       });
     } catch (logError) {
-      console.error('Logging error:', logError);
+      logger.error('Logging error', { error: logError.message });
       // Don't fail the request if logging fails
     }
 
@@ -777,10 +778,8 @@ async function predictPublic(req, res) {
     });
 
   } catch (error) {
-    console.error('Public prediction error:', error);
-    res.status(500).json({ 
-      error: error.message || 'Internal server error' 
-    });
+    logger.error('Public prediction error', { error: error.message, stack: error.stack, lat: req.body.lat, lon: req.body.lon });
+    return sendInternalError(res, 'Public prediction failed', error);
   }
 }
 
@@ -799,7 +798,7 @@ async function getCompanyPredictions(req, res) {
     });
 
     if (!company) {
-      return res.status(404).json({ error: 'Company not found' });
+      return sendNotFoundError(res, 'Company');
     }
 
     // Build where clause
@@ -845,10 +844,8 @@ async function getCompanyPredictions(req, res) {
     });
 
   } catch (error) {
-    console.error('Get company predictions error:', error);
-    res.status(500).json({ 
-      error: error.message || 'Internal server error' 
-    });
+    logger.error('Get company predictions error', { error: error.message, stack: error.stack, companyId: req.params.companyId });
+    return sendInternalError(res, 'Failed to get company predictions', error);
   }
 }
 
@@ -868,9 +865,9 @@ async function predictPublicEnhanced(req, res) {
       // Use Model 1 with historical data
       const mlResult = await getMLModel1Prediction(lat, lon, historicalData, targetDate);
       
-      if (!mlResult.success) {
-        return res.status(500).json({ error: 'Model 1 prediction failed' });
-      }
+    if (!mlResult.success) {
+      return sendErrorResponse(res, 500, 'Model 1 prediction failed', 'PREDICTION_FAILED');
+    }
 
       prediction = {
         latitude: lat,
@@ -889,7 +886,7 @@ async function predictPublicEnhanced(req, res) {
       const mlResult = await getMLPrediction(lat, lon, null, historicalData, targetDate);
       
       if (!mlResult.success) {
-        return res.status(500).json({ error: 'Prediction failed' });
+        return sendErrorResponse(res, 500, 'Prediction failed', 'PREDICTION_FAILED');
       }
 
       prediction = {
@@ -936,12 +933,12 @@ async function predictPublicEnhanced(req, res) {
               riskLevel: prediction.riskLevel
             });
           } catch (notifError) {
-            console.error('Failed to send prediction notification:', notifError);
+            logger.error('Failed to send prediction notification', { error: notifError.message });
             // Don't fail the request if notification fails
           }
         }
       } catch (dbError) {
-        console.error('Error saving to CompanyPrediction:', dbError);
+        logger.error('Error saving to CompanyPrediction', { error: dbError.message });
         // Don't fail the request if database save fails
       }
     }
@@ -957,7 +954,7 @@ async function predictPublicEnhanced(req, res) {
         }
       });
     } catch (logError) {
-      console.error('Logging error:', logError);
+      logger.error('Logging error', { error: logError.message });
     }
 
     res.json({
@@ -970,10 +967,8 @@ async function predictPublicEnhanced(req, res) {
     });
 
   } catch (error) {
-    console.error('Enhanced public prediction error:', error);
-    res.status(500).json({ 
-      error: error.message || 'Internal server error' 
-    });
+    logger.error('Enhanced public prediction error', { error: error.message, stack: error.stack, lat: req.body.lat, lon: req.body.lon });
+    return sendInternalError(res, 'Enhanced prediction failed', error);
   }
 }
 
@@ -986,9 +981,7 @@ async function getHistoricalDataEndpoint(req, res) {
     const { lat, lon, days_back = 30 } = req.query;
 
     if (!lat || !lon) {
-      return res.status(400).json({ 
-        error: 'Latitude and longitude are required' 
-      });
+      return sendValidationError(res, ['Latitude and longitude are required']);
     }
 
     validateCoordinates(parseFloat(lat), parseFloat(lon));
@@ -1000,7 +993,7 @@ async function getHistoricalDataEndpoint(req, res) {
     );
 
     if (!result.success) {
-      return res.status(500).json({ error: 'Failed to get historical data' });
+      return sendErrorResponse(res, 500, 'Failed to get historical data', 'HISTORICAL_DATA_FAILED');
     }
 
     res.json({
@@ -1012,10 +1005,8 @@ async function getHistoricalDataEndpoint(req, res) {
     });
 
   } catch (error) {
-    console.error('Get historical data error:', error);
-    res.status(500).json({ 
-      error: error.message || 'Internal server error' 
-    });
+    logger.error('Get historical data error', { error: error.message, stack: error.stack, lat: req.query.lat, lon: req.query.lon });
+    return sendInternalError(res, 'Failed to get historical data', error);
   }
 }
 
@@ -1033,7 +1024,7 @@ async function getCompanyLocations(req, res) {
     });
 
     if (!company) {
-      return res.status(404).json({ error: 'Company not found' });
+      return sendNotFoundError(res, 'Company');
     }
 
     // Get active company locations
@@ -1060,10 +1051,8 @@ async function getCompanyLocations(req, res) {
     });
 
   } catch (error) {
-    console.error('Get company locations error:', error);
-    res.status(500).json({ 
-      error: error.message || 'Internal server error' 
-    });
+    logger.error('Get company locations error', { error: error.message, stack: error.stack, companyId: req.params.companyId });
+    return sendInternalError(res, 'Failed to get company locations', error);
   }
 }
 
@@ -1078,7 +1067,7 @@ async function predictBulkAllLocations(req, res) {
   res.setTimeout(EXTENDED_TIMEOUT);
   
   try {
-    console.log('[BULK PREDICTION] Starting bulk prediction for all company locations');
+    logger.info('[BULK PREDICTION] Starting bulk prediction for all company locations');
 
     // Get all active companies
     const companies = await prisma.company.findMany({
@@ -1090,12 +1079,10 @@ async function predictBulkAllLocations(req, res) {
     });
 
     if (companies.length === 0) {
-      return res.status(404).json({ 
-        error: 'No active companies found' 
-      });
+      return sendNotFoundError(res, 'Active companies');
     }
 
-    console.log(`[BULK PREDICTION] Found ${companies.length} active companies`);
+    logger.info('[BULK PREDICTION] Found active companies', { count: companies.length });
 
     const results = {
       totalCompanies: companies.length,
@@ -1126,11 +1113,14 @@ async function predictBulkAllLocations(req, res) {
         });
 
         if (locations.length === 0) {
-          console.log(`[BULK PREDICTION] No active locations with coordinates found for company ${company.name}`);
+          logger.debug('[BULK PREDICTION] No active locations with coordinates found for company', { companyName: company.name });
           continue;
         }
 
-        console.log(`[BULK PREDICTION] Processing ${locations.length} locations for company ${company.name}`);
+        logger.info('[BULK PREDICTION] Processing locations for company', { 
+          locationCount: locations.length, 
+          companyName: company.name 
+        });
 
         // Process each location
         for (const location of locations) {
@@ -1211,7 +1201,10 @@ async function predictBulkAllLocations(req, res) {
                 riskLevel: prediction.risk_level
               });
             } catch (notifError) {
-              console.error(`[BULK PREDICTION] Failed to send notification for ${location.name}:`, notifError);
+              logger.error('[BULK PREDICTION] Failed to send notification', { 
+                error: notifError.message, 
+                locationName: location.name 
+              });
               // Don't fail the prediction if notification fails
             }
 
@@ -1247,7 +1240,10 @@ async function predictBulkAllLocations(req, res) {
               longitude: location.longitude
             });
 
-            console.log(`[BULK PREDICTION] Successfully processed ${location.name} (${company.name})`);
+            logger.debug('[BULK PREDICTION] Successfully processed location', { 
+              locationName: location.name, 
+              companyName: company.name 
+            });
 
           } catch (locationError) {
             results.failed++;
@@ -1258,12 +1254,19 @@ async function predictBulkAllLocations(req, res) {
               locationName: location.name,
               error: locationError.message
             });
-            console.error(`[BULK PREDICTION] Error processing location ${location.name} (${company.name}):`, locationError);
+            logger.error('[BULK PREDICTION] Error processing location', { 
+              error: locationError.message, 
+              locationName: location.name, 
+              companyName: company.name 
+            });
           }
         }
 
       } catch (companyError) {
-        console.error(`[BULK PREDICTION] Error processing company ${company.name}:`, companyError);
+        logger.error('[BULK PREDICTION] Error processing company', { 
+          error: companyError.message, 
+          companyName: company.name 
+        });
         results.errors.push({
           companyId: company.id,
           companyName: company.name,
@@ -1272,7 +1275,10 @@ async function predictBulkAllLocations(req, res) {
       }
     }
 
-    console.log(`[BULK PREDICTION] Completed. Success: ${results.successful}, Failed: ${results.failed}`);
+    logger.info('[BULK PREDICTION] Completed', { 
+      successful: results.successful, 
+      failed: results.failed 
+    });
 
     res.json({
       success: true,
@@ -1291,11 +1297,8 @@ async function predictBulkAllLocations(req, res) {
     });
 
   } catch (error) {
-    console.error('[BULK PREDICTION] Fatal error:', error);
-    res.status(500).json({ 
-      error: error.message || 'Internal server error',
-      message: 'Bulk prediction failed'
-    });
+    logger.error('[BULK PREDICTION] Fatal error', { error: error.message, stack: error.stack });
+    return sendInternalError(res, 'Bulk prediction failed', error);
   }
 }
 
@@ -1311,7 +1314,7 @@ async function predictDailyUsers(req, res) {
   res.setTimeout(EXTENDED_TIMEOUT);
   
   try {
-    console.log('[DAILY PREDICTION API] Starting daily prediction for mobile users');
+    logger.info('[DAILY PREDICTION API] Starting daily prediction for mobile users');
 
     // Get all mobile users (role='user') with their company info
     const users = await prisma.user.findMany({
@@ -1327,7 +1330,7 @@ async function predictDailyUsers(req, res) {
       }
     });
 
-    console.log(`[DAILY PREDICTION API] Found ${users.length} users to process`);
+    logger.info('[DAILY PREDICTION API] Found users to process', { count: users.length });
 
     const results = {
       totalUsers: users.length,
@@ -1352,7 +1355,7 @@ async function predictDailyUsers(req, res) {
         });
 
         if (!lastPrediction) {
-          console.log(`[DAILY PREDICTION API] No location found for user ${user.id}, skipping`);
+          logger.debug('[DAILY PREDICTION API] No location found for user', { userId: user.id });
           results.skipped++;
           continue;
         }
@@ -1363,7 +1366,7 @@ async function predictDailyUsers(req, res) {
         const mlResult = await getMLPrediction(latitude, longitude);
         
         if (!mlResult.success || !mlResult.prediction) {
-          console.error(`[DAILY PREDICTION API] Prediction failed for user ${user.id}`);
+          logger.error('[DAILY PREDICTION API] Prediction failed for user', { userId: user.id });
           results.failed++;
           results.errors.push({
             userId: user.id,
@@ -1391,7 +1394,10 @@ async function predictDailyUsers(req, res) {
             longitude
           });
         } catch (notifError) {
-          console.error(`[DAILY PREDICTION API] Failed to send notification for user ${user.id}:`, notifError);
+          logger.error('[DAILY PREDICTION API] Failed to send notification for user', { 
+            error: notifError.message, 
+            userId: user.id 
+          });
           // Don't fail the prediction if notification fails
         }
 
@@ -1416,10 +1422,14 @@ async function predictDailyUsers(req, res) {
           riskLevel
         });
 
-        console.log(`[DAILY PREDICTION API] Successfully processed user ${user.id}`);
+        logger.debug('[DAILY PREDICTION API] Successfully processed user', { userId: user.id });
 
       } catch (userError) {
-        console.error(`[DAILY PREDICTION API] Error processing user ${user.id}:`, userError);
+        logger.error('[DAILY PREDICTION API] Error processing user', { 
+          error: userError.message, 
+          stack: userError.stack, 
+          userId: user.id 
+        });
         results.failed++;
         results.errors.push({
           userId: user.id,
@@ -1429,7 +1439,11 @@ async function predictDailyUsers(req, res) {
       }
     }
 
-    console.log(`[DAILY PREDICTION API] Completed. Success: ${results.successful}, Failed: ${results.failed}, Skipped: ${results.skipped}`);
+    logger.info('[DAILY PREDICTION API] Completed', { 
+      successful: results.successful, 
+      failed: results.failed, 
+      skipped: results.skipped 
+    });
 
     res.json({
       success: true,
@@ -1448,11 +1462,8 @@ async function predictDailyUsers(req, res) {
     });
 
   } catch (error) {
-    console.error('[DAILY PREDICTION API] Fatal error:', error);
-    res.status(500).json({ 
-      error: error.message || 'Internal server error',
-      message: 'Daily prediction failed'
-    });
+    logger.error('[DAILY PREDICTION API] Fatal error', { error: error.message, stack: error.stack });
+    return sendInternalError(res, 'Daily prediction failed', error);
   }
 }
 
@@ -1489,10 +1500,8 @@ async function healthCheck(req, res) {
     });
 
   } catch (error) {
-    console.error('Health check error:', error);
-    res.status(500).json({ 
-      error: 'Health check failed' 
-    });
+    logger.error('Health check error', { error: error.message, stack: error.stack });
+    return sendErrorResponse(res, 500, 'Health check failed', 'HEALTH_CHECK_FAILED');
   }
 }
 

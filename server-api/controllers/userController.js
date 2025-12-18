@@ -1,5 +1,13 @@
 const prisma = require('../prisma/client');
 const bcrypt = require('bcrypt');
+const logger = require('../utils/logger');
+const {
+  sendErrorResponse,
+  sendValidationError,
+  sendNotFoundError,
+  sendConflictError,
+  sendInternalError
+} = require('../utils/errorResponse');
 const SALT_ROUNDS = 10;
 
 // PATCH /users/:id
@@ -13,8 +21,8 @@ exports.updateProfile = async (req, res) => {
   });
 
   if (!name && !username && !email && !phone && !address && !role && !status) {
-    console.log('[UPDATE PROFILE] No required fields to update');
-    return res.status(400).json({ error: 'No fields to update.' });
+    logger.warn('[UPDATE PROFILE] No required fields to update', { userId });
+    return sendValidationError(res, ['At least one field must be provided for update']);
   }
 
   try {
@@ -37,9 +45,8 @@ exports.updateProfile = async (req, res) => {
     console.log('[UPDATE PROFILE] Update successful:', userWithoutPassword);
     res.json({ user: userWithoutPassword });
   } catch (err) {
-    console.error('[UPDATE PROFILE ERROR]', err);
-    console.log('[UPDATE PROFILE] Update failed for user:', userId);
-    res.status(500).json({ error: 'Failed to update profile.' });
+    logger.error('[UPDATE PROFILE ERROR]', { error: err.message, stack: err.stack, userId });
+    return sendInternalError(res, 'Failed to update profile', err);
   }
 };
 
@@ -65,12 +72,12 @@ exports.getUserById = async (req, res) => {
       },
     });
     if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
+      return sendNotFoundError(res, 'User');
     }
     res.json({ user });
   } catch (err) {
-    console.error('[GET USER ERROR]', err);
-    res.status(500).json({ error: 'Failed to fetch user.' });
+    logger.error('[GET USER ERROR]', { error: err.message, stack: err.stack, userId });
+    return sendInternalError(res, 'Failed to fetch user', err);
   }
 };    
 
@@ -82,7 +89,7 @@ exports.updatePassword = async (req, res) => {
   console.log('[UPDATE PASSWORD] Request received:', { userId, requestBody: { password: !!password } });
 
   if (!password || password.length < 6) {
-    return res.status(400).json({ error: 'Password is required and must be at least 6 characters.' });
+    return sendValidationError(res, ['Password is required and must be at least 6 characters']);
   }
 
   try {
@@ -98,8 +105,8 @@ exports.updatePassword = async (req, res) => {
     console.log('[UPDATE PASSWORD] Password updated for user:', userId);
     res.json({ message: 'Password updated successfully.' });
   } catch (err) {
-    console.error('[UPDATE PASSWORD ERROR]', err);
-    res.status(500).json({ error: 'Failed to update password.' });
+    logger.error('[UPDATE PASSWORD ERROR]', { error: err.message, stack: err.stack, userId });
+    return sendInternalError(res, 'Failed to update password', err);
   }
 };
 
@@ -167,8 +174,8 @@ exports.getAllUsers = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('[GET ALL USERS ERROR]', err);
-    res.status(500).json({ error: 'Failed to fetch users.' });
+    logger.error('[GET ALL USERS ERROR]', { error: err.message, stack: err.stack, companyId: req.companyId });
+    return sendInternalError(res, 'Failed to fetch users', err);
   }
 };
 
@@ -179,16 +186,20 @@ exports.createUser = async (req, res) => {
 
   // Validate required fields
   if (!email || !password || !name) {
-    console.log(`[CREATE USER ERROR] Missing required fields for ${email}`);
-    return res.status(400).json({ error: 'Email, password and name are required.' });
+    logger.warn('[CREATE USER ERROR] Missing required fields', { email });
+    const missingFields = [];
+    if (!email) missingFields.push('email');
+    if (!password) missingFields.push('password');
+    if (!name) missingFields.push('name');
+    return sendValidationError(res, [`Missing required fields: ${missingFields.join(', ')}`]);
   }
 
   try {
     // Check if email already exists
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      console.log(`[CREATE USER ERROR] Email already exists: ${email}`);
-      return res.status(409).json({ error: 'Email already registered.' });
+      logger.warn('[CREATE USER ERROR] Email already exists', { email });
+      return sendConflictError(res, 'Email already registered');
     }
 
     // Hash password
@@ -217,8 +228,8 @@ exports.createUser = async (req, res) => {
     res.status(201).json(userWithoutPassword);
 
   } catch (err) {
-    console.error('[CREATE USER ERROR]', err);
-    res.status(500).json({ error: 'Failed to create user.' });
+    logger.error('[CREATE USER ERROR]', { error: err.message, stack: err.stack, email });
+    return sendInternalError(res, 'Failed to create user', err);
   }
 };
 
@@ -235,8 +246,8 @@ exports.deleteUser = async (req, res) => {
     });
 
     if (!user) {
-      console.log('[DELETE USER] User not found:', userId);
-      return res.status(404).json({ error: 'User not found.' });
+      logger.warn('[DELETE USER] User not found', { userId });
+      return sendNotFoundError(res, 'User');
     }
 
     // Delete the user
@@ -248,8 +259,8 @@ exports.deleteUser = async (req, res) => {
     res.json({ message: 'User deleted successfully.' });
 
   } catch (err) {
-    console.error('[DELETE USER ERROR]', err);
-    res.status(500).json({ error: 'Failed to delete user.' });
+    logger.error('[DELETE USER ERROR]', { error: err.message, stack: err.stack, userId });
+    return sendInternalError(res, 'Failed to delete user', err);
   }
 };
 
@@ -263,8 +274,8 @@ exports.bulkDeleteUsers = async (req, res) => {
   console.log('[BULK DELETE USERS] Request received:', { ids });
 
   if (!Array.isArray(ids) || ids.length === 0) {
-    console.log('[BULK DELETE USERS] Invalid or empty ids array');
-    return res.status(400).json({ error: 'Please provide an array of user IDs.' });
+    logger.warn('[BULK DELETE USERS] Invalid or empty ids array');
+    return sendValidationError(res, ['Please provide a non-empty array of user IDs']);
   }
 
   try {
@@ -284,8 +295,8 @@ exports.bulkDeleteUsers = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('[BULK DELETE USERS ERROR]', err);
-    res.status(500).json({ error: 'Failed to delete users.' });
+    logger.error('[BULK DELETE USERS ERROR]', { error: err.message, stack: err.stack, ids });
+    return sendInternalError(res, 'Failed to delete users', err);
   }
 };
 
@@ -297,15 +308,15 @@ exports.updateUserPermission = async (req, res) => {
   console.log('[UPDATE USER PERMISSION] Request received:', { userId, role });
 
   if (!role) {
-    console.log('[UPDATE USER PERMISSION] Missing role in request body');
-    return res.status(400).json({ error: 'Role is required.' });
+    logger.warn('[UPDATE USER PERMISSION] Missing role in request body', { userId });
+    return sendValidationError(res, ['Role is required']);
   }
 
   // Validate role value
   const validRoles = ['admin', 'user'];
   if (!validRoles.includes(role)) {
-    console.log('[UPDATE USER PERMISSION] Invalid role value:', role);
-    return res.status(400).json({ error: 'Invalid role. Must be either "admin" or "user".' });
+    logger.warn('[UPDATE USER PERMISSION] Invalid role value', { userId, role });
+    return sendValidationError(res, [`Invalid role. Must be one of: ${validRoles.join(', ')}`]);
   }
 
   try {
@@ -326,8 +337,8 @@ exports.updateUserPermission = async (req, res) => {
     res.json({ user });
 
   } catch (err) {
-    console.error('[UPDATE USER PERMISSION ERROR]', err);
-    res.status(500).json({ error: 'Failed to update user permission.' });
+    logger.error('[UPDATE USER PERMISSION ERROR]', { error: err.message, stack: err.stack, userId });
+    return sendInternalError(res, 'Failed to update user permission', err);
   }
 };
 
@@ -371,8 +382,8 @@ exports.getUserSummary = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('[GET USER SUMMARY ERROR]', err);
-    res.status(500).json({ error: 'Failed to get user summary.' });
+    logger.error('[GET USER SUMMARY ERROR]', { error: err.message, stack: err.stack, companyId: req.companyId });
+    return sendInternalError(res, 'Failed to get user summary', err);
   }
 };
 
@@ -388,7 +399,7 @@ exports.adminUpdateUserStatus = async (req, res) => {
     });
 
     if (!existingUser) {
-      return res.status(404).json({ error: 'User not found.' });
+      return sendNotFoundError(res, 'User');
     }
 
     // Update user status
@@ -401,7 +412,7 @@ exports.adminUpdateUserStatus = async (req, res) => {
     res.json({ user: updatedUser });
 
   } catch (err) {
-    console.error('[UPDATE USER STATUS ERROR]', err);
-    res.status(500).json({ error: 'Failed to update user status.' });
+    logger.error('[UPDATE USER STATUS ERROR]', { error: err.message, stack: err.stack, userId: req.params.id });
+    return sendInternalError(res, 'Failed to update user status', err);
   }
 };

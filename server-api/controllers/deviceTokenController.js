@@ -1,5 +1,12 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const logger = require('../utils/logger');
+const {
+  sendErrorResponse,
+  sendValidationError,
+  sendUnauthorizedError,
+  sendInternalError
+} = require('../utils/errorResponse');
 
 /**
  * Register device token for push notifications
@@ -12,7 +19,7 @@ async function registerDevice(req, res) {
     const companyId = req.user?.companyId;
     const { pushToken, platform } = req.body;
 
-    console.log('[REGISTER DEVICE TOKEN] Request received:', {
+    logger.debug('[REGISTER DEVICE TOKEN] Request received', {
       userId,
       companyId,
       platform,
@@ -21,22 +28,19 @@ async function registerDevice(req, res) {
     });
 
     if (!pushToken) {
-      console.error('[REGISTER DEVICE TOKEN] Missing pushToken');
-      return res.status(400).json({ error: 'Push token is required' });
+      logger.warn('[REGISTER DEVICE TOKEN] Missing pushToken');
+      return sendValidationError(res, ['Push token is required']);
     }
 
     if (!platform || !['ios', 'android'].includes(platform)) {
-      console.error('[REGISTER DEVICE TOKEN] Invalid platform:', platform);
-      return res.status(400).json({ error: 'Valid platform (ios/android) is required' });
+      logger.warn('[REGISTER DEVICE TOKEN] Invalid platform', { platform });
+      return sendValidationError(res, ['Valid platform (ios/android) is required']);
     }
 
     // Ensure we have a user id from token
     if (!userId) {
-      console.error('[REGISTER DEVICE TOKEN] Missing userId from token:', {
-        user: req.user,
-        hasUser: !!req.user,
-      });
-      return res.status(401).json({ error: 'Unauthorized - userId not found in token' });
+      logger.warn('[REGISTER DEVICE TOKEN] Missing userId from token', { user: req.user, hasUser: !!req.user });
+      return sendUnauthorizedError(res, 'UserId not found in token');
     }
 
     // Check if token already exists for this user
@@ -49,7 +53,7 @@ async function registerDevice(req, res) {
 
     if (existingToken) {
       // Update existing token
-      console.log('[REGISTER DEVICE TOKEN] Updating existing token:', existingToken.id);
+      logger.debug('[REGISTER DEVICE TOKEN] Updating existing token', { tokenId: existingToken.id });
       const updated = await prisma.deviceToken.update({
         where: { id: existingToken.id },
         data: {
@@ -58,12 +62,12 @@ async function registerDevice(req, res) {
           updatedAt: new Date()
         }
       });
-      console.log('[REGISTER DEVICE TOKEN] Token updated successfully');
+      logger.debug('[REGISTER DEVICE TOKEN] Token updated successfully');
       return res.json({ success: true, deviceToken: updated });
     }
 
     // Create new device token
-    console.log('[REGISTER DEVICE TOKEN] Creating new device token');
+    logger.debug('[REGISTER DEVICE TOKEN] Creating new device token');
     const deviceToken = await prisma.deviceToken.create({
       data: {
         userId,
@@ -73,16 +77,16 @@ async function registerDevice(req, res) {
       }
     });
 
-    console.log('[REGISTER DEVICE TOKEN] Token created successfully:', deviceToken.id);
+    logger.debug('[REGISTER DEVICE TOKEN] Token created successfully', { tokenId: deviceToken.id });
     res.json({ success: true, deviceToken });
   } catch (error) {
-    console.error('[REGISTER DEVICE TOKEN ERROR]', {
+    logger.error('[REGISTER DEVICE TOKEN ERROR]', {
       error: error.message,
       stack: error.stack,
       userId: req.user?.userId,
       platform: req.body?.platform,
     });
-    res.status(500).json({ error: 'Failed to register device token', details: error.message });
+    return sendInternalError(res, 'Failed to register device token', error);
   }
 }
 
@@ -96,7 +100,7 @@ async function unregisterDevice(req, res) {
     const { pushToken } = req.body;
 
     if (!pushToken) {
-      return res.status(400).json({ error: 'Push token is required' });
+      return sendValidationError(res, ['Push token is required']);
     }
 
     // Deactivate or delete device token
@@ -116,8 +120,8 @@ async function unregisterDevice(req, res) {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('[UNREGISTER DEVICE TOKEN ERROR]', error);
-    res.status(500).json({ error: 'Failed to unregister device token' });
+    logger.error('[UNREGISTER DEVICE TOKEN ERROR]', { error: error.message, stack: error.stack, userId: req.user?.userId });
+    return sendInternalError(res, 'Failed to unregister device token', error);
   }
 }
 
@@ -138,8 +142,8 @@ async function getDeviceTokens(req, res) {
 
     res.json({ tokens });
   } catch (error) {
-    console.error('[GET DEVICE TOKENS ERROR]', error);
-    res.status(500).json({ error: 'Failed to get device tokens' });
+    logger.error('[GET DEVICE TOKENS ERROR]', { error: error.message, stack: error.stack, userId: req.user?.userId });
+    return sendInternalError(res, 'Failed to get device tokens', error);
   }
 }
 
