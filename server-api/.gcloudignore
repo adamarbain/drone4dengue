@@ -1,0 +1,9 @@
+.gcloudignore
+.git
+.gitignore
+node_modules/
+.env
+.env.local
+.env.prod
+uploads/
+# Do NOT ignore package-lock.json here

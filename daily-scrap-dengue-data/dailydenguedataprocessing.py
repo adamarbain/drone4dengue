@@ -138,63 +138,75 @@ def fetch_weather_data_simplified(latitude, longitude, timezone="Asia/Singapore"
 dengue_hotspot_csv = "dengue_hotspot.csv"
 active_dengue_csv = "active_dengue.csv"
 
+# 📌 Paths for server-ml/models
+server_ml_hotspot_csv = "../server-ml/models/dengue_hotspot.csv"
+server_ml_active_csv = "../server-ml/models/active_dengue.csv"
+
 # 📌 Step 2: Helper function to save DataFrame to CSV
-def save_to_csv(df, file_path):
+def save_to_csv(df, file_paths):
     if df is None or len(df) == 0:
         print("No data to save.")
         return
 
-    if os.path.exists(file_path):
-        # Read existing header to detect schema
-        try:
-            existing_columns = list(pd.read_csv(file_path, nrows=0).columns)
-        except Exception as e:
-            existing_columns = []
+    if isinstance(file_paths, str):
+        file_paths = [file_paths]
 
-        new_columns = list(df.columns)
+    for file_path in file_paths:
+        # Ensure directory exists for the file_path
+        if os.path.dirname(file_path):
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        
+        if os.path.exists(file_path):
+            # Read existing header to detect schema
+            try:
+                existing_columns = list(pd.read_csv(file_path, nrows=0).columns)
+            except Exception as e:
+                existing_columns = []
 
-        if existing_columns:
-            # If schema changed, rewrite file with unified columns
-            if existing_columns != new_columns:
-                combined_columns = existing_columns + [c for c in new_columns if c not in existing_columns]
+            new_columns = list(df.columns)
 
-                try:
-                    existing_df = pd.read_csv(file_path)
-                except Exception:
-                    existing_df = pd.DataFrame(columns=existing_columns)
+            if existing_columns:
+                # If schema changed, rewrite file with unified columns
+                if existing_columns != new_columns:
+                    combined_columns = existing_columns + [c for c in new_columns if c not in existing_columns]
 
-                existing_df = existing_df.reindex(columns=combined_columns)
-                df_to_save = df.reindex(columns=combined_columns)
-                combined_df = pd.concat([existing_df, df_to_save], ignore_index=True)
-                combined_df.to_csv(file_path, index=False, lineterminator='\n')
-                print(f"Schema updated and data merged into {file_path}")
+                    try:
+                        existing_df = pd.read_csv(file_path)
+                    except Exception:
+                        existing_df = pd.DataFrame(columns=existing_columns)
+
+                    existing_df = existing_df.reindex(columns=combined_columns)
+                    df_to_save = df.reindex(columns=combined_columns)
+                    combined_df = pd.concat([existing_df, df_to_save], ignore_index=True)
+                    combined_df.to_csv(file_path, index=False, lineterminator='\n')
+                    print(f"Schema updated and data merged into {file_path}")
+                else:
+                    # Ensure the existing file ends with a newline before appending
+                    try:
+                        needs_newline = False
+                        with open(file_path, "rb") as f:
+                            f.seek(0, os.SEEK_END)
+                            if f.tell() > 0:
+                                f.seek(-1, os.SEEK_END)
+                                last_char = f.read(1)
+                                if last_char not in (b"\n", b"\r"):
+                                    needs_newline = True
+                        if needs_newline:
+                            with open(file_path, "ab") as f:
+                                f.write(b"\n")
+                    except Exception:
+                        # If any issue occurs while checking, proceed with normal append
+                        pass
+
+                    df.to_csv(file_path, mode="a", header=False, index=False, lineterminator='\n')
+                    print(f"Data appended to {file_path}")
             else:
-                # Ensure the existing file ends with a newline before appending
-                try:
-                    needs_newline = False
-                    with open(file_path, "rb") as f:
-                        f.seek(0, os.SEEK_END)
-                        if f.tell() > 0:
-                            f.seek(-1, os.SEEK_END)
-                            last_char = f.read(1)
-                            if last_char not in (b"\n", b"\r"):
-                                needs_newline = True
-                    if needs_newline:
-                        with open(file_path, "ab") as f:
-                            f.write(b"\n")
-                except Exception:
-                    # If any issue occurs while checking, proceed with normal append
-                    pass
-
-                df.to_csv(file_path, mode="a", header=False, index=False, lineterminator='\n')
-                print(f"Data appended to {file_path}")
+                df.to_csv(file_path, index=False, lineterminator='\n')
+                print(f"Data saved to {file_path}")
         else:
+            # New file - write with header
             df.to_csv(file_path, index=False, lineterminator='\n')
             print(f"Data saved to {file_path}")
-    else:
-        # New file - write with header
-        df.to_csv(file_path, index=False, lineterminator='\n')
-        print(f"Data saved to {file_path}")
 
 
 def repair_csv_concatenations(file_path):
@@ -380,8 +392,8 @@ def process_api_2(response_json, x_target=101.653045, y_target=3.122496, toleran
 
     fig.show()
 
-    # Save to Google Drive
-    save_to_csv(df, dengue_hotspot_csv)
+    # Save to CSV files
+    save_to_csv(df, [dengue_hotspot_csv, server_ml_hotspot_csv])
 
     return df
 
@@ -475,8 +487,8 @@ def process_api_3(response_json, x_target=101.653045, y_target=3.122496, toleran
     # Drop the unwanted columns
     df = df.drop(columns=["attributes", "attributes_str"])
 
-    # Save to Google Drive
-    save_to_csv(df, active_dengue_csv)
+    # Save to CSV files
+    save_to_csv(df, [active_dengue_csv, server_ml_active_csv])
 
     return df
 
@@ -673,8 +685,8 @@ if __name__ == "__main__":
     print("Note: This process may take time due to weather API calls.")
     print("=" * 60)
     # Repair previous malformed lines (if any) before continuing
-    repair_csv_concatenations(dengue_hotspot_csv)
-    repair_csv_concatenations(active_dengue_csv)
+    for path in [dengue_hotspot_csv, active_dengue_csv, server_ml_hotspot_csv, server_ml_active_csv]:
+        repair_csv_concatenations(path)
     
     results = {}
     
@@ -697,5 +709,5 @@ if __name__ == "__main__":
     
     print(f"Total dengue hotspots found: {total_hotspots}")
     print(f"Total active outbreak areas found: {total_active_areas}")
-    print(f"Data saved to: {dengue_hotspot_csv} and {active_dengue_csv}")
+    print(f"Data saved to primary and server-ml locations")
     print("All data now includes weather information (humidity, temperature, rainfall)")
