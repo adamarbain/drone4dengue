@@ -44,16 +44,17 @@ class DenguePredictionService:
             models_dir (str): Directory containing the pickle models
         """
         # Auto-detect models directory
-        if not os.path.exists(models_dir) and os.path.exists("../daily-scrap-dengue-data"):
-            models_dir = "../daily-scrap-dengue-data"
-        elif not os.path.exists(models_dir) and os.path.exists("server-ml/models"):
-            models_dir = "server-ml/models"
+        if not os.path.exists(models_dir):
+            if os.path.exists("../daily-scrap-dengue-data"):
+                models_dir = "../daily-scrap-dengue-data"
+            elif os.path.exists("server-ml/models"):
+                models_dir = "server-ml/models"
             
         self.models_dir = models_dir
         
         # Validate that the models directory exists
         if not os.path.exists(self.models_dir):
-            raise Exception(f"Models directory not found: {self.models_dir}")
+            raise Exception(f"Models directory not found. Checked: {models_dir}, ../daily-scrap-dengue-data, server-ml/models")
         
         # Check for required files
         required_files = [
