@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setupNotificationListeners, initializePushNotifications, setBadgeCount } from '../utils/pushNotifications';
 import { getUnreadNotificationCount } from '../utils/userApi';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 export default function AppLayout() {
   const router = useRouter();
@@ -82,15 +83,17 @@ export default function AppLayout() {
   if (!isAuthChecked) return null; // Optionally show a splash/loading screen
 
   return (
-    <SafeAreaProvider>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          animation: 'fade',
-        }}
-      >
-        <Stack.Screen name="dashboard" />
-      </Stack>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: 'fade',
+          }}
+        >
+          <Stack.Screen name="dashboard" />
+        </Stack>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

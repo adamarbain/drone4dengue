@@ -1,6 +1,13 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { sendPushNotification, createNotification } = require('../services/notificationService');
+const logger = require('../utils/logger');
+const {
+  sendErrorResponse,
+  sendValidationError,
+  sendNotFoundError,
+  sendInternalError
+} = require('../utils/errorResponse');
 
 /**
  * Get notifications for a user
@@ -14,13 +21,13 @@ async function getNotifications(req, res) {
 
     // Validate required fields
     if (!companyId) {
-      console.error('[GET NOTIFICATIONS ERROR] Missing companyId. req.user:', req.user, 'req.companyId:', req.companyId);
-      return res.status(400).json({ error: 'Company ID is required' });
+      logger.warn('[GET NOTIFICATIONS ERROR] Missing companyId', { user: req.user, companyId: req.companyId });
+      return sendValidationError(res, ['Company ID is required']);
     }
 
     if (!userId) {
-      console.error('[GET NOTIFICATIONS ERROR] Missing userId. req.user:', req.user);
-      return res.status(400).json({ error: 'User ID is required' });
+      logger.warn('[GET NOTIFICATIONS ERROR] Missing userId', { user: req.user });
+      return sendValidationError(res, ['User ID is required']);
     }
 
     const where = {
@@ -57,8 +64,8 @@ async function getNotifications(req, res) {
       offset: parseInt(offset)
     });
   } catch (error) {
-    console.error('[GET NOTIFICATIONS ERROR]', error);
-    res.status(500).json({ error: 'Failed to fetch notifications' });
+    logger.error('[GET NOTIFICATIONS ERROR]', { error: error.message, stack: error.stack, userId, companyId });
+    return sendInternalError(res, 'Failed to fetch notifications', error);
   }
 }
 
@@ -85,7 +92,7 @@ async function markAsRead(req, res) {
     });
 
     if (!notification) {
-      return res.status(404).json({ error: 'Notification not found' });
+      return sendNotFoundError(res, 'Notification');
     }
 
     const updated = await prisma.notification.update({
@@ -98,8 +105,8 @@ async function markAsRead(req, res) {
 
     res.json(updated);
   } catch (error) {
-    console.error('[MARK NOTIFICATION READ ERROR]', error);
-    res.status(500).json({ error: 'Failed to mark notification as read' });
+    logger.error('[MARK NOTIFICATION READ ERROR]', { error: error.message, stack: error.stack, notificationId: req.params.id });
+    return sendInternalError(res, 'Failed to mark notification as read', error);
   }
 }
 
@@ -131,8 +138,8 @@ async function markAllAsRead(req, res) {
 
     res.json({ updated: result.count });
   } catch (error) {
-    console.error('[MARK ALL NOTIFICATIONS READ ERROR]', error);
-    res.status(500).json({ error: 'Failed to mark all notifications as read' });
+    logger.error('[MARK ALL NOTIFICATIONS READ ERROR]', { error: error.message, stack: error.stack, userId, companyId });
+    return sendInternalError(res, 'Failed to mark all notifications as read', error);
   }
 }
 
@@ -147,13 +154,13 @@ async function getUnreadCount(req, res) {
 
     // Validate required fields
     if (!companyId) {
-      console.error('[GET UNREAD COUNT ERROR] Missing companyId. req.user:', req.user, 'req.companyId:', req.companyId);
-      return res.status(400).json({ error: 'Company ID is required' });
+      logger.warn('[GET UNREAD COUNT ERROR] Missing companyId', { user: req.user, companyId: req.companyId });
+      return sendValidationError(res, ['Company ID is required']);
     }
 
     if (!userId) {
-      console.error('[GET UNREAD COUNT ERROR] Missing userId. req.user:', req.user);
-      return res.status(400).json({ error: 'User ID is required' });
+      logger.warn('[GET UNREAD COUNT ERROR] Missing userId', { user: req.user });
+      return sendValidationError(res, ['User ID is required']);
     }
 
     const where = {
@@ -165,17 +172,17 @@ async function getUnreadCount(req, res) {
       ]
     };
 
-    console.log('[GET UNREAD COUNT] Query params:', { userId, companyId });
-    console.log('[GET UNREAD COUNT] Where clause:', JSON.stringify(where, null, 2));
+    logger.debug('[GET UNREAD COUNT] Query params', { userId, companyId });
+    logger.debug('[GET UNREAD COUNT] Where clause', { where });
 
     const count = await prisma.notification.count({ where });
 
-    console.log('[GET UNREAD COUNT] Unread count:', count);
+    logger.debug('[GET UNREAD COUNT] Unread count', { count });
 
     res.json({ count });
   } catch (error) {
-    console.error('[GET UNREAD COUNT ERROR]', error);
-    res.status(500).json({ error: 'Failed to get unread count' });
+    logger.error('[GET UNREAD COUNT ERROR]', { error: error.message, stack: error.stack, userId, companyId });
+    return sendInternalError(res, 'Failed to get unread count', error);
   }
 }
 
@@ -202,7 +209,7 @@ async function deleteNotification(req, res) {
     });
 
     if (!notification) {
-      return res.status(404).json({ error: 'Notification not found' });
+      return sendNotFoundError(res, 'Notification');
     }
 
     await prisma.notification.delete({
@@ -211,8 +218,8 @@ async function deleteNotification(req, res) {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('[DELETE NOTIFICATION ERROR]', error);
-    res.status(500).json({ error: 'Failed to delete notification' });
+    logger.error('[DELETE NOTIFICATION ERROR]', { error: error.message, stack: error.stack, notificationId: req.params.id });
+    return sendInternalError(res, 'Failed to delete notification', error);
   }
 }
 
@@ -227,7 +234,7 @@ async function sendBroadcastNotification(req, res) {
 
     // Validate required fields
     if (!title || !message) {
-      return res.status(400).json({ error: 'Title and message are required' });
+      return sendValidationError(res, ['Title and message are required']);
     }
 
     // Get all active device tokens from all users
@@ -242,11 +249,7 @@ async function sendBroadcastNotification(req, res) {
     });
 
     if (deviceTokens.length === 0) {
-      return res.status(404).json({ 
-        error: 'No active device tokens found',
-        sent: 0,
-        total: 0
-      });
+      return sendErrorResponse(res, 404, 'No active device tokens found', 'NO_DEVICE_TOKENS', { sent: 0, total: 0 });
     }
 
     // Extract push tokens
@@ -295,7 +298,10 @@ async function sendBroadcastNotification(req, res) {
 
     await Promise.all(notificationPromises);
 
-    console.log(`[BROADCAST NOTIFICATION] Sent to ${pushTokens.length} device tokens across ${Object.keys(companyUserMap).length} companies`);
+    logger.info('[BROADCAST NOTIFICATION] Sent', { 
+      tokensSent: pushTokens.length, 
+      companies: Object.keys(companyUserMap).length 
+    });
 
     res.json({
       success: true,
@@ -305,8 +311,8 @@ async function sendBroadcastNotification(req, res) {
       message: `Broadcast notification sent to ${pushTokens.length} devices`
     });
   } catch (error) {
-    console.error('[BROADCAST NOTIFICATION ERROR]', error);
-    res.status(500).json({ error: 'Failed to send broadcast notification' });
+    logger.error('[BROADCAST NOTIFICATION ERROR]', { error: error.message, stack: error.stack });
+    return sendInternalError(res, 'Failed to send broadcast notification', error);
   }
 }
 

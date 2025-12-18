@@ -1,10 +1,15 @@
 const prisma = require('../prisma/client');
+const logger = require('../utils/logger');
+const {
+  sendValidationError,
+  sendInternalError
+} = require('../utils/errorResponse');
 
 // GET /recommendations/:risk
 exports.getRecommendationsByRisk = async (req, res) => {
   const { risk } = req.params;
   if (!['high', 'medium', 'low'].includes(risk)) {
-    return res.status(400).json({ error: 'Invalid risk level' });
+    return sendValidationError(res, ['Invalid risk level. Must be one of: high, medium, low']);
   }
   try {
     const recommendations = await prisma.recommendation.findMany({
@@ -16,6 +21,7 @@ exports.getRecommendationsByRisk = async (req, res) => {
     });
     res.json(recommendations);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch recommendations' });
+    logger.error('[GET RECOMMENDATIONS ERROR]', { error: err.message, stack: err.stack, risk, companyId: req.companyId });
+    return sendInternalError(res, 'Failed to fetch recommendations', err);
   }
 };

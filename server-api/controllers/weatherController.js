@@ -1,12 +1,19 @@
 const prisma = require('../prisma/client');
 const axios = require('axios');
+const logger = require('../utils/logger');
+const {
+  sendErrorResponse,
+  sendValidationError,
+  sendNotFoundError,
+  sendInternalError
+} = require('../utils/errorResponse');
 
 // GET /weather/data
 // List all weather records
 // Support filters: date range, location
 exports.listWeatherData = async (req, res) => {
     try {
-        console.log('[WEATHER] Fetching weather data', { query: req.query, companyId: req.companyId });
+        logger.debug('[WEATHER] Fetching weather data', { query: req.query, companyId: req.companyId });
         
         // Get company locations for the company
         const companyLocations = await prisma.companyLocation.findMany({
@@ -28,8 +35,8 @@ exports.listWeatherData = async (req, res) => {
         });
         res.status(200).json(weather);
     } catch (err) {
-        console.error('[WEATHER ERROR] Failed to fetch weather data:', err);
-        res.status(500).json({ error: 'Failed to fetch weather data.' });
+        logger.error('[WEATHER ERROR] Failed to fetch weather data', { error: err.message, stack: err.stack, companyId: req.companyId });
+        return sendInternalError(res, 'Failed to fetch weather data', err);
     }
 };
 
@@ -43,7 +50,7 @@ exports.listWeatherData = async (req, res) => {
 // }
 exports.getWeatherSummary = async (req, res) => {
     try {
-        console.log('[WEATHER] Fetching weather summary for company', req.companyId);
+        logger.debug('[WEATHER] Fetching weather summary for company', { companyId: req.companyId });
         
         // Get company locations for the company
         const companyLocations = await prisma.companyLocation.findMany({
@@ -66,8 +73,8 @@ exports.getWeatherSummary = async (req, res) => {
             totalRainfall: totalRain._sum.rainfall || 0,
         });
     } catch (err) {
-        console.error('[WEATHER ERROR] Failed to fetch weather summary:', err);
-        res.status(500).json({ error: 'Failed to fetch weather summary.' });
+        logger.error('[WEATHER ERROR] Failed to fetch weather summary', { error: err.message, stack: err.stack, companyId: req.companyId });
+        return sendInternalError(res, 'Failed to fetch weather summary', err);
     }
 };
 
@@ -76,8 +83,8 @@ exports.getWeatherSummary = async (req, res) => {
 exports.addManualWeatherRecord = async (req, res) => {
     const { date, temperature, humidity, rainfall, location, companyLocationId } = req.body;
     if (!date || temperature == null || humidity == null || rainfall == null || !location || !companyLocationId) {
-        console.log('[WEATHER ERROR] Missing required fields for manual weather record', req.body);
-        return res.status(400).json({ error: 'All fields (date, temperature, humidity, rainfall, location, companyLocationId) are required.' });
+        logger.warn('[WEATHER ERROR] Missing required fields for manual weather record', { body: req.body });
+        return sendValidationError(res, ['All fields (date, temperature, humidity, rainfall, location, companyLocationId) are required']);
     }
     
     // Verify the companyLocationId belongs to the company
@@ -89,7 +96,7 @@ exports.addManualWeatherRecord = async (req, res) => {
     });
     
     if (!companyLocation) {
-        return res.status(400).json({ error: 'Invalid company location ID or location does not belong to your company.' });
+        return sendValidationError(res, ['Invalid company location ID or location does not belong to your company']);
     }
     
     try {
@@ -106,8 +113,8 @@ exports.addManualWeatherRecord = async (req, res) => {
         console.log('[WEATHER] Added manual weather record for company', req.companyId, ':', weather);
         res.status(200).json(weather);
     } catch (err) {
-        console.error('[WEATHER ERROR] Failed to add manual weather record:', err);
-        res.status(500).json({ error: 'Failed to add manual weather record.' });
+        logger.error('[WEATHER ERROR] Failed to add manual weather record', { error: err.message, stack: err.stack, companyId: req.companyId });
+        return sendInternalError(res, 'Failed to add manual weather record', err);
     }
 };
 
@@ -117,8 +124,8 @@ exports.updateWeatherRecord = async (req, res) => {
     const { id } = req.params;
     const { date, temperature, humidity, rainfall, location, companyLocationId } = req.body;
     if (!id || !date || temperature == null || humidity == null || rainfall == null || !location || !companyLocationId) {
-        console.log('[WEATHER ERROR] Missing required fields for update', { id, ...req.body });
-        return res.status(400).json({ error: 'All fields (id, date, temperature, humidity, rainfall, location, companyLocationId) are required.' });
+        logger.warn('[WEATHER ERROR] Missing required fields for update', { id, body: req.body });
+        return sendValidationError(res, ['All fields (id, date, temperature, humidity, rainfall, location, companyLocationId) are required']);
     }
     
     // Verify the companyLocationId belongs to the company
@@ -130,7 +137,7 @@ exports.updateWeatherRecord = async (req, res) => {
     });
     
     if (!companyLocation) {
-        return res.status(400).json({ error: 'Invalid company location ID or location does not belong to your company.' });
+        return sendValidationError(res, ['Invalid company location ID or location does not belong to your company']);
     }
     
     try {
@@ -138,11 +145,11 @@ exports.updateWeatherRecord = async (req, res) => {
             where: { id },
             data: { date: new Date(date), temperature, humidity, rainfall, location, companyLocationId },
         });
-        console.log('[WEATHER] Updated weather record:', weather);
+        logger.debug('[WEATHER] Updated weather record', { weatherId: weather.id });
         res.status(200).json(weather);
     } catch (err) {
-        console.error('[WEATHER ERROR] Failed to update weather record:', err);
-        res.status(500).json({ error: 'Failed to update weather record.' });
+        logger.error('[WEATHER ERROR] Failed to update weather record', { error: err.message, stack: err.stack, weatherId: id });
+        return sendInternalError(res, 'Failed to update weather record', err);
     }
 };
 
@@ -151,18 +158,18 @@ exports.updateWeatherRecord = async (req, res) => {
 exports.deleteWeatherRecord = async (req, res) => {
     const { id } = req.params;
     if (!id) {
-        console.log('[WEATHER ERROR] Missing id for delete');
-        return res.status(400).json({ error: 'ID is required.' });
+        logger.warn('[WEATHER ERROR] Missing id for delete');
+        return sendValidationError(res, ['ID is required']);
     }
     try {
         await prisma.weather.delete({
             where: { id },
         });
-        console.log('[WEATHER] Deleted weather record:', id);
+        logger.debug('[WEATHER] Deleted weather record', { weatherId: id });
         res.json({ message: 'Deleted successfully' });
     } catch (err) {
-        console.error('[WEATHER ERROR] Failed to delete weather record:', err);
-        res.status(500).json({ error: 'Failed to delete weather record.' });
+        logger.error('[WEATHER ERROR] Failed to delete weather record', { error: err.message, stack: err.stack, weatherId: id });
+        return sendInternalError(res, 'Failed to delete weather record', err);
     }
 };
 
@@ -172,13 +179,13 @@ exports.deleteWeatherRecord = async (req, res) => {
 exports.uploadWeatherCSV = async (req, res) => {
     console.log(req.file)
     if (!req.file || !req.file.buffer) {
-        console.log('[WEATHER ERROR] No CSV file uploaded');
-        return res.status(400).json({ error: 'CSV file is required.' });
+        logger.warn('[WEATHER ERROR] No CSV file uploaded');
+        return sendValidationError(res, ['CSV file is required']);
     }
     
     const { companyLocationId } = req.body;
     if (!companyLocationId) {
-        return res.status(400).json({ error: 'companyLocationId is required.' });
+        return sendValidationError(res, ['companyLocationId is required']);
     }
     
     // Verify the companyLocationId belongs to the company
@@ -190,7 +197,7 @@ exports.uploadWeatherCSV = async (req, res) => {
     });
     
     if (!companyLocation) {
-        return res.status(400).json({ error: 'Invalid company location ID or location does not belong to your company.' });
+        return sendValidationError(res, ['Invalid company location ID or location does not belong to your company']);
     }
     
     try {
@@ -208,11 +215,11 @@ exports.uploadWeatherCSV = async (req, res) => {
             };
         });
         await prisma.weather.createMany({ data: weatherData, skipDuplicates: true });
-        console.log(`[WEATHER] Uploaded CSV with ${weatherData.length} records for company ${req.companyId}`);
+        logger.info('[WEATHER] Uploaded CSV', { records: weatherData.length, companyId: req.companyId });
         res.status(200).json({ message: `Uploaded ${weatherData.length} records.` });
     } catch (err) {
-        console.error('[WEATHER ERROR] Failed to upload CSV:', err);
-        res.status(500).json({ error: 'Failed to upload CSV.' });
+        logger.error('[WEATHER ERROR] Failed to upload CSV', { error: err.message, stack: err.stack, companyId: req.companyId });
+        return sendInternalError(res, 'Failed to upload CSV', err);
     }
 };
 
@@ -233,11 +240,11 @@ exports.exportWeatherData = async (req, res) => {
         const csv = convertToCSV(weather);
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader('Content-Disposition', 'attachment; filename="weather-data.csv"');
-        console.log(`[WEATHER] Exported ${weather.length} weather records as CSV for company ${req.companyId}`);
+        logger.info('[WEATHER] Exported weather records as CSV', { records: weather.length, companyId: req.companyId });
         res.status(200).send(csv);
     } catch (err) {
-        console.error('[WEATHER ERROR] Failed to export weather data:', err);
-        res.status(500).json({ error: 'Failed to export weather data.' });
+        logger.error('[WEATHER ERROR] Failed to export weather data', { error: err.message, stack: err.stack, companyId: req.companyId });
+        return sendInternalError(res, 'Failed to export weather data', err);
     }
 };
 
@@ -259,7 +266,7 @@ function convertToCSV(data) {
 exports.fetchAndStoreWeather = async (req, res) => {
     const { latitude, longitude, companyLocationId } = req.body;
     if (!latitude || !longitude || !companyLocationId) {
-        return res.status(400).json({ error: 'Latitude, longitude, and companyLocationId are required.' });
+        return sendValidationError(res, ['Latitude, longitude, and companyLocationId are required']);
     }
     
     // Verify the companyLocationId belongs to the company
@@ -271,7 +278,7 @@ exports.fetchAndStoreWeather = async (req, res) => {
     });
     
     if (!companyLocation) {
-        return res.status(400).json({ error: 'Invalid company location ID or location does not belong to your company.' });
+        return sendValidationError(res, ['Invalid company location ID or location does not belong to your company']);
     }
 
     // Calculate date range for the past week

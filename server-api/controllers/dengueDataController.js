@@ -6,6 +6,13 @@ const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const parse = require('csv-parse');
 const redis = require('redis');
+const logger = require('../utils/logger');
+const {
+  sendErrorResponse,
+  sendValidationError,
+  sendNotFoundError,
+  sendInternalError
+} = require('../utils/errorResponse');
 
 // Redis client configuration
 let redisClient = null;
@@ -33,22 +40,22 @@ try {
   }
 
   redisClient.on('error', (err) => {
-    console.error('Redis Client Error:', err);
+    logger.error('Redis Client Error', { error: err.message });
     redisConnected = false;
   });
 
   redisClient.on('connect', () => {
-    console.log('Connected to Redis');
+    logger.info('Connected to Redis');
     redisConnected = true;
   });
 
   // Connect to Redis (non-blocking)
   redisClient.connect().catch((err) => {
-    console.error('Redis connection failed:', err);
+    logger.error('Redis connection failed', { error: err.message });
     redisConnected = false;
   });
 } catch (error) {
-  console.error('Failed to create Redis client:', error);
+  logger.error('Failed to create Redis client', { error: error.message });
   redisConnected = false;
 }
 
@@ -96,10 +103,11 @@ async function getOne(req, res) {
   try {
     const { id } = req.params;
     const record = await prisma.dengueData.findUnique({ where: { id } });
-    if (!record) return res.status(404).json({ error: 'Not found' });
+    if (!record) return sendNotFoundError(res, 'Dengue data record');
     res.json(record);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    logger.error('[GET DENGUE DATA ERROR]', { error: err.message, stack: err.stack, recordId: req.params.id });
+    return sendInternalError(res, 'Failed to fetch dengue data record', err);
   }
 }
 
@@ -109,7 +117,7 @@ async function create(req, res) {
     const { companyLocationId, ...otherData } = req.body;
     
     if (!companyLocationId) {
-      return res.status(400).json({ error: 'companyLocationId is required.' });
+      return sendValidationError(res, ['companyLocationId is required']);
     }
     
     // Verify the companyLocationId belongs to the company
@@ -121,7 +129,7 @@ async function create(req, res) {
     });
     
     if (!companyLocation) {
-      return res.status(400).json({ error: 'Invalid company location ID or location does not belong to your company.' });
+      return sendValidationError(res, ['Invalid company location ID or location does not belong to your company']);
     }
     
     const data = { ...otherData, companyLocationId };
@@ -153,7 +161,8 @@ async function update(req, res) {
     const record = await prisma.dengueData.update({ where: { id }, data });
     res.json(record);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    logger.error('[UPDATE DENGUE DATA ERROR]', { error: err.message, stack: err.stack, recordId: req.params.id });
+    return sendInternalError(res, 'Failed to update dengue data record', err);
   }
 }
 
@@ -164,17 +173,18 @@ async function remove(req, res) {
     await prisma.dengueData.delete({ where: { id } });
     res.json({ success: true });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    logger.error('[DELETE DENGUE DATA ERROR]', { error: err.message, stack: err.stack, recordId: req.params.id });
+    return sendInternalError(res, 'Failed to delete dengue data record', err);
   }
 }
 
 // Upload CSV and import dengue data
 async function uploadCSV(req, res) {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  if (!req.file) return sendValidationError(res, ['No file uploaded']);
   
   const { companyLocationId } = req.body;
   if (!companyLocationId) {
-    return res.status(400).json({ error: 'companyLocationId is required.' });
+    return sendValidationError(res, ['companyLocationId is required']);
   }
   
   // Verify the companyLocationId belongs to the company
@@ -186,7 +196,7 @@ async function uploadCSV(req, res) {
   });
   
   if (!companyLocation) {
-    return res.status(400).json({ error: 'Invalid company location ID or location does not belong to your company.' });
+    return sendValidationError(res, ['Invalid company location ID or location does not belong to your company']);
   }
   
   const filePath = req.file.path;
@@ -220,7 +230,7 @@ async function uploadCSV(req, res) {
             companyId: req.companyId
           });
         } catch (notifError) {
-          console.error('Failed to send dengue case notification:', notifError);
+          logger.error('Failed to send dengue case notification', { error: notifError.message });
           // Don't fail the request if notification fails
         }
       } catch (err) {
@@ -231,7 +241,8 @@ async function uploadCSV(req, res) {
     res.json({ imported: results.length, errors });
   } catch (err) {
     fs.unlink(filePath, () => {});
-    res.status(500).json({ error: err.message });
+    logger.error('[UPLOAD CSV ERROR]', { error: err.message, stack: err.stack, companyId: req.companyId });
+    return sendInternalError(res, 'Failed to upload and import CSV', err);
   }
 }
 
@@ -278,7 +289,8 @@ async function getHistorical(req, res) {
     });
     res.json(Object.values(trends));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    logger.error('[GET HISTORICAL ERROR]', { error: err.message, stack: err.stack });
+    return sendInternalError(res, 'Failed to get historical trend data', err);
   }
 }
 
@@ -299,7 +311,8 @@ async function getMapData(req, res) {
     });
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    logger.error('[GET MAP DATA ERROR]', { error: err.message, stack: err.stack });
+    return sendInternalError(res, 'Failed to get map data', err);
   }
 }
 
@@ -407,8 +420,8 @@ async function exportData(req, res) {
     res.attachment('dengue_data_export.csv');
     res.send(csv);
   } catch (err) {
-    console.error('Export failed:', err);
-    res.status(500).json({ error: err.message });
+    logger.error('[EXPORT DATA ERROR]', { error: err.message, stack: err.stack, format: req.query.format });
+    return sendInternalError(res, 'Failed to export data', err);
   }
 }
 
@@ -425,8 +438,8 @@ async function getLocations(req, res) {
     
     res.json(uniqueLocations);
   } catch (err) {
-    console.error('Error fetching locations:', err);
-    res.status(500).json({ error: err.message });
+    logger.error('[GET LOCATIONS ERROR]', { error: err.message, stack: err.stack });
+    return sendInternalError(res, 'Failed to fetch locations', err);
   }
 }
 
@@ -564,7 +577,8 @@ async function generateReport(req, res) {
       }
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    logger.error('[GENERATE REPORT ERROR]', { error: err.message, stack: err.stack, query: req.query });
+    return sendInternalError(res, 'Failed to generate report', err);
   }
 }
 
@@ -597,7 +611,7 @@ async function getCachedNearbyCases(cacheKey) {
     const cached = await redisClient.get(cacheKey);
     return cached ? JSON.parse(cached) : null;
   } catch (error) {
-    console.error('Redis get error:', error);
+    logger.error('Redis get error', { error: error.message });
     return null;
   }
 }
@@ -616,7 +630,7 @@ async function cacheNearbyCases(cacheKey, data, ttl = 3600) {
   try {
     await redisClient.setEx(cacheKey, ttl, JSON.stringify(data));
   } catch (error) {
-    console.error('Redis set error:', error);
+    logger.error('Redis set error', { error: error.message });
   }
 }
 
@@ -669,7 +683,7 @@ async function getNearbyCases(req, res) {
     const tol = tolerance ? parseFloat(tolerance) : 0.018;
     
     if (isNaN(lat) || isNaN(lon) || isNaN(tol)) {
-      return res.status(400).json({ error: 'Invalid latitude, longitude, or tolerance values' });
+      return sendValidationError(res, ['Invalid latitude, longitude, or tolerance values']);
     }
     
     // Generate cache key
@@ -772,8 +786,8 @@ async function getNearbyCases(req, res) {
     
     res.json(result);
   } catch (err) {
-    console.error('Error fetching nearby cases:', err);
-    res.status(500).json({ error: err.message || 'Failed to fetch nearby dengue cases' });
+    logger.error('[GET NEARBY CASES ERROR]', { error: err.message, stack: err.stack, latitude, longitude });
+    return sendInternalError(res, 'Failed to fetch nearby dengue cases', err);
   }
 }
 
