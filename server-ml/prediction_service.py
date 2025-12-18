@@ -36,13 +36,19 @@ class DenguePredictionService:
     Service class for dengue risk prediction using pre-trained models
     """
     
-    def __init__(self, models_dir: str = "../daily-scrap-dengue-data"):
+    def __init__(self, models_dir: str = "models"):
         """
         Initialize the prediction service
         
         Args:
             models_dir (str): Directory containing the pickle models
         """
+        # Auto-detect models directory
+        if not os.path.exists(models_dir) and os.path.exists("../daily-scrap-dengue-data"):
+            models_dir = "../daily-scrap-dengue-data"
+        elif not os.path.exists(models_dir) and os.path.exists("server-ml/models"):
+            models_dir = "server-ml/models"
+            
         self.models_dir = models_dir
         
         # Validate that the models directory exists

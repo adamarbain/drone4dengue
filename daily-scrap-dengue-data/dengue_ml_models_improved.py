@@ -11,6 +11,7 @@ Date: 2025
 
 import pandas as pd
 import numpy as np
+import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.model_selection import train_test_split, cross_val_score, TimeSeriesSplit
@@ -635,26 +636,40 @@ class ImprovedDengueMLModels:
     
     def save_models(self):
         """
-        Save trained models and scalers
+        Save trained models and scalers to the server-ml/models directory
         """
+        # Define the target directory relative to this script
+        # This script is in daily-scrap-dengue-data/
+        # Target is in server-ml/models/
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        target_dir = os.path.join(script_dir, "..", "server-ml", "models")
+        
+        # Ensure the target directory exists
+        os.makedirs(target_dir, exist_ok=True)
+
         if self.model1 is not None:
-            joblib.dump(self.model1, 'model1_historical_cases_improved.pkl')
-            joblib.dump(self.scaler1, 'scaler1_historical_cases_improved.pkl')
-            print("Model 1 and scaler saved successfully!")
+            model1_path = os.path.join(target_dir, 'model1_historical_cases_improved.pkl')
+            scaler1_path = os.path.join(target_dir, 'scaler1_historical_cases_improved.pkl')
+            joblib.dump(self.model1, model1_path)
+            joblib.dump(self.scaler1, scaler1_path)
+            print(f"Model 1 and scaler saved successfully to {target_dir}!")
         
         if self.model2 is not None:
-            joblib.dump(self.model2, 'model2_weather_based_improved.pkl')
-            joblib.dump(self.scaler2, 'scaler2_weather_based_improved.pkl')
-            print("Model 2 and scaler saved successfully!")
+            model2_path = os.path.join(target_dir, 'model2_weather_based_improved.pkl')
+            scaler2_path = os.path.join(target_dir, 'scaler2_weather_based_improved.pkl')
+            joblib.dump(self.model2, model2_path)
+            joblib.dump(self.scaler2, scaler2_path)
+            print(f"Model 2 and scaler saved successfully to {target_dir}!")
         
         # Save feature names
         import json
-        with open('model_features_improved.json', 'w') as f:
+        features_path = os.path.join(target_dir, 'model_features_improved.json')
+        with open(features_path, 'w') as f:
             json.dump({
                 'model1_features': self.model1_feature_names,
                 'model2_features': self.model2_feature_names
             }, f)
-        print("Feature names saved successfully!")
+        print(f"Feature names saved successfully to {target_dir}!")
     
     def test_historical_features(self):
         """
