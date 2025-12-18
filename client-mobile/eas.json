@@ -14,13 +14,13 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://drone4dengue-backend.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://server-api-772509861122.us-central1.run.app"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://drone4dengue-backend.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://server-api-772509861122.us-central1.run.app"
       }
     }
   },

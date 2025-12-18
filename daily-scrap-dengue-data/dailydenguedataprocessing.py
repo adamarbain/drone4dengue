@@ -248,10 +248,6 @@ def repair_csv_concatenations(file_path):
     except Exception as e:
         print(f"Failed to repair {file_path}: {e}")
 
-"""API 1 : Fetch UM Location from Idengue.com"""
-
-um_location_url = "https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?SingleLine=Universiti%20Malaya%2C%20Kuala%20Lumpur%2C%20Wilayah%20Persekutuan%20Kuala%20Lumpur%2C%20MYS&f=json&outSR=%7B%22wkid%22%3A102100%7D&outFields=*&magicKey=dHA9MCN0dj00Yjg3MGE5MSNsb2M9Njc4NTA0MTEjbG5nPTExMiNwbD04NTk4Mjk0MCNsYnM9MTQ6NzM1MzMxODMjbG49V29ybGQ%3D&maxLocations=6"
-
 """API 2 : List of Hotspot"""
 
 hotspot_location_url = "https://sppk.mysa.gov.my/proxy/proxy.php?https://mygis.mysa.gov.my/erica1/rest/services/iDengue/WM_idengue/MapServer/0/query?f=json&where=1%3D1&returnGeometry=true&spatialRel=esriSpatialRelIntersects&outFields=SPWD.AVT_HOTSPOTMINGGUAN.KUMULATIF_KES%2CSPWD.AVT_HOTSPOTMINGGUAN.TEMPOH_WABAK%2CSPWD.AVT_HOTSPOTMINGGUAN.NEGERI%2CSPWD.AVT_HOTSPOTMINGGUAN.DAERAH%2CSPWD.DBO_LOKALITI_POINTS.LOKALITI"
@@ -262,11 +258,10 @@ active_area_url = "https://sppk.mysa.gov.my/proxy/proxy.php?https://mygis.mysa.g
 
 """Defining API Endpoint"""
 
-# Define API endpoints
+# Define API endpoints (only hotspot and active area; UM location removed)
 API_ENDPOINTS = {
-    "um_location": um_location_url,
-    "hotspot_location_url" : hotspot_location_url,
-    "active_area_url" : active_area_url,
+    "hotspot_location_url": hotspot_location_url,
+    "active_area_url": active_area_url,
 }
 print(API_ENDPOINTS)
 
@@ -277,52 +272,11 @@ malaysia_tz = pytz.timezone("Asia/Kuala_Lumpur")
 
 """Define functions for processing different API responses"""
 
-def process_api_1(response_json):
-    """Process and visualize data for API 1 with interactive hover tooltips."""
-    candidates = response_json.get("candidates", [])
-
-    data = [
-        {
-            "X": c["attributes"].get("X"),
-            "Y": c["attributes"].get("Y"),
-            "attributes": c["attributes"],
-            "location": c["attributes"].get("LongLabel"),
-        }
-        for c in candidates
-    ]
-
-    if not data:
-        print("No data available for API 1.")
-        return None
-
-    df = pd.DataFrame(data)
-
-    print(f"API 1: Found {len(df)} locations.")
-    for idx, row in df.iterrows():
-        print(f"Location {idx + 1}: Location -> {row['location']}")
-
-    # Convert attributes dict to string for display
-    df["attributes_str"] = df["attributes"].astype(str)
-
-    # Create interactive scatter plot with hover tooltip
-    fig = px.scatter(
-        df,
-        x="X",
-        y="Y",
-        labels={"X": "Longitude", "Y": "Latitude"},
-        title="API 1 - UM Location",
-        color_discrete_sequence=["blue"]
-    )
-
-    fig.show()
-
-    return df
-
-def process_api_2(response_json, x_target=101.653045, y_target=3.122496, tolerance=0.045):
-    """Process and visualize data for API 2 with interactive hover tooltips and weather data."""
+def process_api_2(response_json):
+    """Process and visualize data for API 2 with interactive hover tooltips and weather data for all hotspots."""
     features = response_json.get("features", [])
 
-    filtered_data = []
+    filtered_data = []  # collect all hotspots (no radius filter)
     current_date = datetime.now(malaysia_tz).strftime('%d/%m/%Y')  # Malaysia Time
 
     for feature in features:
@@ -332,40 +286,37 @@ def process_api_2(response_json, x_target=101.653045, y_target=3.122496, toleran
         days_duration = attr.get("SPWD.AVT_HOTSPOTMINGGUAN.TEMPOH_WABAK", 0)
         total_cases = attr.get("SPWD.AVT_HOTSPOTMINGGUAN.KUMULATIF_KES", 0)
 
-        if (x_target - tolerance <= feature["geometry"]["x"] <= x_target + tolerance) and \
-           (y_target - tolerance <= feature["geometry"]["y"] <= y_target + tolerance):
-            
-            # Fetch current weather data for this location
-            print(f"Fetching current weather data for hotspot: {area}")
-            weather_data = fetch_weather_data(feature["geometry"]["y"], feature["geometry"]["x"], current_date)
-            
-            # Ensure weather data has valid values
-            if weather_data is None:
-                weather_data = {'humidity': None, 'temperature': None, 'rainfall': None}
-            
-            filtered_data.append({
-                "x": feature["geometry"]["x"],
-                "y": feature["geometry"]["y"],
-                "date": current_date,
-                "area": area,
-                "state": state,
-                "days_duration": days_duration,
-                "total_active_cases": total_cases,
-                "humidity": weather_data.get('humidity'),
-                "temperature": weather_data.get('temperature'),
-                "rainfall": weather_data.get('rainfall')
-            })
-            
-            # Add delay to avoid rate limiting
-            time.sleep(1)
+        # Fetch current weather data for this location
+        print(f"Fetching current weather data for hotspot: {area}")
+        weather_data = fetch_weather_data(feature["geometry"]["y"], feature["geometry"]["x"], current_date)
+        
+        # Ensure weather data has valid values
+        if weather_data is None:
+            weather_data = {'humidity': None, 'temperature': None, 'rainfall': None}
+        
+        filtered_data.append({
+            "x": feature["geometry"]["x"],
+            "y": feature["geometry"]["y"],
+            "date": current_date,
+            "area": area,
+            "state": state,
+            "days_duration": days_duration,
+            "total_active_cases": total_cases,
+            "humidity": weather_data.get('humidity'),
+            "temperature": weather_data.get('temperature'),
+            "rainfall": weather_data.get('rainfall')
+        })
+        
+        # Add delay to avoid rate limiting
+        time.sleep(1)
 
     if not filtered_data:
-        print("No matching data found within the specified range.")
+        print("No hotspot data found in API 2 response.")
         return None
 
     df = pd.DataFrame(filtered_data)
 
-    print(f"API 2: Found {len(df)} dengue hotspot locations.")
+    print(f"API 2: Found {len(df)} dengue hotspot locations (all records).")
     for idx, row in df.iterrows():
         print(f"Hotspot {idx + 1}: Area -> {row['area']}, Cases -> {row['total_active_cases']}")
         print(f"  Weather: Humidity={row['humidity']:.2f}%, Temp={row['temperature']:.2f}°C, Rain={row['rainfall']:.2f}mm")
@@ -377,17 +328,8 @@ def process_api_2(response_json, x_target=101.653045, y_target=3.122496, toleran
         y="y",
         hover_data=["area", "total_active_cases", "humidity", "temperature", "rainfall"],
         labels={"x": "Longitude", "y": "Latitude"},
-        title="API 2 - Dengue Hotspots (5KM Radius) with Weather Data",
+        title="API 2 - Dengue Hotspots with Weather Data",
         color_discrete_sequence=["red"]
-    )
-
-    # Add target location as a marker
-    fig.add_scatter(
-        x=[x_target],
-        y=[y_target],
-        mode="markers",
-        marker=dict(size=10, color="black", symbol="x"),
-        name="Target Location"
     )
 
     fig.show()
@@ -403,8 +345,8 @@ def calculate_centroid(rings):
     all_y = [point[1] for ring in rings for point in ring]
     return np.mean(all_x), np.mean(all_y)
 
-def process_api_3(response_json, x_target=101.653045, y_target=3.122496, tolerance=0.045):
-    """Process and visualize data for API 3, filtering based on polygon centroid with weather data."""
+def process_api_3(response_json):
+    """Process and visualize data for API 3, using all polygon centroids with weather data."""
     features = response_json.get("features", [])
 
     filtered_data = []
@@ -423,39 +365,37 @@ def process_api_3(response_json, x_target=101.653045, y_target=3.122496, toleran
         state = attributes.get("SPWD.AVT_WABAK_IDENGUE_NODM.NEGERI", "null")
         total_cases = attributes.get("SPWD.AVT_WABAK_IDENGUE_NODM.TOTAL_KES", 0)
 
-        if (x_target - tolerance <= centroid_x <= x_target + tolerance) and (y_target - tolerance <= centroid_y <= y_target + tolerance):
-            
-            # Fetch current weather data for this location
-            print(f"Fetching current weather data for active area: {location}")
-            weather_data = fetch_weather_data(centroid_y, centroid_x, current_date)
-            
-            # Ensure weather data has valid values
-            if weather_data is None:
-                weather_data = {'humidity': None, 'temperature': None, 'rainfall': None}
-            
-            filtered_data.append({
-                "attributes": feature["attributes"],
-                "centroid_x": centroid_x,
-                "centroid_y": centroid_y,
-                "date": current_date,
-                "location": location,
-                "state": state,
-                "total_active_cases": total_cases,
-                "humidity": weather_data.get('humidity'),
-                "temperature": weather_data.get('temperature'),
-                "rainfall": weather_data.get('rainfall')
-            })
-            
-            # Add delay to avoid rate limiting
-            time.sleep(1)
+        # Fetch current weather data for this location
+        print(f"Fetching current weather data for active area: {location}")
+        weather_data = fetch_weather_data(centroid_y, centroid_x, current_date)
+        
+        # Ensure weather data has valid values
+        if weather_data is None:
+            weather_data = {'humidity': None, 'temperature': None, 'rainfall': None}
+        
+        filtered_data.append({
+            "attributes": feature["attributes"],
+            "centroid_x": centroid_x,
+            "centroid_y": centroid_y,
+            "date": current_date,
+            "location": location,
+            "state": state,
+            "total_active_cases": total_cases,
+            "humidity": weather_data.get('humidity'),
+            "temperature": weather_data.get('temperature'),
+            "rainfall": weather_data.get('rainfall')
+        })
+        
+        # Add delay to avoid rate limiting
+        time.sleep(1)
 
     if not filtered_data:
-        print("No matching data found within the specified range.")
+        print("No active area data found in API 3 response.")
         return None
 
     df = pd.DataFrame(filtered_data)
 
-    print(f"API 3: Found {len(df)} active area centroids.")
+    print(f"API 3: Found {len(df)} active area centroids (all records).")
     for idx, row in df.iterrows():
         print(f"Centroid {idx + 1}: Location: {row['location']}, Total Cases: {row['total_active_cases']}")
         print(f"  Weather: Humidity={row['humidity']:.2f}%, Temp={row['temperature']:.2f}°C, Rain={row['rainfall']:.2f}mm")
@@ -470,16 +410,7 @@ def process_api_3(response_json, x_target=101.653045, y_target=3.122496, toleran
         y="centroid_y",
         hover_data=["location", "state", "total_active_cases", "humidity", "temperature", "rainfall"],
         labels={"centroid_x": "Longitude", "centroid_y": "Latitude"},
-        title="API 3 - Active Area Centroids (5KM Radius) with Weather Data"
-    )
-
-    # Add target location as a marker
-    fig.add_scatter(
-        x=[x_target],
-        y=[y_target],
-        mode="markers",
-        marker=dict(size=10, color="black", symbol="x"),
-        name="Target Location"
+        title="API 3 - Active Area Centroids with Weather Data"
     )
 
     fig.show()
@@ -495,7 +426,6 @@ def process_api_3(response_json, x_target=101.653045, y_target=3.122496, toleran
 """Mapping APIs to their respective processing functions"""
 
 PROCESSING_FUNCTIONS = {
-    "um_location": process_api_1,
     "hotspot_location_url": process_api_2,
     "active_area_url": process_api_3
 }
