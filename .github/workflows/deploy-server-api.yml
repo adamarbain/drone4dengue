@@ -1,0 +1,64 @@
+name: Deploy Server API to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'server-api/**'
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  SERVICE_NAME: server-api
+  IMAGE_NAME: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/drone-images/server-api
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Google Auth
+        id: auth
+        uses: 'google-github-actions/auth@v1'
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Build and Push Container
+        run: |
+          cd server-api
+          gcloud builds submit --tag ${{ env.IMAGE_NAME }} .
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image ${{ env.IMAGE_NAME }} \
+            --platform managed \
+            --region ${{ env.REGION }} \
+            --allow-unauthenticated \
+            --memory 1Gi \
+            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
+            --set-env-vars "REDIS_HOST=${{ secrets.REDIS_HOST }}" \
+            --set-env-vars "REDIS_PORT=${{ secrets.REDIS_PORT }}" \
+            --set-env-vars "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" \
+            --set-env-vars "REDIS_USERNAME=${{ secrets.REDIS_USERNAME }}" \
+            --set-env-vars "ML_SERVICE_URL=${{ secrets.ML_SERVICE_URL }}" \
+            --set-env-vars "FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" \
+            --set-env-vars "FIREBASE_CLIENT_EMAIL=${{ secrets.FIREBASE_CLIENT_EMAIL }}" \
+            --set-env-vars "FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}" \
+            --set-env-vars "FIREBASE_PRIVATE_KEY_BASE64=${{ secrets.FIREBASE_PRIVATE_KEY_BASE64 }}" \
+            --set-env-vars "SENDER_EMAIL=${{ secrets.SENDER_EMAIL }}" \
+            --set-env-vars "SENDER_EMAIL_PW=${{ secrets.SENDER_EMAIL_PW }}" \
+            --set-env-vars "TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID }}" \
+            --set-env-vars "TWILIO_AUTH_TOKEN=${{ secrets.TWILIO_AUTH_TOKEN }}" \
+            --set-env-vars "TWILIO_PHONE_NUMBER=${{ secrets.TWILIO_PHONE_NUMBER }}" \
+            --set-env-vars "PORT=8080"
+
