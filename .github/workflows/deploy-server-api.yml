@@ -60,5 +60,7 @@ jobs:
             --set-env-vars "TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID }}" \
             --set-env-vars "TWILIO_AUTH_TOKEN=${{ secrets.TWILIO_AUTH_TOKEN }}" \
             --set-env-vars "TWILIO_PHONE_NUMBER=${{ secrets.TWILIO_PHONE_NUMBER }}" \
-            --set-env-vars "PORT=8080"
+            --set-env-vars "NODE_ENV=production" \
+            --set-env-vars "API_BASE_URL=${{ secrets.API_BASE_URL }}" \
+            --set-env-vars "SENTRY_DSN=${{ secrets.SENTRY_DSN }}"
 
