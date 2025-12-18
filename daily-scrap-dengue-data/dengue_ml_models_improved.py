@@ -573,6 +573,15 @@ class ImprovedDengueMLModels:
         X2 = self.df[model2_features].copy()
         y2 = self.df[self.target_column].copy()
         
+        # Handle missing values in Model 2 features to avoid NaN issues for some regressors
+        if X2.isnull().any().any():
+            print("\nMissing values detected in Model 2 features. Imputing with median values...")
+            missing_before = X2.isnull().sum()
+            print("Missing values per feature before imputation:")
+            print(missing_before[missing_before > 0])
+            X2 = X2.fillna(X2.median(numeric_only=True))
+            print(f"Total missing values after imputation: {int(X2.isnull().sum().sum())}")
+        
         print(f"Model 2 training data: {X2.shape[0]} samples, {X2.shape[1]} features")
         
         # Split data
