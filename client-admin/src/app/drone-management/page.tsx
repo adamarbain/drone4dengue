@@ -14,6 +14,7 @@ import {
   FiEye,
   FiChevronRight,
   FiPlus,
+  FiFilter,
   FiDownload,
   FiMap,
   FiX,
@@ -25,7 +26,7 @@ import {
   FiAlertCircle,
 } from "react-icons/fi"
 import Image from "next/image"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { useState, useEffect } from "react"
 import type { JSX } from "react"
 import { useAuth } from "@/context/AuthContext"
@@ -76,19 +77,64 @@ const item = {
   show: { opacity: 1, y: 0 },
 }
 
+const modalVariants = {
+  hidden: {
+    opacity: 0,
+    scale: 0.8,
+    y: 50,
+  },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      stiffness: 300,
+      damping: 30,
+    },
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.8,
+    y: 50,
+    transition: {
+      duration: 0.2,
+    },
+  },
+}
+
+const overlayVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+  exit: { opacity: 0 },
+}
+
 export default function DroneManagementPage() {
   const { companyId } = useAuth()
   const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("All")
   const [selectedDrone, setSelectedDrone] = useState("")
   const [showAddDroneModal, setShowAddDroneModal] = useState(false)
   const [showMapModal, setShowMapModal] = useState(false)
   const [editingDrone, setEditingDrone] = useState<any>(null)
   const [showImageModal, setShowImageModal] = useState(false)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
-  const [droneList, setDroneList] = useState(drones)
+  const [droneList, setDroneList] = useState<any[]>([])
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [detailsDrone, setDetailsDrone] = useState<any>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalDrones, setTotalDrones] = useState(0)
+  const dronesPerPage = 10
   const [editArea, setEditArea] = useState("")
+  const [editDroneForm, setEditDroneForm] = useState({
+    name: '',
+    model: '',
+    serial: '',
+    operationalArea: '',
+    companyLocationId: '',
+    status: 'Operational'
+  })
   const [showAddImagesModal, setShowAddImagesModal] = useState(false)
   const [selectedDroneForImages, setSelectedDroneForImages] = useState<any>(null)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
@@ -111,6 +157,42 @@ export default function DroneManagementPage() {
   const [isCreatingDrone, setIsCreatingDrone] = useState(false)
   const [droneImages, setDroneImages] = useState<any[]>([])
   const [loadingImages, setLoadingImages] = useState(false)
+  const [loadingDrones, setLoadingDrones] = useState(false)
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    confirmText: string
+    cancelText: string
+    onConfirm: () => void
+    type: "danger" | "warning" | "info"
+  } | null>(null)
+
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
+  const [successDialogMessage, setSuccessDialogMessage] = useState("")
+
+  // Refresh drones helper
+  const refreshDrones = async () => {
+    try {
+      const data = await fetchAllDrones(currentPage, searchTerm, statusFilter)
+      const mappedDrones = data.drones.map((drone: any) => ({
+        id: drone.id,
+        name: drone.name,
+        model: drone.model,
+        serial: drone.serial,
+        area: drone.operationalArea,
+        date: new Date(drone.createdAt).toLocaleDateString(),
+        status: drone.status,
+        companyLocation: drone.companyLocation
+      }))
+      setDroneList(mappedDrones)
+      setTotalPages(data.pagination.pages)
+      setTotalDrones(data.pagination.total)
+    } catch (error) {
+      console.error('Failed to refresh drones:', error)
+    }
+  }
 
   // Helper function to get image URL (handles both Firebase URLs and legacy local paths)
   const getImageUrl = (image: any): string => {
@@ -126,42 +208,50 @@ export default function DroneManagementPage() {
     return `http://localhost:4000/uploads/drones/${image.filename}`
   }
 
-  const filteredDrones = droneList.filter(
-    (drone) =>
-      drone.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      drone.area.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  const filteredDrones = droneList
 
   // Fetch company locations and drones on component mount
   useEffect(() => {
-    const loadData = async () => {
+    fetchCompanyLocations()
+  }, [])
+
+  // Fetch drones when pagination, search, or status filter changes
+  useEffect(() => {
+    const loadDrones = async () => {
+      setLoadingDrones(true)
       try {
-        await Promise.all([
-          fetchCompanyLocations(),
-          fetchAllDrones().then(drones => {
-            const mappedDrones = drones.map((drone: any) => ({
-              id: drone.id,
-              name: drone.name,
-              model: drone.model,
-              serial: drone.serial,
-              area: drone.operationalArea,
-              date: new Date(drone.createdAt).toLocaleDateString(),
-              status: drone.status
-            }))
-            setDroneList(mappedDrones)
-            
-            // Set the first drone as selected if none is selected
-            if (mappedDrones.length > 0 && !selectedDrone) {
-              setSelectedDrone(mappedDrones[0].id)
-            }
-          })
-        ])
+        const data = await fetchAllDrones(currentPage, searchTerm, statusFilter)
+        const mappedDrones = data.drones.map((drone: any) => ({
+          id: drone.id,
+          name: drone.name,
+          model: drone.model,
+          serial: drone.serial,
+          area: drone.operationalArea,
+          date: new Date(drone.createdAt).toLocaleDateString(),
+          status: drone.status,
+          companyLocation: drone.companyLocation
+        }))
+        setDroneList(mappedDrones)
+        setTotalPages(data.pagination.pages)
+        setTotalDrones(data.pagination.total)
+        
+        // Set the first drone as selected if none is selected
+        if (mappedDrones.length > 0 && !selectedDrone) {
+          setSelectedDrone(mappedDrones[0].id)
+        }
       } catch (error) {
-        console.error('Failed to load data:', error)
+        console.error('Failed to load drones:', error)
+      } finally {
+        setLoadingDrones(false)
       }
     }
-    loadData()
-  }, [])
+    loadDrones()
+  }, [currentPage, searchTerm, statusFilter])
+
+  // Reset to first page when search or status filter changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, statusFilter])
 
   // Fetch images when selected drone changes
   useEffect(() => {
@@ -420,10 +510,76 @@ export default function DroneManagementPage() {
     }
   }
 
-  // Fetch all drones function
-  const fetchAllDrones = async () => {
+  // Update drone function
+  const updateExistingDrone = async (id: string, droneData: any) => {
     try {
-      const response = await fetch(`${API_URL}/drones`, {
+      const response = await fetch(`${API_URL}/drones/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${getToken()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(droneData)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to update drone')
+      }
+
+      const result = await response.json()
+      return result.drone
+    } catch (error) {
+      console.error('Update drone error:', error)
+      throw error
+    }
+  }
+
+  // Delete drone function
+  const deleteExistingDrone = async (id: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "Delete Drone",
+      message: "Are you sure you want to delete this drone? This action cannot be undone.",
+      confirmText: "Confirm",
+      cancelText: "Cancel",
+      type: "danger",
+      onConfirm: async () => {
+        setConfirmDialog(null)
+        try {
+          const response = await fetch(`${API_URL}/drones/${id}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${getToken()}`
+            }
+          })
+
+          if (!response.ok) {
+            const errorData = await response.json()
+            throw new Error(errorData.error || 'Failed to delete drone')
+          }
+
+          await refreshDrones()
+          setSuccessDialogMessage("Drone deleted successfully!")
+          setShowSuccessDialog(true)
+        } catch (error: any) {
+          alert(`Failed to delete drone: ${error.message}`)
+        }
+      },
+    })
+  }
+
+  // Fetch all drones function
+  const fetchAllDrones = async (page = 1, search = "", status = "") => {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: dronesPerPage.toString()
+      })
+      if (search) params.append("search", search)
+      if (status && status !== "All") params.append("status", status)
+
+      const response = await fetch(`${API_URL}/drones?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${getToken()}`
         }
@@ -434,7 +590,7 @@ export default function DroneManagementPage() {
       }
 
       const data = await response.json()
-      return data.drones || [] // Extract drones array from response
+      return data // Return the whole response including pagination
     } catch (error) {
       console.error('Fetch drones error:', error)
       throw error
@@ -477,7 +633,7 @@ export default function DroneManagementPage() {
           <motion.div variants={item} className="mb-8">
             <h1 className="text-3xl font-bold text-black mb-1">Drone Management</h1>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#A21C1C]"></div>
+              <div className="w-2 h-2 rounded-full bg-[#1D4ED8]"></div>
               <div className="text-lg text-gray-600">Manage all aspects of the drones and images captured by drone within your company</div>
             </div>
           </motion.div>
@@ -498,7 +654,12 @@ export default function DroneManagementPage() {
                 icon: <FiSettings />,
                 color: "bg-yellow-500",
               },
-              { label: "Coverage Areas", value: "0", icon: <FiMapPin />, color: "bg-purple-500" },
+              { 
+                label: "Inactive",
+                value: droneList.filter((d) => d.status === "Inactive").length,
+                icon: <FiAlertCircle />,
+                color: "bg-red-500",
+              },
             ].map((stat, idx) => (
               <motion.div
                 key={stat.label}
@@ -521,7 +682,7 @@ export default function DroneManagementPage() {
           {/* Drone List Table */}
           <motion.div variants={item} className="mb-10">
             <div className="bg-white rounded-xl shadow-md overflow-hidden border border-[#E2C275]/30">
-              <div className="bg-[#A21C1C] px-6 py-4 flex items-center gap-4">
+              <div className="bg-[#1D4ED8] px-6 py-4 flex items-center gap-4">
                 <div className="font-bold text-lg text-white">Drone Fleet</div>
                 <div className="flex-1" />
                 <div className="flex items-center gap-3">
@@ -539,16 +700,36 @@ export default function DroneManagementPage() {
                     <FiPlus size={18} />
                     Add Drone
                   </button>
-                  <div className="relative">
-                    <div className="flex items-center bg-white/10 rounded-lg">
-                      <FiSearch className="ml-3 text-white" />
-                      <input
-                        type="text"
-                        placeholder="Search drones..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="bg-transparent border-none text-white placeholder-white/70 px-3 py-2 w-64 focus:outline-none"
-                      />
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <div className="flex items-center bg-white/10 rounded-lg">
+                        <FiFilter className="ml-3 text-white" />
+                        <select
+                          value={statusFilter}
+                          onChange={(e) => setStatusFilter(e.target.value)}
+                          className="bg-transparent border-none text-white px-3 py-2 focus:outline-none appearance-none cursor-pointer"
+                        >
+                          <option value="All" className="text-black">All Status</option>
+                          <option value="Operational" className="text-black">Operational</option>
+                          <option value="Maintenance" className="text-black">Maintenance</option>
+                          <option value="Inactive" className="text-black">Inactive</option>
+                        </select>
+                        <div className="pr-3 pointer-events-none text-white">
+                          <FiChevronRight className="rotate-90" size={14} />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <div className="flex items-center bg-white/10 rounded-lg">
+                        <FiSearch className="ml-3 text-white" />
+                        <input
+                          type="text"
+                          placeholder="Search drones..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="bg-transparent border-none text-white placeholder-white/70 px-3 py-2 w-64 focus:outline-none"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -561,12 +742,29 @@ export default function DroneManagementPage() {
                       <th className="py-4 px-6">Drone Name</th>
                       <th className="py-4 px-6">Model</th>
                       <th className="py-4 px-6">Registration Date <br /> Operational Area</th>
+                      <th className="py-4 px-6">Status</th>
                       <th className="py-4 px-6">Add Drone Images</th>
                       <th className="py-4 px-6">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredDrones.map((drone, idx) => (
+                    {loadingDrones ? (
+                      <tr>
+                        <td colSpan={6} className="py-10 text-center">
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="w-8 h-8 border-4 border-[#1D4ED8]/30 border-t-[#1D4ED8] rounded-full animate-spin"></div>
+                            <span className="text-gray-500 font-medium">Loading drones...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : filteredDrones.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-10 text-center text-gray-500 italic">
+                          No drones found
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredDrones.map((drone, idx) => (
                       <motion.tr
                         key={drone.id}
                         className={`border-b border-gray-100 last:border-0 hover:bg-[#FFF7E3]/50 transition-colors cursor-pointer ${idx % 2 === 0 ? "bg-white" : "bg-[#F9F6F2]"}`}
@@ -583,17 +781,23 @@ export default function DroneManagementPage() {
                         </td>
                         <td className="py-4 px-6">
                           <div className="flex items-center gap-2 mb-1">
-                            <FiCalendar className="text-[#A21C1C]" size={16} />
+                            <FiCalendar className="text-[#1D4ED8]" size={16} />
                             <span className="text-sm">{drone.date}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <FiMapPin className="text-[#A21C1C]" size={16} />
+                            <FiMapPin className="text-[#1D4ED8]" size={16} />
                             <span className="text-sm text-gray-600">{drone.area}</span>
                           </div>
                         </td>
                         <td className="py-4 px-6">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${statusStyles[drone.status] || "text-gray-600 bg-gray-100 border-gray-200"}`}>
+                            {statusIcons[drone.status]}
+                            {drone.status}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
                           <button 
-                            className="flex items-center gap-2 px-4 py-2 bg-[#A21C1C] text-white rounded-lg hover:bg-[#7C1D1D] transition-colors text-sm font-medium"
+                            className="flex items-center gap-2 px-4 py-2 bg-[#1D4ED8] text-white rounded-lg hover:bg-[#1E3A8A] transition-colors text-sm font-medium"
                             onClick={(e) => {
                               e.stopPropagation()
                               setSelectedDroneForImages(drone)
@@ -607,7 +811,7 @@ export default function DroneManagementPage() {
                         <td className="py-4 px-6">
                           <div className="flex gap-2">
                             <button 
-                              className="p-2 rounded-lg hover:bg-[#FFF7E3] text-[#A21C1C] transition-colors"
+                              className="p-2 rounded-lg hover:bg-[#EFF6FF] text-[#1D4ED8] transition-colors"
                               title="View Details"
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -618,35 +822,118 @@ export default function DroneManagementPage() {
                               <FiEye size={18} />
                             </button>
                             <button 
-                              className="p-2 rounded-lg hover:bg-[#FFF7E3] text-[#A21C1C] transition-colors"
+                              className="p-2 rounded-lg hover:bg-[#EFF6FF] text-[#1D4ED8] transition-colors"
                               title="Edit Drone"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 setEditingDrone(drone)
-                                setEditArea(drone.area)
+                                setEditDroneForm({
+                                  name: drone.name || '',
+                                  model: drone.model || '',
+                                  serial: drone.serial || '',
+                                  operationalArea: drone.area || '',
+                                  companyLocationId: drone.companyLocation?.id || '',
+                                  status: drone.status || 'Operational'
+                                })
                               }}
                             >
                               <FiEdit2 size={18} />
                             </button>
-                            <button 
+                            {/* TODO: Implement assign zone functionality */}
+                            {/* <button 
                               className="p-2 rounded-lg hover:bg-blue-50 text-blue-500 transition-colors"
                               title="Assign Zone"
                               onClick={() => setShowMapModal(true)}
                             >
                               <FiMap size={18} />
-                            </button>
+                            </button> */}
                             <button 
                               className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
                               title="Delete Drone"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                deleteExistingDrone(drone.id)
+                              }}
                             >
                               <FiTrash2 size={18} />
                             </button>
                           </div>
                         </td>
                       </motion.tr>
-                    ))}
+                    )))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Pagination Controls */}
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div className="text-sm text-gray-600">
+                  Showing <span className="font-semibold">{Math.min(totalDrones, (currentPage - 1) * dronesPerPage + 1)}</span> to{" "}
+                  <span className="font-semibold">{Math.min(totalDrones, currentPage * dronesPerPage)}</span> of{" "}
+                  <span className="font-semibold">{totalDrones}</span> drones
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    title="First Page"
+                  >
+                    <FiChevronRight className="rotate-180" size={18} />
+                    <FiChevronRight className="rotate-180 -ml-3" size={18} />
+                  </button>
+                  <button
+                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    title="Previous Page"
+                  >
+                    <FiChevronRight className="rotate-180" size={18} />
+                  </button>
+                  
+                  <div className="flex items-center gap-1 mx-2">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          className={`w-10 h-10 rounded-lg border font-medium transition-all ${currentPage === pageNum ? "bg-[#1D4ED8] text-white border-[#1D4ED8]" : "border-gray-300 hover:bg-gray-100 text-gray-700"}`}
+                          onClick={() => setCurrentPage(pageNum)}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    title="Next Page"
+                  >
+                    <FiChevronRight size={18} />
+                  </button>
+                  <button
+                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    title="Last Page"
+                  >
+                    <FiChevronRight size={18} />
+                    <FiChevronRight className="-ml-3" size={18} />
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -657,14 +944,14 @@ export default function DroneManagementPage() {
               <div className="px-6 py-4 bg-[#F3EAD8] border-b border-[#E2C275]/30">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-lg flex items-center gap-2">
-                    <FiCamera className="text-[#A21C1C]" />
+                    <FiCamera className="text-[#1D4ED8]" />
                     Drone Images
                   </h3>
                   <div className="flex items-center gap-2">
                     <select
                       value={selectedDrone}
                       onChange={(e) => setSelectedDrone(e.target.value)}
-                      className="px-4 py-2 bg-[#A21C1C] text-white rounded-lg font-medium text-sm"
+                      className="px-4 py-2 bg-[#1D4ED8] text-white rounded-lg font-medium text-sm"
                     >
                       {droneList.map((drone) => (
                         <option key={drone.id} value={drone.id}>
@@ -678,8 +965,8 @@ export default function DroneManagementPage() {
 
               <div className="p-6">
                 {loadingImages ? (
-                  <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#A21C1C] mx-auto mb-4"></div>
+                    <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1D4ED8] mx-auto mb-4"></div>
                     <p className="text-gray-500">Loading images...</p>
                   </div>
                 ) : droneImages.length > 0 ? (
@@ -719,7 +1006,7 @@ export default function DroneManagementPage() {
                                   setShowImageModal(true)
                                 }}
                               >
-                                <FiEye className="text-[#A21C1C]" size={20} />
+                                <FiEye className="text-[#1D4ED8]" size={20} />
                               </button>
                               <button className="bg-white/90 backdrop-blur-sm p-3 rounded-full hover:bg-white transition-colors">
                                 <FiDownload className="text-green-600" size={20} />
@@ -748,7 +1035,7 @@ export default function DroneManagementPage() {
                                   </div>
                                 )}
                               </div>
-                              <button className="text-[#A21C1C] hover:bg-[#FFF7E3] p-2 rounded-lg transition-colors">
+                              <button className="text-[#1D4ED8] hover:bg-[#EFF6FF] p-2 rounded-lg transition-colors">
                                 <FiChevronRight size={16} />
                               </button>
                             </div>
@@ -758,7 +1045,7 @@ export default function DroneManagementPage() {
                     </div>
 
                     <div className="flex justify-center mt-6">
-                      <button className="flex items-center gap-2 px-6 py-3 bg-[#A21C1C] text-white rounded-lg font-medium hover:bg-[#7C1D1D] transition-colors">
+                      <button className="flex items-center gap-2 px-6 py-3 bg-[#1D4ED8] text-white rounded-lg font-medium hover:bg-[#1E3A8A] transition-colors">
                         Load More Images
                         <FiChevronRight />
                       </button>
@@ -786,7 +1073,7 @@ export default function DroneManagementPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto"
           >
-            <div className="bg-[#A21C1C] px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#1D4ED8] px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">Drone Details</h2>
               <button
                 onClick={() => setShowDetailsModal(false)}
@@ -798,12 +1085,24 @@ export default function DroneManagementPage() {
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-[#F9F6F2] p-4 rounded-lg">
+                  <div className="text-sm text-gray-500">Drone Name</div>
+                  <div className="font-semibold">{detailsDrone.name || "N/A"}</div>
+                </div>
+                <div className="bg-[#F9F6F2] p-4 rounded-lg">
+                  <div className="text-sm text-gray-500">Serial Number</div>
+                  <div className="font-semibold">{detailsDrone.serial || "N/A"}</div>
+                </div>
+                <div className="bg-[#F9F6F2] p-4 rounded-lg">
                   <div className="text-sm text-gray-500">Drone ID</div>
                   <div className="font-semibold">{detailsDrone.id}</div>
                 </div>
                 <div className="bg-[#F9F6F2] p-4 rounded-lg">
                   <div className="text-sm text-gray-500">Model</div>
                   <div className="font-semibold">{detailsDrone.model}</div>
+                </div>
+                <div className="bg-[#F9F6F2] p-4 rounded-lg">
+                  <div className="text-sm text-gray-500">Company Location</div>
+                  <div className="font-semibold">{detailsDrone.companyLocation?.name || "No specific location"}</div>
                 </div>
                 <div className="bg-[#F9F6F2] p-4 rounded-lg">
                   <div className="text-sm text-gray-500">Registration Date</div>
@@ -817,7 +1116,7 @@ export default function DroneManagementPage() {
 
               <div className="mt-6">
                 <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-                  <FiCamera className="text-[#A21C1C]" /> Images for {detailsDrone.id}
+                  <FiCamera className="text-[#1D4ED8]" /> Images for {detailsDrone.name || detailsDrone.id}
                 </h3>
                 {droneImages.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -861,7 +1160,7 @@ export default function DroneManagementPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4"
           >
-            <div className="bg-[#A21C1C] px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#1D4ED8] px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">Edit Drone</h2>
               <button
                 onClick={() => setEditingDrone(null)}
@@ -871,23 +1170,85 @@ export default function DroneManagementPage() {
               </button>
             </div>
             <div className="p-6">
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Drone ID</label>
-                <input
-                  disabled
-                  value={editingDrone.id}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-600"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Drone Name</label>
+                  <input
+                    value={editDroneForm.name}
+                    onChange={(e) => setEditDroneForm(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                    placeholder="Enter drone name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Model</label>
+                  <select 
+                    value={editDroneForm.model}
+                    onChange={(e) => setEditDroneForm(prev => ({ ...prev, model: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                  >
+                    <option value="">Select Model</option>
+                    <option value="DJI Phantom 4 Pro">DJI Phantom 4 Pro</option>
+                    <option value="DJI Mavic Air 2">DJI Mavic Air 2</option>
+                    <option value="DJI Mini 3 Pro">DJI Mini 3 Pro</option>
+                    <option value="DJI Air 2S">DJI Air 2S</option>
+                    <option value="DJI Mavic 3">DJI Mavic 3</option>
+                    <option value="DJI Mini 2">DJI Mini 2</option>
+                  </select>
+                </div>
               </div>
-              <div className="mb-6">
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Serial Number</label>
+                  <input
+                    value={editDroneForm.serial}
+                    onChange={(e) => setEditDroneForm(prev => ({ ...prev, serial: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                    placeholder="Enter serial number"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                  <select 
+                    value={editDroneForm.status}
+                    onChange={(e) => setEditDroneForm(prev => ({ ...prev, status: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                  >
+                    <option value="Operational">Operational</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Operational Area</label>
                 <input
-                  value={editArea}
-                  onChange={(e) => setEditArea(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                  value={editDroneForm.operationalArea}
+                  onChange={(e) => setEditDroneForm(prev => ({ ...prev, operationalArea: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
                   placeholder="Enter operational area"
                 />
               </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Company Location</label>
+                <select 
+                  value={editDroneForm.companyLocationId}
+                  onChange={(e) => setEditDroneForm(prev => ({ ...prev, companyLocationId: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                  disabled={loadingLocations}
+                >
+                  <option value="">No specific location</option>
+                  {companyLocations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {location.name} {location.address && `- ${location.address}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setEditingDrone(null)}
@@ -896,11 +1257,20 @@ export default function DroneManagementPage() {
                   Cancel
                 </button>
                 <button
-                  onClick={() => {
-                    setDroneList((prev) => prev.map((d) => d.id === editingDrone.id ? { ...d, area: editArea } : d))
-                    setEditingDrone(null)
+                  onClick={async () => {
+                    try {
+                      await updateExistingDrone(editingDrone.id, editDroneForm)
+                      
+                      // Refresh the list to keep everything in sync with server-side pagination
+                      await refreshDrones()
+                      
+                      setEditingDrone(null)
+                      alert('Drone updated successfully!')
+                    } catch (error: any) {
+                      alert(`Failed to update drone: ${error.message}`)
+                    }
                   }}
-                  className="flex items-center gap-2 px-6 py-2 bg-[#A21C1C] text-white rounded-lg hover:bg-[#7C1D1D] transition-colors"
+                  className="flex items-center gap-2 px-6 py-2 bg-[#1D4ED8] text-white rounded-lg hover:bg-[#1E3A8A] transition-colors"
                 >
                   <FiSave size={18} />
                   Save Changes
@@ -918,7 +1288,7 @@ export default function DroneManagementPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
           >
-            <div className="bg-[#A21C1C] px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#1D4ED8] px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">Add New Drone</h2>
               <button
                 onClick={() => setShowAddDroneModal(false)}
@@ -938,22 +1308,25 @@ export default function DroneManagementPage() {
                     alert('Please fill in all required fields')
                     return
                   }
+
+                  // Check for existing name or serial number
+                  const exists = droneList.some(d => 
+                    d.name.toLowerCase() === droneFormData.name.toLowerCase() || 
+                    d.serial.toLowerCase() === droneFormData.serial.toLowerCase()
+                  )
+
+                  if (exists) {
+                    alert('Drone with this serial/name already exists')
+                    return
+                  }
                   
                   setIsCreatingDrone(true)
                   
                   try {
                     const newDrone = await createNewDrone(droneFormData)
                     
-                    // Add the new drone to the list
-                    setDroneList(prev => [...prev, {
-                      id: newDrone.id,
-                      name: newDrone.name,
-                      model: newDrone.model,
-                      serial: newDrone.serial,
-                      area: newDrone.operationalArea,
-                      date: new Date(newDrone.createdAt).toLocaleDateString(),
-                      status: newDrone.status
-                    }])
+                    // Refresh the list to keep everything in sync with server-side pagination
+                    await refreshDrones()
                     
                     // Reset form and close modal
                     setDroneFormData({
@@ -968,7 +1341,11 @@ export default function DroneManagementPage() {
                     
                     alert('Drone created successfully!')
                   } catch (error: any) {
-                    alert(`Failed to create drone: ${error.message}`)
+                    if (error.message.includes('already exists') || error.message.includes('unique constraint')) {
+                      alert('Drone with this serial/name already exists')
+                    } else {
+                      alert(`Failed to create drone: ${error.message}`)
+                    }
                   } finally {
                     setIsCreatingDrone(false)
                   }
@@ -981,7 +1358,7 @@ export default function DroneManagementPage() {
                       type="text"
                       value={droneFormData.name}
                       onChange={(e) => setDroneFormData(prev => ({ ...prev, name: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
                       placeholder="e.g., Drone Alpha"
                     />
                   </div>
@@ -990,7 +1367,7 @@ export default function DroneManagementPage() {
                     <select 
                       value={droneFormData.model}
                       onChange={(e) => setDroneFormData(prev => ({ ...prev, model: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
                     >
                       <option value="">Select Model</option>
                       <option value="DJI Phantom 4 Pro">DJI Phantom 4 Pro</option>
@@ -1009,7 +1386,7 @@ export default function DroneManagementPage() {
                       type="text"
                       value={droneFormData.serial}
                       onChange={(e) => setDroneFormData(prev => ({ ...prev, serial: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
                       placeholder="e.g., SN123456789"
                     />
                   </div>
@@ -1018,7 +1395,7 @@ export default function DroneManagementPage() {
                     <select 
                       value={droneFormData.status}
                       onChange={(e) => setDroneFormData(prev => ({ ...prev, status: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
                     >
                       <option value="Operational">Operational</option>
                       <option value="Maintenance">Maintenance</option>
@@ -1028,11 +1405,11 @@ export default function DroneManagementPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Operational Area</label>
-                  <input
+                    <input
                     type="text"
                     value={droneFormData.operationalArea}
                     onChange={(e) => setDroneFormData(prev => ({ ...prev, operationalArea: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
                     placeholder="e.g., Kuala Lumpur City Center"
                   />
                 </div>
@@ -1042,7 +1419,7 @@ export default function DroneManagementPage() {
                     <select 
                       value={droneFormData.companyLocationId}
                       onChange={(e) => setDroneFormData(prev => ({ ...prev, companyLocationId: e.target.value }))}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
                       disabled={loadingLocations}
                     >
                       <option value="">No specific location</option>
@@ -1084,7 +1461,7 @@ export default function DroneManagementPage() {
                   <button
                     type="submit"
                     disabled={isCreatingDrone}
-                    className={`flex items-center gap-2 px-6 py-2 bg-[#A21C1C] text-white rounded-lg hover:bg-[#7C1D1D] transition-colors ${isCreatingDrone ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`flex items-center gap-2 px-6 py-2 bg-[#1D4ED8] text-white rounded-lg hover:bg-[#1E3A8A] transition-colors ${isCreatingDrone ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <FiSave size={18} />
                     {isCreatingDrone ? 'Creating...' : 'Add Drone'}
@@ -1104,7 +1481,7 @@ export default function DroneManagementPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto"
           >
-            <div className="bg-[#A21C1C] px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#1D4ED8] px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">Assign Drone to Monitoring Zone</h2>
               <button
                 onClick={() => setShowMapModal(false)}
@@ -1131,7 +1508,7 @@ export default function DroneManagementPage() {
                 >
                   Cancel
                 </button>
-                <button className="flex items-center gap-2 px-6 py-2 bg-[#A21C1C] text-white rounded-lg hover:bg-[#7C1D1D] transition-colors">
+                <button className="flex items-center gap-2 px-6 py-2 bg-[#1D4ED8] text-white rounded-lg hover:bg-[#1E3A8A] transition-colors">
                   <FiSave size={18} />
                   Assign Zone
                 </button>
@@ -1182,8 +1559,8 @@ export default function DroneManagementPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto"
           >
-            <div className="bg-[#A21C1C] px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Add Drone Images - {selectedDroneForImages.id}</h2>
+            <div className="bg-[#1D4ED8] px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Add Drone Images - {selectedDroneForImages.name}</h2>
               <button
                 onClick={() => {
                   setShowAddImagesModal(false)
@@ -1229,8 +1606,8 @@ export default function DroneManagementPage() {
                 <div
                   className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
                     dragActive 
-                      ? 'border-[#A21C1C] bg-[#A21C1C]/5' 
-                      : 'border-gray-300 hover:border-[#A21C1C]/50'
+                      ? 'border-[#1D4ED8] bg-[#1D4ED8]/5' 
+                      : 'border-gray-300 hover:border-[#1D4ED8]/50'
                   }`}
                   onDragEnter={handleDrag}
                   onDragLeave={handleDrag}
@@ -1241,9 +1618,9 @@ export default function DroneManagementPage() {
                     <div className="space-y-3">
                       <div className="flex items-center justify-center">
                         {uploadedFile.type.startsWith('video/') ? (
-                          <FiVideo className="text-[#A21C1C]" size={48} />
+                          <FiVideo className="text-[#1D4ED8]" size={48} />
                         ) : (
-                          <FiCamera className="text-[#A21C1C]" size={48} />
+                          <FiCamera className="text-[#1D4ED8]" size={48} />
                         )}
                       </div>
                       <div>
@@ -1281,7 +1658,7 @@ export default function DroneManagementPage() {
                       />
                       <label
                         htmlFor="media-upload"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#A21C1C] text-white rounded-lg hover:bg-[#7C1D1D] transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#1D4ED8] text-white rounded-lg hover:bg-[#1E3A8A] transition-colors cursor-pointer"
                       >
                         <FiUpload size={16} />
                         Choose Media File
@@ -1449,7 +1826,7 @@ export default function DroneManagementPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4"
           >
-            <div className="bg-[#A21C1C] px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#1D4ED8] px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">Add New Location</h2>
               <button
                 onClick={() => {
@@ -1469,7 +1846,7 @@ export default function DroneManagementPage() {
                     type="text"
                     value={newLocation.name}
                     onChange={(e) => setNewLocation(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
                     placeholder="e.g., KLCC Office"
                   />
                 </div>
@@ -1479,7 +1856,7 @@ export default function DroneManagementPage() {
                     type="text"
                     value={newLocation.address}
                     onChange={(e) => setNewLocation(prev => ({ ...prev, address: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
                     placeholder="e.g., Jalan Ampang, Kuala Lumpur"
                   />
                 </div>
@@ -1491,7 +1868,7 @@ export default function DroneManagementPage() {
                       step="any"
                       value={newLocation.latitude}
                       onChange={(e) => setNewLocation(prev => ({ ...prev, latitude: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
                       placeholder="e.g., 3.1579"
                     />
                   </div>
@@ -1502,7 +1879,7 @@ export default function DroneManagementPage() {
                       step="any"
                       value={newLocation.longitude}
                       onChange={(e) => setNewLocation(prev => ({ ...prev, longitude: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
                       placeholder="e.g., 101.7116"
                     />
                   </div>
@@ -1536,7 +1913,7 @@ export default function DroneManagementPage() {
                         alert('Failed to create location. Please try again.')
                       }
                     }}
-                    className="flex items-center gap-2 px-6 py-2 bg-[#A21C1C] text-white rounded-lg hover:bg-[#7C1D1D] transition-colors"
+                  className="flex items-center gap-2 px-6 py-2 bg-[#1D4ED8] text-white rounded-lg hover:bg-[#1E3A8A] transition-colors"
                   >
                     <FiSave size={18} />
                     Create Location
@@ -1547,6 +1924,141 @@ export default function DroneManagementPage() {
           </motion.div>
         </div>
       )}
+
+      {/* Beautiful Confirmation Modal */}
+      <AnimatePresence>
+        {confirmDialog && (
+          <motion.div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4"
+            variants={overlayVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            onClick={() => setConfirmDialog(null)}
+          >
+            <motion.div
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[80vh] flex flex-col"
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div
+                className={`px-6 py-4 ${
+                  confirmDialog.type === "danger"
+                    ? "bg-gradient-to-r from-red-500 to-red-600"
+                    : confirmDialog.type === "warning"
+                      ? "bg-gradient-to-r from-yellow-500 to-yellow-600"
+                      : "bg-gradient-to-r from-blue-500 to-blue-600"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    {confirmDialog.type === "danger" && <FiTrash2 className="text-white text-lg" />}
+                    {confirmDialog.type === "warning" && <FiActivity className="text-white text-lg" />}
+                    {confirmDialog.type === "info" && <FiCheckCircle className="text-white text-lg" />}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">{confirmDialog.title}</h2>
+                    <p className="text-white/80 text-sm">Please confirm your action</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 overflow-y-auto flex-1">
+                <div className="flex items-start gap-4">
+                  <div
+                    className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      confirmDialog.type === "danger"
+                        ? "bg-red-100"
+                        : confirmDialog.type === "warning"
+                          ? "bg-yellow-100"
+                          : "bg-blue-100"
+                    }`}
+                  >
+                    {confirmDialog.type === "danger" && <FiTrash2 className="text-red-600 text-xl" />}
+                    {confirmDialog.type === "warning" && <FiActivity className="text-yellow-600 text-xl" />}
+                    {confirmDialog.type === "info" && <FiCheckCircle className="text-blue-600 text-xl" />}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-gray-700 leading-relaxed">{confirmDialog.message}</p>
+                    {confirmDialog.type === "danger" && (
+                      <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-red-700 text-sm font-medium">⚠️ This action is irreversible</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="bg-gray-50 px-6 py-4 flex gap-3">
+                <button
+                  onClick={() => setConfirmDialog(null)}
+                  className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+                >
+                  {confirmDialog.cancelText}
+                </button>
+                <button
+                  onClick={confirmDialog.onConfirm}
+                  className={`flex-1 px-4 py-3 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2 ${
+                    confirmDialog.type === "danger"
+                      ? "bg-red-600 hover:bg-red-700"
+                      : confirmDialog.type === "warning"
+                        ? "bg-yellow-600 hover:bg-yellow-700"
+                        : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                >
+                  {confirmDialog.type === "danger" && <FiTrash2 size={16} />}
+                  {confirmDialog.type === "warning" && <FiActivity size={16} />}
+                  {confirmDialog.type === "info" && <FiCheckCircle size={16} />}
+                  {confirmDialog.confirmText}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Success Dialog */}
+      <AnimatePresence>
+        {showSuccessDialog && (
+          <motion.div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4"
+            variants={overlayVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            onClick={() => setShowSuccessDialog(false)}
+          >
+            <motion.div
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-8 text-center">
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <FiCheckCircle className="text-green-600 text-4xl" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Success!</h3>
+                <p className="text-gray-600 mb-8">{successDialogMessage}</p>
+                <button
+                  onClick={() => setShowSuccessDialog(false)}
+                  className="w-full bg-[#1D4ED8] text-white py-3 rounded-xl font-bold hover:bg-[#1E3A8A] transition-colors"
+                >
+                  Great!
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

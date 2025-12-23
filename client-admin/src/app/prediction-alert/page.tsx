@@ -355,7 +355,7 @@ export default function PredictionAlertPage() {
           <motion.div variants={item} className="mb-8">
             <h1 className="text-3xl font-bold text-black mb-1">Prediction & Alert</h1>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#A21C1C]"></div>
+              <div className="w-2 h-2 rounded-full bg-[#1D4ED8]"></div>
               <div className="text-lg text-gray-600">Dengue Prediction & Alert System for your company</div>
             </div>
           </motion.div>
@@ -374,7 +374,7 @@ export default function PredictionAlertPage() {
                 {/* <button className="bg-[#E5E7EB] text-black px-6 py-2 rounded-lg font-bold text-base hover:bg-[#F3EAD8] flex items-center gap-2" onClick={() => setShowEnhancedPrediction(true)}>
                   <FiTarget /> Enhanced Prediction
                 </button> */}
-                <button className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2" onClick={handleUpdatePrediction} disabled={refreshing}>
+                <button className="bg-[#1D4ED8] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#1E3A8A] flex items-center gap-2" onClick={handleUpdatePrediction} disabled={refreshing}>
                   <FiRefreshCw className={refreshing ? 'animate-spin' : ''} /> {refreshing ? "Refreshing..." : "Refresh Predictions"}
                 </button>
               </div>
@@ -542,10 +542,10 @@ export default function PredictionAlertPage() {
                         <td className="py-3 px-6 text-black">{new Date(prediction.createdAt).toLocaleDateString()}</td>
                         <td className="py-3 px-6">
                           <div className="flex gap-2">
-                            <button className="text-[#A21C1C] hover:bg-[#F3EAD8] p-2 rounded-lg" onClick={() => setShowDetails(prediction)}>
+                            <button className="text-[#1D4ED8] hover:bg-[#EFF6FF] p-2 rounded-lg" onClick={() => setShowDetails(prediction)}>
                               <FiEye />
                             </button>
-                            <button className="text-[#A21C1C] hover:bg-[#F3EAD8] p-2 rounded-lg" onClick={handleExport} disabled={loading}>
+                            <button className="text-[#1D4ED8] hover:bg-[#EFF6FF] p-2 rounded-lg" onClick={handleExport} disabled={loading}>
                               <FiDownload />
                             </button>
                           </div>
@@ -659,7 +659,7 @@ export default function PredictionAlertPage() {
                   <div><span className="font-semibold">Prediction Date:</span> {new Date(showDetails.createdAt).toLocaleString()}</div>
                 </div>
                 <div className="mt-6">
-                  <button className="bg-[#A21C1C] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#7C1D1D]" onClick={() => setShowDetails(null)}>Close</button>
+                  <button className="bg-[#1D4ED8] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#1E3A8A]" onClick={() => setShowDetails(null)}>Close</button>
                 </div>
               </div>
             </div>
@@ -708,7 +708,7 @@ export default function PredictionAlertPage() {
                           value="combined"
                           checked={enhancedPredictionMode === 'combined'}
                           onChange={(e) => setEnhancedPredictionMode(e.target.value as 'combined' | 'model1')}
-                          className="accent-[#A21C1C]"
+                          className="accent-[#1D4ED8]"
                         />
                         <span>Combined Models (Historical + Weather)</span>
                       </label>
@@ -719,7 +719,7 @@ export default function PredictionAlertPage() {
                           value="model1"
                           checked={enhancedPredictionMode === 'model1'}
                           onChange={(e) => setEnhancedPredictionMode(e.target.value as 'combined' | 'model1')}
-                          className="accent-[#A21C1C]"
+                          className="accent-[#1D4ED8]"
                         />
                         <span>Model 1 Only (Historical)</span>
                       </label>
@@ -791,7 +791,7 @@ export default function PredictionAlertPage() {
                         }
                       }}
                       disabled={loading}
-                      className="flex-1 bg-[#A21C1C] text-white px-6 py-3 rounded-lg font-bold hover:bg-[#7C1D1D] disabled:opacity-50"
+                      className="flex-1 bg-[#1D4ED8] text-white px-6 py-3 rounded-lg font-bold hover:bg-[#1E3A8A] disabled:opacity-50"
                     >
                       {loading ? 'Predicting...' : 'Make Enhanced Prediction'}
                     </button>
@@ -813,7 +813,7 @@ export default function PredictionAlertPage() {
             {/* Set Alert Rules */}
             <div className="bg-white rounded-xl p-6 shadow">
               <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                <FiAlertTriangle className="text-[#A21C1C]" />
+                <FiAlertTriangle className="text-[#1D4ED8]" />
                 Set Alert Rules
               </h3>
 
@@ -846,7 +846,7 @@ export default function PredictionAlertPage() {
 
                 <div className="mt-6">
                   <div className="text-sm font-semibold text-black mb-2">Notification Recipients</div>
-                  <select className="w-full rounded-lg border border-gray-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#E2C275]" value={alertRecipient} onChange={e => setAlertRecipient(e.target.value)}>
+                  <select className="w-full rounded-lg border border-gray-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]" value={alertRecipient} onChange={e => setAlertRecipient(e.target.value)}>
                     <option value="">-- Select Recipients --</option>
                     <option>All Health Officials</option>
                   </select>
@@ -856,15 +856,15 @@ export default function PredictionAlertPage() {
                   <div className="text-sm font-semibold text-black mb-2">Notification Channels</div>
                   <div className="space-y-2">
                     <label className="flex items-center gap-2">
-                      <input type="checkbox" className="accent-[#A21C1C]" defaultChecked />
+                      <input type="checkbox" className="accent-[#1D4ED8]" defaultChecked />
                       <span className="text-sm">Email</span>
                     </label>
                     <label className="flex items-center gap-2">
-                      <input type="checkbox" className="accent-[#A21C1C]" defaultChecked />
+                      <input type="checkbox" className="accent-[#1D4ED8]" defaultChecked />
                       <span className="text-sm">SMS</span>
                     </label>
                     <label className="flex items-center gap-2">
-                      <input type="checkbox" className="accent-[#A21C1C]" />
+                      <input type="checkbox" className="accent-[#1D4ED8]" />
                       <span className="text-sm">Push Notification</span>
                     </label>
                   </div>
@@ -872,7 +872,7 @@ export default function PredictionAlertPage() {
 
                 {alertSaveError && <div className="text-red-600 bg-red-100 border border-red-200 rounded-lg px-4 py-2 font-semibold">{alertSaveError}</div>}
                 {alertSaveSuccess && <div className="text-green-700 bg-green-100 border border-green-200 rounded-lg px-4 py-2 font-semibold">{alertSaveSuccess}</div>}
-                <button className="w-full bg-[#A21C1C] text-white py-2 rounded-lg font-bold hover:bg-[#7C1D1D] mt-4 disabled:opacity-60" onClick={handleSaveAlertRules} disabled={savingAlert || !alertRecipient}>
+                <button className="w-full bg-[#1D4ED8] text-white py-2 rounded-lg font-bold hover:bg-[#1E3A8A] mt-4 disabled:opacity-60" onClick={handleSaveAlertRules} disabled={savingAlert || !alertRecipient}>
                   {savingAlert ? "Saving..." : "Save Alert Rules"}
                 </button>
               </div>
@@ -884,10 +884,10 @@ export default function PredictionAlertPage() {
               <div className="bg-white rounded-xl p-6 shadow">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-bold text-lg flex items-center gap-2">
-                    <FiClock className="text-[#A21C1C]" />
+                    <FiClock className="text-[#1D4ED8]" />
                     Scheduled Notifications
                   </h3>
-                  <button className="bg-[#A21C1C] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#7C1D1D]">
+                  <button className="bg-[#1D4ED8] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#1E3A8A]">
                     + Create New Alert Schedule
                   </button>
                 </div>
@@ -899,10 +899,10 @@ export default function PredictionAlertPage() {
                       <div className="text-xs text-gray-500">Every day at 8:00 AM</div>
                     </div>
                     <div className="flex gap-2">
-                      <button className="text-[#A21C1C] hover:bg-white p-1 rounded">
+                      <button className="text-[#1D4ED8] hover:bg-white p-1 rounded">
                         <FiEye className="w-4 h-4" />
                       </button>
-                      <button className="text-[#A21C1C] hover:bg-white p-1 rounded">
+                      <button className="text-[#1D4ED8] hover:bg-white p-1 rounded">
                         <FiAlertTriangle className="w-4 h-4" />
                       </button>
                     </div>
@@ -914,10 +914,10 @@ export default function PredictionAlertPage() {
                       <div className="text-xs text-gray-500">Every Mon at 9:00 AM</div>
                     </div>
                     <div className="flex gap-2">
-                      <button className="text-[#A21C1C] hover:bg-white p-1 rounded">
+                      <button className="text-[#1D4ED8] hover:bg-white p-1 rounded">
                         <FiEye className="w-4 h-4" />
                       </button>
-                      <button className="text-[#A21C1C] hover:bg-white p-1 rounded">
+                      <button className="text-[#1D4ED8] hover:bg-white p-1 rounded">
                         <FiAlertTriangle className="w-4 h-4" />
                       </button>
                     </div>
@@ -928,7 +928,7 @@ export default function PredictionAlertPage() {
               {/* Alert History */}
               <div className="bg-white rounded-xl p-6 shadow">
                 <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                  <FiCheckCircle className="text-[#A21C1C]" />
+                  <FiCheckCircle className="text-[#1D4ED8]" />
                   Alert History
                 </h3>
 
@@ -945,10 +945,10 @@ export default function PredictionAlertPage() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <button className="text-[#A21C1C] hover:bg-white p-1 rounded">
+                        <button className="text-[#1D4ED8] hover:bg-white p-1 rounded">
                           <FiEye className="w-4 h-4" />
                         </button>
-                        <button className="text-[#A21C1C] hover:bg-white p-1 rounded">
+                        <button className="text-[#1D4ED8] hover:bg-white p-1 rounded">
                           <FiDownload className="w-4 h-4" />
                         </button>
                       </div>
@@ -956,7 +956,7 @@ export default function PredictionAlertPage() {
                   ))}
                 </div>
 
-                <button className="w-full text-[#A21C1C] font-semibold text-sm mt-4 hover:bg-[#F3EAD8] py-2 rounded-lg">
+                <button className="w-full text-[#1D4ED8] font-semibold text-sm mt-4 hover:bg-[#EFF6FF] py-2 rounded-lg">
                   View All Alert History
                 </button>
               </div>
@@ -968,7 +968,7 @@ export default function PredictionAlertPage() {
             <button className="bg-[#E5E7EB] text-black px-8 py-2 rounded-lg font-bold text-base hover:bg-[#F3EAD8]">
               Reset to Defaults
             </button>
-            <button className="bg-[#A21C1C] text-white px-8 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D]">
+            <button className="bg-[#1D4ED8] text-white px-8 py-2 rounded-lg font-bold text-base hover:bg-[#1E3A8A]">
               Save All Settings
             </button>
           </motion.div> */}

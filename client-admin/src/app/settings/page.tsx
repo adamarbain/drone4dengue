@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import AdminSidebar from "@/components/AdminSidebar"
 import AdminHeader from "@/components/AdminHeader"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { FiSave, FiEdit2, FiLock, FiMail, FiUser, FiSettings, FiSliders, FiRefreshCw, FiMapPin, FiPlus, FiEdit3, FiTrash2, FiSend, FiBell, FiEye, FiEyeOff } from "react-icons/fi"
+import { FiSave, FiEdit2, FiLock, FiMail, FiUser, FiSettings, FiSliders, FiRefreshCw, FiMapPin, FiPlus, FiEdit3, FiTrash2, FiSend, FiBell, FiEye, FiEyeOff, FiCheckCircle, FiX } from "react-icons/fi"
 import MapPicker from "@/components/MapPicker"
 import { useAuth } from '@/context/AuthContext';
 
@@ -26,6 +26,23 @@ const item = {
   show: { opacity: 1, y: 0 },
 }
 
+const overlayVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+  exit: { opacity: 0 },
+}
+
+const modalVariants = {
+  hidden: { opacity: 0, scale: 0.8, y: 50 },
+  visible: { 
+    opacity: 1, 
+    scale: 1, 
+    y: 0,
+    transition: { type: "spring", stiffness: 300, damping: 30 }
+  },
+  exit: { opacity: 0, scale: 0.8, y: 50, transition: { duration: 0.2 } },
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export default function SettingsPage() {
@@ -36,11 +53,15 @@ export default function SettingsPage() {
   const [alertThreshold, setAlertThreshold] = useState("medium")
   const [syncMode, setSyncMode] = useState("automatic")
 
+  // Success Dialog State
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successDialogMessage, setSuccessDialogMessage] = useState("");
+
   // Auth context
   const { user, token } = useAuth();
 
   // User profile state
-  const [userData, setUserData] = useState(null);
+  const [userData, setUserData] = useState<any>(null);
   const [profileForm, setProfileForm] = useState({ name: '', username: '', email: '', phone: '' });
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState('');
@@ -90,6 +111,10 @@ export default function SettingsPage() {
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const isPasswordValid = (value: string) => /^(?=.*\d).{8,}$/.test(value);
   const isEmailValid = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  const isPhoneValid = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, "");
+    return digitsOnly.length >= 8 && digitsOnly.length <= 15;
+  };
 
   // Company locations state
   const [locations, setLocations] = useState([]);
@@ -97,10 +122,9 @@ export default function SettingsPage() {
   const [locationsError, setLocationsError] = useState('');
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [editingLocation, setEditingLocation] = useState<any>(null);
-  const [locationForm, setLocationForm] = useState({ name: '', address: '', latitude: '', longitude: '' });
+  const [locationForm, setLocationForm] = useState({ name: '', address: '', latitude: '', longitude: '', isActive: true });
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState('');
-  const [locationSuccess, setLocationSuccess] = useState('');
 
   // Broadcast notification state
   const [broadcastTitle, setBroadcastTitle] = useState('');
@@ -210,6 +234,25 @@ export default function SettingsPage() {
   });
   }
 
+  // Toggle profile edit mode and handle cancel/revert
+  function handleToggleProfileEdit() {
+    if (profileEditable) {
+      // Revert changes when canceling
+      if (userData) {
+        setProfileForm({
+          name: userData.name || '',
+          username: userData.username || '',
+          email: userData.email || '',
+          phone: userData.phone || ''
+        });
+      }
+      setProfileFieldErrors({});
+      setProfileEditable(false);
+    } else {
+      setProfileEditable(true);
+    }
+  }
+
   // Handle profile save
   async function handleProfileSave() {
     setProfileError('');
@@ -220,6 +263,7 @@ export default function SettingsPage() {
   if (!profileForm.email.trim()) fieldErrors.email = 'Please fill out this field';
   else if (!isEmailValid(profileForm.email)) fieldErrors.email = 'Invalid email format.';
   if (!profileForm.phone.trim()) fieldErrors.phone = 'Please fill out this field';
+  else if (!isPhoneValid(profileForm.phone)) fieldErrors.phone = 'Invalid number format.';
 
   if (Object.keys(fieldErrors).length > 0) {
     setProfileFieldErrors(fieldErrors);
@@ -303,7 +347,6 @@ export default function SettingsPage() {
   // Handle add/edit location
   async function handleLocationSave() {
     setLocationError('');
-    setLocationSuccess('');
     if (!locationForm.name.trim()) {
       setLocationError('Location name is required.');
       return;
@@ -330,14 +373,19 @@ export default function SettingsPage() {
           address: locationForm.address.trim() || null,
           latitude: locationForm.latitude ? parseFloat(locationForm.latitude) : null,
           longitude: locationForm.longitude ? parseFloat(locationForm.longitude) : null,
+          isActive: locationForm.isActive,
         }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || `Failed to ${editingLocation ? 'update' : 'create'} location`);
       }
-      setLocationSuccess(`Location ${editingLocation ? 'updated' : 'created'} successfully!`);
-      setLocationForm({ name: '', address: '', latitude: '', longitude: '' });
+      
+      const successMsg = `Location ${editingLocation ? 'updated' : 'created'} successfully!`;
+      setSuccessDialogMessage(successMsg);
+      setShowSuccessDialog(true);
+      
+      setLocationForm({ name: '', address: '', latitude: '', longitude: '', isActive: true });
       setShowAddLocation(false);
       setEditingLocation(null);
       // Refresh locations
@@ -363,17 +411,17 @@ export default function SettingsPage() {
       address: location.address || '',
       latitude: location.latitude?.toString() || '',
       longitude: location.longitude?.toString() || '',
+      isActive: location.isActive !== undefined ? location.isActive : true,
     });
     setShowAddLocation(true);
   }
 
   // Handle cancel location form
   function handleCancelLocation() {
-    setLocationForm({ name: '', address: '', latitude: '', longitude: '' });
+    setLocationForm({ name: '', address: '', latitude: '', longitude: '', isActive: true });
     setShowAddLocation(false);
     setEditingLocation(null);
     setLocationError('');
-    setLocationSuccess('');
   }
 
   // Handle save notification preferences
@@ -544,7 +592,7 @@ export default function SettingsPage() {
           <motion.div variants={item} className="mb-8">
             <h1 className="text-3xl font-bold text-black mb-1">Settings</h1>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#A21C1C]"></div>
+              <div className="w-2 h-2 rounded-full bg-[#1D4ED8]"></div>
               <div className="text-lg text-gray-600">Manage your account and system preferences</div>
             </div>
           </motion.div>
@@ -555,7 +603,7 @@ export default function SettingsPage() {
               <Card className="bg-white shadow-md rounded-xl overflow-hidden">
                 <div className="bg-[#F3EAD8] px-6 py-4 border-b border-[#E2C275]">
                   <h2 className="text-xl font-bold flex items-center gap-2">
-                    <FiUser className="text-[#A21C1C]" />
+                    <FiUser className="text-[#1D4ED8]" />
                     Profile Settings
                   </h2>
                 </div>
@@ -564,8 +612,8 @@ export default function SettingsPage() {
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-lg font-semibold">Profile Information</h3>
                       <button
-                        onClick={() => setProfileEditable(!profileEditable)}
-                        className="flex items-center gap-2 text-[#A21C1C] hover:bg-[#F3EAD8] p-2 rounded-lg"
+                        onClick={handleToggleProfileEdit}
+                        className="flex items-center gap-2 text-[#1D4ED8] hover:bg-[#F3EAD8] p-2 rounded-lg"
                         disabled={profileLoading}
                       >
                         <FiEdit2 />
@@ -587,7 +635,7 @@ export default function SettingsPage() {
                             value={profileForm.name}
                             onChange={handleProfileChange}
                             disabled={!profileEditable}
-                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#A21C1C]"}`}
+                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#1D4ED8]"}`}
                           />
                           {profileFieldErrors.name && <p className="text-xs text-red-600">{profileFieldErrors.name}</p>}
                         </div>
@@ -599,7 +647,7 @@ export default function SettingsPage() {
                             value={profileForm.username}
                             onChange={handleProfileChange}
                             disabled={!profileEditable}
-                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#A21C1C]"}`}
+                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#1D4ED8]"}`}
                           />
                           {profileFieldErrors.username && <p className="text-xs text-red-600">{profileFieldErrors.username}</p>}
                         </div>
@@ -623,7 +671,7 @@ export default function SettingsPage() {
                             value={profileForm.phone}
                             onChange={handleProfileChange}
                             disabled={!profileEditable}
-                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#A21C1C]"}`}
+                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#1D4ED8]"}`}
                           />
                           {profileFieldErrors.phone && <p className="text-xs text-red-600">{profileFieldErrors.phone}</p>}
                         </div>
@@ -635,7 +683,7 @@ export default function SettingsPage() {
                             value={company?.name}
                             onChange={handleProfileChange}
                             disabled={true}
-                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#A21C1C]"}`}
+                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#1D4ED8]"}`}
                           />
                         </div>
                       </>
@@ -644,7 +692,7 @@ export default function SettingsPage() {
                     {profileEditable && !profileLoading && (
                       <div className="pt-4">
                         <button
-                          className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2"
+                          className="bg-[#1D4ED8] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#1E3A8A] flex items-center gap-2"
                           onClick={handleProfileSave}
                           disabled={profileLoading}
                         >
@@ -664,7 +712,7 @@ export default function SettingsPage() {
               <Card className="bg-white shadow-md rounded-xl overflow-hidden">
                 <div className="bg-[#F3EAD8] px-6 py-4 border-b border-[#E2C275]">
                   <h2 className="text-xl font-bold flex items-center gap-2">
-                    <FiLock className="text-[#A21C1C]" />
+                    <FiLock className="text-[#1D4ED8]" />
                     Password Settings
                   </h2>
                 </div>
@@ -692,12 +740,12 @@ export default function SettingsPage() {
                           value={newPassword}
                           onChange={e => setNewPassword(e.target.value)}
                           placeholder="••••••••"
-                          className="border-[#E2C275] focus:border-[#A21C1C] pr-12"
+                          className="border-[#E2C275] focus:border-[#1D4ED8] pr-12"
                           autoComplete="new-password"
                         />
                         <button
                           type="button"
-                          className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-[#A21C1C]"
+                          className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-[#1D4ED8]"
                           onClick={() => setShowNewPassword((prev) => !prev)}
                           aria-label={showNewPassword ? "Hide password" : "Show password"}
                         >
@@ -714,12 +762,12 @@ export default function SettingsPage() {
                           value={confirmPassword}
                           onChange={e => setConfirmPassword(e.target.value)}
                           placeholder="••••••••"
-                          className="border-[#E2C275] focus:border-[#A21C1C] pr-12"
+                          className="border-[#E2C275] focus:border-[#1D4ED8] pr-12"
                           autoComplete="new-password"
                         />
                         <button
                           type="button"
-                          className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-[#A21C1C]"
+                          className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-[#1D4ED8]"
                           onClick={() => setShowConfirmPassword((prev) => !prev)}
                           aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                         >
@@ -731,7 +779,7 @@ export default function SettingsPage() {
                     {passwordSuccess && <div className="text-green-600 mt-2">{passwordSuccess}</div>}
                     <div className="pt-4">
                       <button
-                        className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2"
+                        className="bg-[#1D4ED8] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#1E3A8A] flex items-center gap-2"
                         onClick={handlePasswordUpdate}
                         disabled={passwordLoading}
                       >
@@ -749,7 +797,7 @@ export default function SettingsPage() {
               <Card className="bg-white shadow-md rounded-xl overflow-hidden">
                 <div className="bg-[#F3EAD8] px-6 py-4 border-b border-[#E2C275]">
                   <h2 className="text-xl font-bold flex items-center gap-2">
-                    <FiMail className="text-[#A21C1C]" />
+                    <FiMail className="text-[#1D4ED8]" />
                     Notification Preferences
                   </h2>
                 </div>
@@ -767,7 +815,7 @@ export default function SettingsPage() {
                           onChange={() => setEmailNotifications(!emailNotifications)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#A21C1C]"></div>
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1D4ED8]"></div>
                       </label>
                     </div>
 
@@ -783,7 +831,7 @@ export default function SettingsPage() {
                           onChange={() => setSmsNotifications(!smsNotifications)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#A21C1C]"></div>
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1D4ED8]"></div>
                       </label>
                     </div>
 
@@ -793,7 +841,7 @@ export default function SettingsPage() {
                         id="alert-frequency"
                         value={alertFrequency}
                         onChange={(e) => setAlertFrequency(e.target.value)}
-                        className="w-full rounded-lg border border-[#E2C275] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#A21C1C]"
+                        className="w-full rounded-lg border border-[#E2C275] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
                       >
                         <option value="immediate">Immediate</option>
                         <option value="daily">Daily</option>
@@ -805,7 +853,7 @@ export default function SettingsPage() {
                     {notificationSuccess && <div className="text-green-600 mt-2">{notificationSuccess}</div>}
                     <div className="pt-4">
                       <button 
-                        className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2 disabled:opacity-50"
+                        className="bg-[#1D4ED8] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#1E3A8A] flex items-center gap-2 disabled:opacity-50"
                         onClick={handleSaveNotificationPreferences}
                         disabled={notificationLoading || companySettingsLoading}
                       >
@@ -823,7 +871,7 @@ export default function SettingsPage() {
               <Card className="bg-white shadow-md rounded-xl overflow-hidden">
                 <div className="bg-[#F3EAD8] px-6 py-4 border-b border-[#E2C275]">
                   <h2 className="text-xl font-bold flex items-center gap-2">
-                    <FiSettings className="text-[#A21C1C]" />
+                    <FiSettings className="text-[#1D4ED8]" />
                     System Configuration
                   </h2>
                 </div>
@@ -839,7 +887,7 @@ export default function SettingsPage() {
                             value="low"
                             checked={alertThreshold === "low"}
                             onChange={() => setAlertThreshold("low")}
-                            className="accent-[#A21C1C]"
+                            className="accent-[#1D4ED8]"
                           />
                           <span>Low</span>
                         </label>
@@ -850,7 +898,7 @@ export default function SettingsPage() {
                             value="medium"
                             checked={alertThreshold === "medium"}
                             onChange={() => setAlertThreshold("medium")}
-                            className="accent-[#A21C1C]"
+                            className="accent-[#1D4ED8]"
                           />
                           <span>Medium</span>
                         </label>
@@ -861,7 +909,7 @@ export default function SettingsPage() {
                             value="high"
                             checked={alertThreshold === "high"}
                             onChange={() => setAlertThreshold("high")}
-                            className="accent-[#A21C1C]"
+                            className="accent-[#1D4ED8]"
                           />
                           <span>High</span>
                         </label>
@@ -873,7 +921,7 @@ export default function SettingsPage() {
                         <Label htmlFor="prediction-model">Prediction Model Parameters</Label>
                         <button 
                           onClick={() => setShowModelParamsEdit(!showModelParamsEdit)}
-                          className="text-[#A21C1C] hover:bg-[#F3EAD8] p-2 rounded-lg flex items-center gap-1"
+                          className="text-[#1D4ED8] hover:bg-[#F3EAD8] p-2 rounded-lg flex items-center gap-1"
                         >
                           <FiSliders className="text-sm" />
                           <span className="text-sm">{showModelParamsEdit ? 'Cancel' : 'Edit Parameters'}</span>
@@ -893,7 +941,7 @@ export default function SettingsPage() {
                                 ...predictionModelParams,
                                 temperatureWeight: parseFloat(e.target.value) || 0
                               })}
-                              className="w-20 border-[#E2C275] focus:border-[#A21C1C]"
+                              className="w-20 border-[#E2C275] focus:border-[#1D4ED8]"
                             />
                           </div>
                           <div className="flex justify-between items-center">
@@ -908,7 +956,7 @@ export default function SettingsPage() {
                                 ...predictionModelParams,
                                 rainfallWeight: parseFloat(e.target.value) || 0
                               })}
-                              className="w-20 border-[#E2C275] focus:border-[#A21C1C]"
+                              className="w-20 border-[#E2C275] focus:border-[#1D4ED8]"
                             />
                           </div>
                           <div className="flex justify-between items-center">
@@ -923,7 +971,7 @@ export default function SettingsPage() {
                                 ...predictionModelParams,
                                 populationDensityWeight: parseFloat(e.target.value) || 0
                               })}
-                              className="w-20 border-[#E2C275] focus:border-[#A21C1C]"
+                              className="w-20 border-[#E2C275] focus:border-[#1D4ED8]"
                             />
                           </div>
                         </div>
@@ -955,7 +1003,7 @@ export default function SettingsPage() {
                             value="automatic"
                             checked={syncMode === "automatic"}
                             onChange={() => setSyncMode("automatic")}
-                            className="accent-[#A21C1C]"
+                            className="accent-[#1D4ED8]"
                           />
                           <span>Automatic</span>
                         </label>
@@ -966,7 +1014,7 @@ export default function SettingsPage() {
                             value="manual"
                             checked={syncMode === "manual"}
                             onChange={() => setSyncMode("manual")}
-                            className="accent-[#A21C1C]"
+                            className="accent-[#1D4ED8]"
                           />
                           <span>Manual</span>
                         </label>
@@ -983,7 +1031,7 @@ export default function SettingsPage() {
                     {systemConfigSuccess && <div className="text-green-600 mt-2">{systemConfigSuccess}</div>}
                     <div className="pt-4">
                       <button 
-                        className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2 disabled:opacity-50"
+                        className="bg-[#1D4ED8] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#1E3A8A] flex items-center gap-2 disabled:opacity-50"
                         onClick={handleSaveSystemConfiguration}
                         disabled={systemConfigLoading || companySettingsLoading}
                       >
@@ -1003,12 +1051,12 @@ export default function SettingsPage() {
               <div className="bg-[#F3EAD8] px-6 py-4 border-b border-[#E2C275]">
                 <div className="flex justify-between items-center">
                   <h2 className="text-xl font-bold flex items-center gap-2">
-                    <FiMapPin className="text-[#A21C1C]" />
+                    <FiMapPin className="text-[#1D4ED8]" />
                     Company Locations
                   </h2>
                   <button
                     onClick={() => setShowAddLocation(true)}
-                    className="bg-[#A21C1C] text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#7C1D1D] flex items-center gap-2"
+                    className="bg-[#1D4ED8] text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#1E3A8A] flex items-center gap-2"
                   >
                     <FiPlus />
                     Add Location
@@ -1055,7 +1103,7 @@ export default function SettingsPage() {
                           <div className="flex gap-2 ml-4">
                             <button
                               onClick={() => handleEditLocation(location)}
-                              className="text-[#A21C1C] hover:bg-[#F3EAD8] p-2 rounded-lg"
+                              className="text-[#1D4ED8] hover:bg-[#F3EAD8] p-2 rounded-lg"
                               title="Edit location"
                             >
                               <FiEdit3 />
@@ -1083,7 +1131,7 @@ export default function SettingsPage() {
                             value={locationForm.name}
                             onChange={handleLocationChange}
                             placeholder="Enter location name"
-                            className="border-[#E2C275] focus:border-[#A21C1C]"
+                            className="border-[#E2C275] focus:border-[#1D4ED8]"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1094,7 +1142,7 @@ export default function SettingsPage() {
                             value={locationForm.address}
                             onChange={handleLocationChange}
                             placeholder="Enter address (optional)"
-                            className="border-[#E2C275] focus:border-[#A21C1C]"
+                            className="border-[#E2C275] focus:border-[#1D4ED8]"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1107,7 +1155,7 @@ export default function SettingsPage() {
                             value={locationForm.latitude}
                             onChange={handleLocationChange}
                             placeholder="Enter latitude (optional)"
-                            className="border-[#E2C275] focus:border-[#A21C1C]"
+                            className="border-[#E2C275] focus:border-[#1D4ED8]"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1120,8 +1168,21 @@ export default function SettingsPage() {
                             value={locationForm.longitude}
                             onChange={handleLocationChange}
                             placeholder="Enter longitude (optional)"
-                            className="border-[#E2C275] focus:border-[#A21C1C]"
+                            className="border-[#E2C275] focus:border-[#1D4ED8]"
                           />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="location-status">Status</Label>
+                          <select
+                            id="location-status"
+                            name="isActive"
+                            value={locationForm.isActive.toString()}
+                            onChange={(e) => setLocationForm({ ...locationForm, isActive: e.target.value === 'true' })}
+                            className="w-full rounded-md border border-[#E2C275] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                          >
+                            <option value="true">Active</option>
+                            <option value="false">Inactive</option>
+                          </select>
                         </div>
                       </div>
 
@@ -1163,13 +1224,12 @@ export default function SettingsPage() {
                       </div>
                       
                       {locationError && <div className="text-red-600">{locationError}</div>}
-                      {locationSuccess && <div className="text-green-600">{locationSuccess}</div>}
                       
                       <div className="flex gap-3">
                         <button
                           onClick={handleLocationSave}
                           disabled={locationLoading}
-                          className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2 disabled:opacity-50"
+                          className="bg-[#1D4ED8] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#1E3A8A] flex items-center gap-2 disabled:opacity-50"
                         >
                           <FiSave />
                           {locationLoading ? 'Saving...' : (editingLocation ? 'Update Location' : 'Add Location')}
@@ -1193,7 +1253,7 @@ export default function SettingsPage() {
             <Card className="bg-white shadow-md rounded-xl overflow-hidden">
               <div className="bg-[#F3EAD8] px-6 py-4 border-b border-[#E2C275]">
                 <h2 className="text-xl font-bold flex items-center gap-2">
-                  <FiBell className="text-[#A21C1C]" />
+                  <FiBell className="text-[#1D4ED8]" />
                   Broadcast Notification
                 </h2>
                 <p className="text-sm text-gray-600 mt-1">Send push notifications to all mobile app users</p>
@@ -1207,7 +1267,7 @@ export default function SettingsPage() {
                       value={broadcastTitle}
                       onChange={(e) => setBroadcastTitle(e.target.value)}
                       placeholder="Enter notification title"
-                      className="border-[#E2C275] focus:border-[#A21C1C]"
+                      className="border-[#E2C275] focus:border-[#1D4ED8]"
                       disabled={broadcastLoading}
                     />
                   </div>
@@ -1219,7 +1279,7 @@ export default function SettingsPage() {
                       onChange={(e) => setBroadcastMessage(e.target.value)}
                       placeholder="Enter notification message"
                       rows={4}
-                      className="w-full rounded-lg border border-[#E2C275] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#A21C1C] resize-none"
+                      className="w-full rounded-lg border border-[#E2C275] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] resize-none"
                       disabled={broadcastLoading}
                     />
                   </div>
@@ -1241,7 +1301,7 @@ export default function SettingsPage() {
                   )}
                   <div className="pt-2">
                     <button
-                      className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="bg-[#1D4ED8] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#1E3A8A] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={handleBroadcastNotification}
                       disabled={broadcastLoading || !broadcastTitle.trim() || !broadcastMessage.trim()}
                     >
@@ -1262,7 +1322,7 @@ export default function SettingsPage() {
             <Card className="bg-white shadow-md rounded-xl overflow-hidden">
               <div className="bg-[#F3EAD8] px-6 py-4 border-b border-[#E2C275]">
                 <h2 className="text-xl font-bold flex items-center gap-2">
-                  <FiSettings className="text-[#A21C1C]" />
+                  <FiSettings className="text-[#1D4ED8]" />
                   Advanced Settings
                 </h2>
               </div>
@@ -1321,7 +1381,7 @@ export default function SettingsPage() {
                   
                   <div className="pt-4">
                     <button 
-                      className="bg-[#A21C1C] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#7C1D1D] flex items-center gap-2 disabled:opacity-50"
+                      className="bg-[#1D4ED8] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#1E3A8A] flex items-center gap-2 disabled:opacity-50"
                       onClick={handleSaveAdvancedSettings}
                       disabled={advancedSettingsLoading || companySettingsLoading}
                     >
@@ -1334,6 +1394,43 @@ export default function SettingsPage() {
             </Card>
           </motion.div>
         </motion.section>
+
+        {/* Success Dialog */}
+        <AnimatePresence>
+          {showSuccessDialog && (
+            <motion.div
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4"
+              variants={overlayVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              onClick={() => setShowSuccessDialog(false)}
+            >
+              <motion.div
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+                variants={modalVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-8 text-center">
+                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <FiCheckCircle className="text-green-600 text-4xl" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Success!</h3>
+                  <p className="text-gray-600 mb-8">{successDialogMessage}</p>
+                  <button
+                    onClick={() => setShowSuccessDialog(false)}
+                    className="w-full bg-[#1D4ED8] text-white py-3 rounded-xl font-bold hover:bg-[#1E3A8A] transition-colors"
+                  >
+                    Great!
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   )

@@ -20,9 +20,8 @@ export default function AdminSidebar({ current }: { current: string }) {
   return (
     <aside className="w-72 bg-white flex flex-col py-8 px-4 gap-2 border-r border-[#E2C275] shadow-lg">
       <div className="flex items-center gap-3 mb-10 px-4">
-        <div className="relative w-10 h-10 bg-[#A21C1C] rounded-lg flex items-center justify-center">
+        <div className="relative w-10 h-10 bg-[#1D4ED8] rounded-lg flex items-center justify-center">
           <Image src="/logo.svg" alt="Logo" width={28} height={28} className="object-contain" />
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#E2C275] rounded-full"></div>
         </div>
         <span className="font-bold text-xl text-black">Drone4Dengue</span>
       </div>
@@ -40,7 +39,7 @@ export default function AdminSidebar({ current }: { current: string }) {
               key={link.label}
               href={link.href}
               className={`relative flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 group ${
-                isActive ? "bg-[#A21C1C] text-white" : "text-gray-600 hover:bg-[#FFF7E3]"
+              isActive ? "bg-[#1D4ED8] text-white" : "text-gray-600 hover:bg-[#EFF6FF]"
               }`}
             >
               {isActive && (
@@ -52,25 +51,24 @@ export default function AdminSidebar({ current }: { current: string }) {
                   transition={{ duration: 0.2 }}
                 />
               )}
-              <span className={`text-lg ${isActive ? "text-white" : "text-[#A21C1C] group-hover:text-[#A21C1C]"}`}>
+            <span className={`text-lg ${isActive ? "text-white" : "text-[#1D4ED8] group-hover:text-[#1D4ED8]"}`}>
                 {link.icon}
               </span>
               <span className={isActive ? "font-semibold" : ""}>{link.label}</span>
-              {isActive && <div className="absolute right-4 w-1.5 h-1.5 rounded-full bg-white"></div>}
             </Link>
           )
         })}
       </nav>
 
-      {/* <div className="mt-auto mx-4 mb-6 bg-gradient-to-r from-[#FFF7E3] to-[#E2C275]/30 p-4 rounded-xl">
+      {/* <div className="mt-auto mx-4 mb-6 bg-gradient-to-r from-[#FFF6FF] to-[#E2C275]/30 p-4 rounded-xl">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-8 h-8 rounded-full bg-[#A21C1C] flex items-center justify-center text-white">
+          <div className="w-8 h-8 rounded-full bg-[#1D4ED8] flex items-center justify-center text-white">
             <FiAlertCircle size={16} />
           </div>
           <p className="font-medium text-sm">Need Help?</p>
         </div>
         <p className="text-xs text-gray-600 mb-3">Contact our support team for assistance</p>
-        <button className="w-full py-2 bg-[#A21C1C] text-white text-sm font-medium rounded-lg hover:bg-[#7C1D1D] transition-colors">
+        <button className="w-full py-2 bg-[#1D4ED8] text-white text-sm font-medium rounded-lg hover:bg-[#1E3A8A] transition-colors">
           Contact Support
         </button>
       </div> */}

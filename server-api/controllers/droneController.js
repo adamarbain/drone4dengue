@@ -365,7 +365,7 @@ exports.registerDrone = async (req, res) => {
 exports.updateDrone = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, model, operationalArea, status } = req.body;
+    const { name, model, serial, operationalArea, status, companyLocationId } = req.body;
 
     // Check if drone exists and belongs to company
     const existingDrone = await prisma.drone.findFirst({
@@ -385,8 +385,10 @@ exports.updateDrone = async (req, res) => {
       data: {
         ...(name && { name }),
         ...(model && { model }),
+        ...(serial && { serial }),
         ...(operationalArea && { operationalArea }),
-        ...(status && { status })
+        ...(status && { status }),
+        ...(companyLocationId && { companyLocationId })
       },
       include: {
         user: {
@@ -394,7 +396,8 @@ exports.updateDrone = async (req, res) => {
             userId: true,
             name: true
           }
-        }
+        },
+        companyLocation: true
       }
     });
 

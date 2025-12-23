@@ -12,6 +12,7 @@ import {
   FiActivity,
   FiTrendingUp,
   FiDatabase,
+  FiChevronRight,
 } from "react-icons/fi"
 import Image from "next/image"
 import { motion } from "framer-motion"
@@ -81,31 +82,48 @@ export default function DataManagementPage() {
   const [mapData, setMapData] = useState<any[]>([])
   const [historicalData, setHistoricalData] = useState<any[]>([])
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRows, setTotalRows] = useState(0);
   const rowsPerPage = 20;
 
-  // Extract unique locations and statuses
-  const uniqueLocations = [
-    "All Locations",
-    ...Array.from(new Set(dataRows.map((row) => row.location))).filter(Boolean),
-  ]
-  const uniqueStatuses = [
-    "All Type",
-    ...Array.from(new Set(dataRows.map((row) => row.status))).filter(Boolean),
-  ]
+  // Extract unique locations and statuses from dataRows (now used for filters dropdown)
+  // We'll also fetch these separately or keep them updated
+  const [uniqueLocations, setUniqueLocations] = useState<string[]>(["All Locations"])
+  const uniqueStatuses = ["All Type", "Active Cases", "Hotspot", "Completed", "Processing"];
 
-  // Fetch data with filters
+  // Fetch unique locations for filter
+  useEffect(() => {
+    async function fetchFilterOptions() {
+      try {
+        const res = await fetch(`${API_URL}/dengue-data/locations`);
+        if (res.ok) {
+          const locations = await res.json();
+          setUniqueLocations(["All Locations", ...locations]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch locations for filter:", err);
+      }
+    }
+    fetchFilterOptions();
+  }, []);
+
+  // Fetch data with filters and pagination
   useEffect(() => {
     async function fetchData() {
       setLoading(true)
       setError(null)
       try {
-        let url = `${API_URL}/dengue-data`;
-        const params = [];
-        if (selectedLocation && selectedLocation !== "All Locations") params.push(`location=${encodeURIComponent(selectedLocation)}`);
-        if (selectedStatus && selectedStatus !== "All Status") params.push(`status=${encodeURIComponent(selectedStatus)}`);
-        if (params.length) url += `?${params.join("&")}`;
+        let url = `${API_URL}/dengue-data?page=${currentPage}&limit=${rowsPerPage}`;
+        if (selectedLocation && selectedLocation !== "All Locations") url += `&location=${encodeURIComponent(selectedLocation)}`;
+        if (selectedStatus && selectedStatus !== "All Status" && selectedStatus !== "All Type") url += `&status=${encodeURIComponent(selectedStatus)}`;
+        if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`; // If backend supports search
+
         const [recordsRes, summaryRes] = await Promise.all([
-          fetch(url),
+          fetch(url, {
+            headers: {
+              Authorization: `Bearer ${getToken()}`
+            }
+          }),
           fetch(`${API_URL}/dengue-data/summary/dengue-data`, {
             headers: {
               Authorization: `Bearer ${getToken()}`
@@ -113,9 +131,13 @@ export default function DataManagementPage() {
           })
         ])
         if (!recordsRes.ok || !summaryRes.ok) throw new Error("Failed to fetch data")
-        const records = await recordsRes.json()
+        
+        const recordsData = await recordsRes.json()
         const summaryData = await summaryRes.json()
-        setDataRows(records)
+        
+        setDataRows(recordsData.data || [])
+        setTotalPages(recordsData.pagination?.totalPages || 1)
+        setTotalRows(recordsData.pagination?.total || 0)
         setSummary(summaryData)
       } catch (e: any) {
         setError(e.message)
@@ -124,7 +146,7 @@ export default function DataManagementPage() {
       }
     }
     fetchData()
-  }, [selectedLocation, selectedStatus])
+  }, [selectedLocation, selectedStatus, currentPage, searchTerm])
 
   useEffect(() => {
     async function fetchMapData() {
@@ -156,28 +178,18 @@ export default function DataManagementPage() {
     fetchHistorical()
   }, [])
 
-  const filteredData = dataRows.filter(
-    (row) =>
-      row.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (row.date && new Date(row.date).toLocaleDateString().includes(searchTerm))
-  )
-
   // When filters/search change, reset currentPage to 1
   useEffect(() => { setCurrentPage(1); }, [selectedLocation, selectedStatus, searchTerm]);
 
-  const totalRows = filteredData.length;
-  const totalPages = Math.ceil(totalRows / rowsPerPage);
-  const paginatedData = filteredData.slice(
-    (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
-  );
+  const paginatedData = dataRows;
 
   // Export handler
   const onExport = () => {
     let url = `${API_URL}/dengue-data/export`;
     const params = [];
     if (selectedLocation && selectedLocation !== "All Locations") params.push(`location=${encodeURIComponent(selectedLocation)}`);
-    if (selectedStatus && selectedStatus !== "All Status") params.push(`status=${encodeURIComponent(selectedStatus)}`);
+    if (selectedStatus && selectedStatus !== "All Status" && selectedStatus !== "All Type") params.push(`status=${encodeURIComponent(selectedStatus)}`);
+    if (searchTerm) params.push(`search=${encodeURIComponent(searchTerm)}`);
     if (params.length) url += `?${params.join("&")}`;
     // Trigger download
     const link = document.createElement('a');
@@ -218,7 +230,11 @@ export default function DataManagementPage() {
       if (selectedStatus && selectedStatus !== "All Status") params.push(`status=${encodeURIComponent(selectedStatus)}`);
       if (params.length) url += `?${params.join("&")}`;
       const [recordsRes, summaryRes] = await Promise.all([
-        fetch(url),
+        fetch(url, {
+          headers: {
+            Authorization: `Bearer ${getToken()}`
+          }
+        }),
         fetch(`${API_URL}/dengue-data/summary/dengue-data`, {
           headers: {
             Authorization: `Bearer ${getToken()}`
@@ -226,8 +242,11 @@ export default function DataManagementPage() {
         })
       ])
       if (recordsRes.ok && summaryRes.ok) {
-        setDataRows(await recordsRes.json())
-        setSummary(await summaryRes.json())
+        const recordsData = await recordsRes.json();
+        setDataRows(recordsData.data || []);
+        setTotalPages(recordsData.pagination?.totalPages || 1);
+        setTotalRows(recordsData.pagination?.total || 0);
+        setSummary(await summaryRes.json());
       }
     } catch (e: any) {
       setUploadMsg(e.message)
@@ -246,7 +265,7 @@ export default function DataManagementPage() {
           <Tooltip />
           <Legend />
           <Line type="monotone" dataKey="activeCases" stroke="#2563eb" strokeWidth={2} name="Active Cases" />
-          <Line type="monotone" dataKey="hotspotCount" stroke="#A21C1C" strokeWidth={2} name="Hotspot Detected" />
+          <Line type="monotone" dataKey="hotspotCount" stroke="#1D4ED8" strokeWidth={2} name="Hotspot Detected" />
         </LineChart>
       </ResponsiveContainer>
     )
@@ -269,7 +288,7 @@ export default function DataManagementPage() {
           <motion.div variants={item} className="mb-8">
             <h1 className="text-3xl font-bold text-black mb-1">Data Management</h1>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#A21C1C]"></div>
+              <div className="w-2 h-2 rounded-full bg-[#1D4ED8]"></div>
               <div className="text-lg text-gray-600">
                 View and Analyze data related to dengue cases
               </div>
@@ -278,9 +297,9 @@ export default function DataManagementPage() {
 
           {/* Data Overview Cards */}
           <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            {summary && [
+              {summary && [
               { label: "Total Records", value: summary.totalRecords, icon: <FiDatabase />, color: "bg-blue-500" },
-              { label: "Active Cases", value: summary.activeCases, icon: <FiActivity />, color: "bg-red-500" },
+              { label: "Active Cases", value: summary.activeCases, icon: <FiActivity />, color: "bg-blue-600" },
               { label: "Dengue Hotspots", value: summary.hotspotCount, icon: <FiTrendingUp />, color: "bg-purple-500" },
               { label: "Locations Covered", value: summary.locationsCovered, icon: <FiMapPin />, color: "bg-green-500" },
             ].map((stat) => (
@@ -299,7 +318,7 @@ export default function DataManagementPage() {
           {/* Upload Button */}
           {/* <motion.div variants={item} className="mb-8">
             <button
-              className={`bg-[#A21C1C] text-white px-8 py-3 rounded-lg font-bold text-base hover:bg-[#7C1D1D] transition-all flex items-center gap-2 shadow-md ${uploading ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={`bg-[#1D4ED8] text-white px-8 py-3 rounded-lg font-bold text-base hover:bg-[#1E3A8A] transition-all flex items-center gap-2 shadow-md ${uploading ? "opacity-50 cursor-not-allowed" : ""}`}
               onClick={onUploadClick}
               disabled={uploading}
             >
@@ -322,7 +341,7 @@ export default function DataManagementPage() {
           <motion.div variants={item} className="mb-8">
             <div className="bg-white rounded-xl p-6 shadow-md border border-[#E2C275]/30">
               <div className="font-bold text-lg mb-4 flex items-center gap-2">
-                <FiFilter className="text-[#A21C1C]" />
+                <FiFilter className="text-[#1D4ED8]" />
                 Data Filters
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -337,7 +356,7 @@ export default function DataManagementPage() {
                   />
                 </div>
                 <select
-                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E2C275]"
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
                   value={selectedLocation}
                   onChange={(e) => setSelectedLocation(e.target.value)}
                 >
@@ -348,7 +367,7 @@ export default function DataManagementPage() {
                   ))}
                 </select>
                 <select
-                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E2C275]"
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
                 >
@@ -369,7 +388,7 @@ export default function DataManagementPage() {
                 <div className="flex justify-between items-center">
                   <h3 className="font-bold text-lg">Data Records</h3>
                   <div className="flex gap-2">
-                    <button className="px-4 py-2 bg-[#A21C1C] text-white rounded-lg text-sm font-medium hover:bg-[#7C1D1D] transition-colors flex items-center gap-2" onClick={onExport}>
+                    <button className="px-4 py-2 bg-[#1D4ED8] text-white rounded-lg text-sm font-medium hover:bg-[#1E3A8A] transition-colors flex items-center gap-2" onClick={onExport}>
                       <FiDownload size={16} />
                       Export
                     </button>
@@ -397,11 +416,11 @@ export default function DataManagementPage() {
                         transition={{ delay: idx * 0.1 }}
                       >
                         <td className="py-4 px-6 font-medium text-black flex items-center gap-2">
-                          <FiCalendar className="text-[#A21C1C]" size={16} />
+                          <FiCalendar className="text-[#1D4ED8]" size={16} />
                           {row.date ? new Date(row.date).toLocaleDateString("en-GB") : "-"}
                         </td>
                         <td className="py-4 px-6 text-black flex items-center gap-2">
-                          <FiMapPin className="text-[#A21C1C]" size={16} />
+                          <FiMapPin className="text-[#1D4ED8]" size={16} />
                           {row.location}
                         </td>
                         <td className="py-4 px-6">
@@ -430,24 +449,74 @@ export default function DataManagementPage() {
                   </tbody>
                 </table>
               </div>
-              <div className="flex justify-center items-center gap-2 mt-4">
-                <button
-                  className="px-3 py-1 rounded bg-gray-200"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  Previous
-                </button>
-                <span>
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  className="px-3 py-1 rounded bg-gray-200"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                </button>
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div className="text-sm text-gray-600">
+                  Showing <span className="font-semibold">{Math.min(totalRows, (currentPage - 1) * rowsPerPage + 1)}</span> to{" "}
+                  <span className="font-semibold">{Math.min(totalRows, currentPage * rowsPerPage)}</span> of{" "}
+                  <span className="font-semibold">{totalRows}</span> records
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    title="First Page"
+                  >
+                    <FiChevronRight className="rotate-180" size={18} />
+                    <FiChevronRight className="rotate-180 -ml-3" size={18} />
+                  </button>
+                  <button
+                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    title="Previous Page"
+                  >
+                    <FiChevronRight className="rotate-180" size={18} />
+                  </button>
+                  
+                  <div className="flex items-center gap-1 mx-2">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          className={`w-10 h-10 rounded-lg border font-medium transition-all ${currentPage === pageNum ? "bg-[#1D4ED8] text-white border-[#1D4ED8]" : "border-gray-300 hover:bg-gray-100 text-gray-700"}`}
+                          onClick={() => setCurrentPage(pageNum)}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    title="Next Page"
+                  >
+                    <FiChevronRight size={18} />
+                  </button>
+                  <button
+                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    title="Last Page"
+                  >
+                    <FiChevronRight size={18} />
+                    <FiChevronRight className="-ml-3" size={18} />
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -457,16 +526,16 @@ export default function DataManagementPage() {
             <div className="bg-white rounded-xl p-8 shadow-md border border-[#E2C275]/30">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-lg">Historical Trends</h3>
-                <FiTrendingUp className="text-[#A21C1C]" />
+                <FiTrendingUp className="text-[#1D4ED8]" />
               </div>
               <div className="text-center mb-6">
-                <div className="text-4xl font-extrabold text-[#A21C1C] mb-2">{
+                <div className="text-4xl font-extrabold text-[#1D4ED8] mb-2">{
                   (historicalData || []).reduce((sum, row) => sum + (row.activeCases || 0), 0).toLocaleString()
                 }</div>
                 <div className="text-lg text-gray-500 mb-4">Total Active Cases</div>
               </div>
               <HistoricalTrendsChart />
-              <button className="w-full bg-[#A21C1C] text-white py-3 rounded-lg font-bold text-base hover:bg-[#7C1D1D] transition-colors">
+              <button className="w-full bg-[#1D4ED8] text-white py-3 rounded-lg font-bold text-base hover:bg-[#1E3A8A] transition-colors">
                 View Detailed Analytics
               </button>
             </div>
@@ -474,20 +543,20 @@ export default function DataManagementPage() {
             <div className="bg-white rounded-xl p-6 shadow-md border border-[#E2C275]/30">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-lg">Coverage Map</h3>
-                <FiMapPin className="text-[#A21C1C]" />
+                <FiMapPin className="text-[#1D4ED8]" />
               </div>
               <div className="relative rounded-lg overflow-hidden mb-4">
                 <CoverageMap mapData={mapData} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-3 bg-[#FFF7E3] rounded-lg">
-                  <div className="text-lg font-bold text-[#A21C1C]">
+                  <div className="text-lg font-bold text-[#1D4ED8]">
                     {uniqueLocations.length - 1}
                   </div>
                   <div className="text-xs text-gray-600">Locations Covered</div>
                 </div>
                 <div className="text-center p-3 bg-[#FFF7E3] rounded-lg">
-                  <div className="text-lg font-bold text-[#A21C1C]">24/7</div>
+                  <div className="text-lg font-bold text-[#1D4ED8]">24/7</div>
                   <div className="text-xs text-gray-600">Monitoring</div>
                 </div>
               </div>
