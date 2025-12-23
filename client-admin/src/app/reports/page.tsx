@@ -281,7 +281,7 @@ export default function ReportsPage() {
           <motion.div variants={item} className="mb-8">
             <h1 className="text-3xl font-bold text-black mb-1">Report Generation</h1>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#A21C1C]"></div>
+              <div className="w-2 h-2 rounded-full bg-[#1D4ED8]"></div>
               <div className="text-lg text-gray-600">Customize and generate data insights reports for your company</div>
             </div>
           </motion.div>
@@ -316,13 +316,13 @@ export default function ReportsPage() {
           <motion.div variants={item} className="mb-8">
             <div className="bg-white rounded-xl p-6 shadow-md border border-[#E2C275]/30">
               <div className="font-bold text-xl mb-4 flex items-center gap-2">
-                <FiFilter className="text-[#A21C1C]" />
+                <FiFilter className="text-[#1D4ED8]" />
                 Report Filters
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 <div className="flex flex-col gap-2">
                   <label className="font-semibold text-black text-sm flex items-center gap-2">
-                    <FiCalendar className="text-[#A21C1C]" size={16} />
+                    <FiCalendar className="text-[#1D4ED8]" size={16} />
                     Start Date
                   </label>
                   <input
@@ -334,7 +334,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="font-semibold text-black text-sm flex items-center gap-2">
-                    <FiCalendar className="text-[#A21C1C]" size={16} />
+                    <FiCalendar className="text-[#1D4ED8]" size={16} />
                     End Date
                   </label>
                   <input
@@ -346,7 +346,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="font-semibold text-black text-sm flex items-center gap-2">
-                    <FiBarChart2 className="text-[#A21C1C]" size={16} />
+                    <FiBarChart2 className="text-[#1D4ED8]" size={16} />
                     Data Type
                   </label>
                   <select
@@ -370,7 +370,7 @@ export default function ReportsPage() {
               )}
               <div className="flex gap-4">
                 <button
-                  className={`bg-[#A21C1C] text-white px-8 py-3 rounded-lg font-bold text-base flex items-center gap-2 shadow-md transition-all ${!filtersComplete || loading ? "opacity-60 cursor-not-allowed" : "hover:bg-[#7C1D1D]"}`}
+                  className={`bg-[#1D4ED8] text-white px-8 py-3 rounded-lg font-bold text-base flex items-center gap-2 shadow-md transition-all ${!filtersComplete || loading ? "opacity-60 cursor-not-allowed" : "hover:bg-[#1E3A8A]"}`}
                   onClick={handleGenerateReport}
                   disabled={!filtersComplete || loading}
                 >
@@ -382,7 +382,7 @@ export default function ReportsPage() {
                   {loading ? "Generating..." : "Generate Report"}
                 </button>
                 <button
-                  className="bg-white text-[#A21C1C] border border-[#A21C1C] px-8 py-3 rounded-lg font-bold text-base hover:bg-[#FFF7E3] transition-all"
+                  className="bg-white text-[#1D4ED8] border border-[#1D4ED8] px-8 py-3 rounded-lg font-bold text-base hover:bg-[#EFF6FF] transition-all"
                   onClick={handleClearFilters}
                   disabled={loading}
                 >
@@ -404,7 +404,7 @@ export default function ReportsPage() {
               >
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold text-lg flex items-center gap-2">
-                    <FiBarChart2 className="text-[#A21C1C]" />
+                    <FiBarChart2 className="text-[#1D4ED8]" />
                     Weekly Overview
                   </h3>
                   <FiTrendingUp className="text-green-500" />
@@ -420,7 +420,7 @@ export default function ReportsPage() {
                           y={bar.y} 
                           width="16" 
                           height={bar.height} 
-                          fill={idx === generateBarChartData().length - 1 ? "#A21C1C" : "#E2C275"} 
+                          fill={idx === generateBarChartData().length - 1 ? "#1D4ED8" : "#E2C275"} 
                           rx="2" 
                         />
                       ))
@@ -429,7 +429,7 @@ export default function ReportsPage() {
                         <rect x="20" y="40" width="16" height="30" fill="#E2C275" rx="2" />
                         <rect x="44" y="30" width="16" height="40" fill="#E2C275" rx="2" />
                         <rect x="68" y="50" width="16" height="20" fill="#E2C275" rx="2" />
-                        <rect x="92" y="20" width="16" height="50" fill="#A21C1C" rx="2" />
+                        <rect x="92" y="20" width="16" height="50" fill="#1D4ED8" rx="2" />
                         <rect x="116" y="35" width="16" height="35" fill="#E2C275" rx="2" />
                         <rect x="140" y="45" width="16" height="25" fill="#E2C275" rx="2" />
                       </>
@@ -437,7 +437,7 @@ export default function ReportsPage() {
                   </svg>
                 </div>
                 <div className="text-center mb-4">
-                  <div className="text-2xl font-bold text-[#A21C1C]">
+                  <div className="text-2xl font-bold text-[#1D4ED8]">
                     {reportGenerated && reportData ? reportData.latestValue : "-"}
                   </div>
                   <div className="text-sm text-gray-500">{selectedDataType || "Data"}</div>
@@ -448,7 +448,7 @@ export default function ReportsPage() {
                   </div>
                 </div>
                 <button
-                  className="w-full bg-[#A21C1C] text-white py-2 rounded-lg font-bold hover:bg-[#7C1D1D] transition-colors disabled:cursor-not-allowed"
+                  className="w-full bg-[#1D4ED8] text-white py-2 rounded-lg font-bold hover:bg-[#1E3A8A] transition-colors disabled:cursor-not-allowed"
                   disabled={!reportGenerated}
                   onClick={() => handleViewDetails("weekly")}
                 >
@@ -464,7 +464,7 @@ export default function ReportsPage() {
               >
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold text-lg flex items-center gap-2">
-                    <FiPieChart className="text-[#A21C1C]" />
+                    <FiPieChart className="text-[#1D4ED8]" />
                     Cases Overview
                   </h3>
                   <FiTrendingUp className="text-green-500" />
@@ -474,8 +474,8 @@ export default function ReportsPage() {
                   <svg width="100%" height="100%" viewBox="0 0 320 80" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <defs>
                       <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="80" gradientUnits="userSpaceOnUse">
-                        <stop stopColor="#A21C1C" stopOpacity="0.6" />
-                        <stop offset="1" stopColor="#A21C1C" stopOpacity="0.1" />
+                        <stop stopColor="#1D4ED8" stopOpacity="0.6" />
+                        <stop offset="1" stopColor="#1D4ED8" stopOpacity="0.1" />
                       </linearGradient>
                     </defs>
                     {reportGenerated && reportData && reportData.weeklyData && reportData.weeklyData.length > 0 ? (() => {
@@ -488,12 +488,12 @@ export default function ReportsPage() {
                           />
                           <path
                             d={chartData.path}
-                            stroke="#A21C1C"
+                            stroke="#1D4ED8"
                             strokeWidth="2"
                             fill="none"
                           />
                           {chartData.points.map((point: any, idx: number) => (
-                            <circle key={idx} cx={point.x} cy={point.y} r="3" fill="#A21C1C" />
+                            <circle key={idx} cx={point.x} cy={point.y} r="3" fill="#1D4ED8" />
                           ))}
                         </>
                       )
@@ -505,13 +505,13 @@ export default function ReportsPage() {
                         />
                         <path
                           d="M0,60 Q40,40 80,50 Q120,70 160,40 Q200,20 240,50 Q280,80 320,40"
-                          stroke="#A21C1C"
+                          stroke="#1D4ED8"
                           strokeWidth="2"
                           fill="none"
                         />
-                        <circle cx="80" cy="50" r="3" fill="#A21C1C" />
-                        <circle cx="160" cy="40" r="3" fill="#A21C1C" />
-                        <circle cx="240" cy="50" r="3" fill="#A21C1C" />
+                        <circle cx="80" cy="50" r="3" fill="#1D4ED8" />
+                        <circle cx="160" cy="40" r="3" fill="#1D4ED8" />
+                        <circle cx="240" cy="50" r="3" fill="#1D4ED8" />
                       </>
                     )}
                   </svg>
@@ -537,7 +537,7 @@ export default function ReportsPage() {
                   )}
                 </div>
                 <button
-                  className="w-full bg-[#A21C1C] text-white py-2 rounded-lg font-bold hover:bg-[#7C1D1D] transition-colors disabled:cursor-not-allowed"
+                  className="w-full bg-[#1D4ED8] text-white py-2 rounded-lg font-bold hover:bg-[#1E3A8A] transition-colors disabled:cursor-not-allowed"
                   disabled={!reportGenerated}
                   onClick={() => handleViewDetails("cases")}
                 >
@@ -579,7 +579,7 @@ export default function ReportsPage() {
                             <div className="font-medium text-gray-800">
                               {entry.date ? new Date(entry.date).toLocaleDateString() : `Week ${idx + 1}`}
                             </div>
-                            <div className="text-[#A21C1C] font-semibold">
+                            <div className="text-[#1D4ED8] font-semibold">
                               {entry.value !== undefined ? entry.value.toLocaleString() : "-"}
                             </div>
                           </div>
@@ -602,7 +602,7 @@ export default function ReportsPage() {
                                 <span className={`inline-block w-3 h-3 rounded-full ${stat.color}`}></span>
                                 {stat.label}
                               </div>
-                              <div className="text-2xl font-bold text-[#A21C1C]">
+                              <div className="text-2xl font-bold text-[#1D4ED8]">
                                 {stat.value !== undefined ? stat.value.toLocaleString() : "-"}
                               </div>
                             </div>
@@ -644,7 +644,7 @@ export default function ReportsPage() {
             <motion.div variants={item} className="mb-8">
               <div className="bg-white rounded-xl p-6 shadow-md border border-[#E2C275]/30">
                 <div className="font-bold text-xl mb-4 flex items-center gap-2">
-                  <FiDownload className="text-[#A21C1C]" />
+                  <FiDownload className="text-[#1D4ED8]" />
                   Export Options
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

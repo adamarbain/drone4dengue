@@ -160,16 +160,16 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-700 relative overflow-hidden flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 relative overflow-hidden flex items-center justify-center">
       {/* Decorative elements */}
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-yellow-100 rounded-full transform translate-y-1/2 -translate-x-1/4 opacity-80"></div>
-      <div className="absolute top-1/4 right-0 w-80 h-80 bg-red-600 rounded-full transform translate-x-1/3 -translate-y-1/4 opacity-60"></div>
+      <div className="absolute top-1/4 right-0 w-80 h-80 bg-blue-600 rounded-full transform translate-x-1/3 -translate-y-1/4 opacity-60"></div>
       <div className="absolute top-0 right-1/4 w-64 h-64 bg-yellow-200 rounded-full transform -translate-y-1/2 opacity-80"></div>
-      <div className="absolute bottom-1/4 left-1/3 w-48 h-48 bg-red-500 rounded-full transform translate-y-1/4 opacity-40"></div>
+      <div className="absolute bottom-1/4 left-1/3 w-48 h-48 bg-blue-500 rounded-full transform translate-y-1/4 opacity-40"></div>
 
       {/* Animated mosquito silhouettes */}
       <motion.div
-        className="absolute top-20 left-1/4 text-red-300/20"
+        className="absolute top-20 left-1/4 w-20 h-20 opacity-60"
         animate={{
           y: [0, 10, 0],
           rotate: [0, 5, 0],
@@ -180,9 +180,14 @@ export default function SignUpPage() {
           ease: "easeInOut",
         }}
       >
-        <svg width="80" height="80" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C10.9 2 10 2.9 10 4C10 5.1 10.9 6 12 6C13.1 6 14 5.1 14 4C14 2.9 13.1 2 12 2ZM21 9V7L19 8L17 7V9L19 10L21 9ZM7 7V9L5 10L3 9V7L5 8L7 7ZM12 8C9.8 8 8 9.8 8 12C8 14.2 9.8 16 12 16C14.2 16 16 14.2 16 12C16 9.8 14.2 8 12 8ZM12 14C10.9 14 10 13.1 10 12C10 10.9 10.9 10 12 10C13.1 10 14 10.9 14 12C14 13.1 13.1 14 12 14ZM12 18C10.9 18 10 18.9 10 20C10 21.1 10.9 22 12 22C13.1 22 14 21.1 14 20C14 18.9 13.1 18 12 18Z" />
-        </svg>
+        <Image
+          src="/images/mosquito-icon.png"
+          alt="Mosquito silhouette"
+          width={80}
+          height={80}
+          className="w-full h-full object-contain"
+          priority={false}
+        />
       </motion.div>
 
       {/* Main content */}
@@ -208,7 +213,7 @@ export default function SignUpPage() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="w-full"
         >
-          <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-xl overflow-hidden rounded-2xl">
+          <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-xl overflow-hidden rounded-2xl mb-10">
             <CardContent className="space-y-6 p-8">
               {/* Mosquito icon */}
               <div className="flex justify-center mb-6">
@@ -257,7 +262,7 @@ export default function SignUpPage() {
                     Email Address
                   </Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-300 w-5 h-5" />
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
                     <Input
                       id="email"
                       type="email"
@@ -295,7 +300,7 @@ export default function SignUpPage() {
                     Full Name
                   </Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-300 w-5 h-5" />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
                     <Input
                       id="name"
                       type="text"
@@ -315,7 +320,7 @@ export default function SignUpPage() {
                     Username
                   </Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-300 w-5 h-5" />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
                     <Input
                       id="username"
                       type="text"
@@ -334,7 +339,7 @@ export default function SignUpPage() {
                     Phone Number
                   </Label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-300 w-5 h-5" />
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
                     <Input
                       id="phone"
                       type="tel"
@@ -364,7 +369,7 @@ export default function SignUpPage() {
                     Company
                   </Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-300 w-5 h-5" />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
                     <select
                       id="company"
                       required
@@ -391,7 +396,7 @@ export default function SignUpPage() {
                     Password
                   </Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-300 w-5 h-5" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
@@ -446,7 +451,7 @@ export default function SignUpPage() {
                     Confirm Password
                   </Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-300 w-5 h-5" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
                     <Input
                       id="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
@@ -513,7 +518,7 @@ export default function SignUpPage() {
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3 bg-gradient-to-r from-white to-white text-red-900 font-semibold rounded-lg hover:from-gray-100 hover:to-gray-200 transition-all shadow-lg disabled:opacity-70"
+                    className="w-full py-3 bg-gradient-to-r from-white to-white text-blue-900 font-semibold rounded-lg hover:from-gray-100 hover:to-gray-200 transition-all shadow-lg disabled:opacity-70"
                   >
                     {isLoading ? "CREATING ACCOUNT..." : "SIGN UP"}
                   </Button>

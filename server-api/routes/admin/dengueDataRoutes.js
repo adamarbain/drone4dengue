@@ -9,7 +9,7 @@ router.get('/summary/dengue-data', checkToken, checkRole('admin'), getSummary);
 router.get('/locations', getLocations);
 router.get('/generate-report', checkToken, checkRole('admin'), generateReport);
 router.get('/nearby', getNearbyCases); // Public endpoint for nearby cases
-router.get('/export/generate-report', exportData);
+router.get('/export', exportData);
 router.get('/', getAll);
 router.get('/:id', getOne);
 router.post('/', create);

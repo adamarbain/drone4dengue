@@ -100,15 +100,37 @@ export default function UserManagementPage() {
   const [error, setError] = useState<string | null>(null)
   const [openModalCreateUser, setOpenModalCreateUser] = useState(false)
   const [creating, setCreating] = useState(false)
+
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successDialogMessage, setSuccessDialogMessage] = useState("");
+
+  const resetNewUser = () => {
+    setNewUser({
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      phone: "",
+      address: "",
+      role: "user",
+      companyId: companyId ?? "",
+    })
+    setError(null)
+  }
+
   const [newUser, setNewUser] = useState<any>({
     name: "",
     email: "",
     password: "",
+    confirmPassword: "",
     phone: "",
     address: "",
     role: "user",
     companyId: companyId ?? "",
   })
+
+  const isEmailValid = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  const isPasswordValid = (value: string) => /^(?=.*\d).{8,}$/.test(value);
   const [updating, setUpdating] = useState(false)
   const [updateUser, setUpdateUser] = useState<any>(null)
 
@@ -183,27 +205,45 @@ export default function UserManagementPage() {
 
   // Create user
   const handleCreateUser = async () => {
-    setCreating(true)
     setError(null)
+
+    // Validation
+    if (!isEmailValid(newUser.email)) {
+      setError("Please enter a valid email address")
+      return
+    }
+    if (!isPasswordValid(newUser.password)) {
+      setError("Password must be at least 8 characters and include a number")
+      return
+    }
+    if (newUser.password !== newUser.confirmPassword) {
+      setError("The passwords do not match.")
+      return
+    }
+
+    setCreating(true)
     try {
       const res = await fetch(`${API_URL}/users`, {
         method: "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify(newUser),
+        body: JSON.stringify({
+          name: newUser.name,
+          email: newUser.email,
+          password: newUser.password,
+          phone: newUser.phone,
+          address: newUser.address,
+          role: newUser.role,
+          companyId: newUser.companyId,
+        }),
       })
       if (!res.ok) {
         const errData = await res.json()
+        if (res.status === 400 && errData.error?.includes("already registered")) {
+          throw new Error("Email already registered")
+        }
         throw new Error(errData.error || "Failed to create user")
       }
-      setNewUser({
-        name: "",
-        email: "",
-        password: "",
-        phone: "",
-        address: "",
-        role: "user",
-        companyId: companyId ?? "",
-      })
+      resetNewUser()
       setCreating(false)
       setOpenModalCreateUser(false)
       fetchUsers()
@@ -235,6 +275,8 @@ export default function UserManagementPage() {
             const errData = await res.json()
             throw new Error(errData.error || "Failed to delete user")
           }
+          setSuccessDialogMessage("User deleted successfully.")
+          setShowSuccessDialog(true)
           fetchUsers()
           fetchSummary()
         } catch (err: any) {
@@ -266,7 +308,10 @@ export default function UserManagementPage() {
             const errData = await res.json()
             throw new Error(errData.error || "Failed to bulk delete users")
           }
+          const count = selectedUsers.length;
           setSelectedUsers([])
+          setSuccessDialogMessage(`${count} users deleted successfully.`)
+          setShowSuccessDialog(true)
           fetchUsers()
           fetchSummary()
         } catch (err: any) {
@@ -387,7 +432,7 @@ export default function UserManagementPage() {
           <motion.div variants={item} className="mb-8">
             <h1 className="text-3xl font-bold text-black mb-1">User Management</h1>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#A21C1C]"></div>
+              <div className="w-2 h-2 rounded-full bg-[#1D4ED8]"></div>
               <div className="text-lg text-gray-600">
                 Manage all users within your company. Users can only see and manage data from their own company.
               </div>
@@ -397,14 +442,14 @@ export default function UserManagementPage() {
           {/* Quick Action */}
           <motion.div variants={item} className="mb-8 flex gap-4">
             <button
-              className="bg-[#A21C1C] text-white px-8 py-3 rounded-lg font-bold text-base hover:bg-[#7C1D1D] transition-all flex items-center gap-2 shadow-md"
+              className="bg-[#1D4ED8] text-white px-8 py-3 rounded-lg font-bold text-base hover:bg-[#1E3A8A] transition-all flex items-center gap-2 shadow-md"
               onClick={() => setOpenModalCreateUser(true)}
             >
               <FiPlus />
               Add New User
             </button>
             <button
-              className="bg-white text-[#A21C1C] border border-[#A21C1C] px-8 py-3 rounded-lg font-bold text-base hover:bg-[#FFF7E3] transition-all flex items-center gap-2"
+              className="bg-white text-[#1D4ED8] border border-[#1D4ED8] px-8 py-3 rounded-lg font-bold text-base hover:bg-[#EFF6FF] transition-all flex items-center gap-2"
               onClick={handleBulkDelete}
               disabled={selectedUsers.length === 0}
             >
@@ -440,7 +485,7 @@ export default function UserManagementPage() {
           <motion.div variants={item} className="mb-8">
             <div className="bg-white rounded-xl p-6 shadow-md border border-[#E2C275]/30">
               <div className="font-bold text-lg mb-4 flex items-center gap-2">
-                <FiCheckCircle className="text-[#A21C1C]" />
+                <FiCheckCircle className="text-[#1D4ED8]" />
                 Quick Status Actions
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -522,17 +567,17 @@ export default function UserManagementPage() {
             </div>
 
             {/* Enhanced Header */}
-            <div className="bg-[#A21C1C] rounded-t-xl px-6 py-4 flex items-center gap-4">
+            <div className="bg-[#1D4ED8] rounded-t-xl px-6 py-4 flex items-center gap-4">
               <div className="flex items-center gap-3">
                 <button
-                  className="bg-white text-[#A21C1C] rounded-lg p-2 hover:bg-gray-100 transition-colors"
+                  className="bg-white text-[#1D4ED8] rounded-lg p-2 hover:bg-gray-100 transition-colors"
                   onClick={() => setOpenModalCreateUser(true)}
                 >
                   <FiPlus />
                 </button>
                 <div className="relative">
                   <button
-                    className="bg-white text-[#A21C1C] rounded-lg p-2 hover:bg-gray-100 transition-colors"
+                    className="bg-white text-[#1D4ED8] rounded-lg p-2 hover:bg-gray-100 transition-colors"
                     onClick={() => setFilterOpen(!filterOpen)}
                   >
                     <FiFilter />
@@ -565,7 +610,7 @@ export default function UserManagementPage() {
                       </div>
                       <div className="mt-4 flex gap-2">
                         <button
-                          className="bg-[#A21C1C] text-white px-3 py-1 rounded"
+                          className="bg-[#1D4ED8] text-white px-3 py-1 rounded"
                           onClick={() => {
                             setFilterOpen(false)
                             fetchUsers()
@@ -589,7 +634,7 @@ export default function UserManagementPage() {
                   )}
                 </div>
                 <button
-                  className="bg-white text-[#A21C1C] rounded-lg p-2 hover:bg-gray-100 transition-colors"
+                  className="bg-white text-[#1D4ED8] rounded-lg p-2 hover:bg-gray-100 transition-colors"
                   onClick={exportToCSV}
                   title="Export to CSV"
                 >
@@ -618,7 +663,7 @@ export default function UserManagementPage() {
                     <th className="py-4 px-6">
                       <input
                         type="checkbox"
-                        className="accent-[#A21C1C] rounded"
+                        className="accent-[#1D4ED8] rounded"
                         checked={selectedUsers.length === users.length}
                         onChange={toggleSelectAll}
                       />
@@ -645,7 +690,7 @@ export default function UserManagementPage() {
                       <td className="py-4 px-6">
                         <input
                           type="checkbox"
-                          className="accent-[#A21C1C] rounded"
+                          className="accent-[#1D4ED8] rounded"
                           checked={selectedUsers.includes(user.id)}
                           onChange={() => toggleSelectUser(user.id)}
                         />
@@ -721,7 +766,7 @@ export default function UserManagementPage() {
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-2">
                           <button
-                            className="p-2 rounded-lg hover:bg-[#FFF7E3] text-[#A21C1C] transition-colors"
+                            className="p-2 rounded-lg hover:bg-[#EFF6FF] text-[#1D4ED8] transition-colors"
                             onClick={() => setUpdateUser(user)}
                           >
                             <FiEdit2 size={16} />
@@ -751,7 +796,10 @@ export default function UserManagementPage() {
               initial="hidden"
               animate="visible"
               exit="exit"
-              onClick={() => setOpenModalCreateUser(false)}
+              onClick={() => {
+                setOpenModalCreateUser(false)
+                resetNewUser()
+              }}
             >
               <motion.div
                 className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[80vh] flex flex-col"
@@ -762,7 +810,7 @@ export default function UserManagementPage() {
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Modal Header */}
-                <div className="bg-gradient-to-r from-[#A21C1C] to-[#7C1D1D] px-6 py-4">
+                <div className="bg-gradient-to-r from-[#1D4ED8] to-[#1E3A8A] px-6 py-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -774,7 +822,10 @@ export default function UserManagementPage() {
                       </div>
                     </div>
                     <button
-                      onClick={() => setOpenModalCreateUser(false)}
+                      onClick={() => {
+                        setOpenModalCreateUser(false)
+                        resetNewUser()
+                      }}
                       className="text-white/80 hover:text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
                     >
                       <FiX size={20} />
@@ -794,7 +845,7 @@ export default function UserManagementPage() {
                     {/* Name Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiUser className="text-[#A21C1C]" size={16} />
+                        <FiUser className="text-[#1D4ED8]" size={16} />
                         Full Name
                       </label>
                       <input
@@ -809,7 +860,7 @@ export default function UserManagementPage() {
                     {/* Email Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiMail className="text-[#A21C1C]" size={16} />
+                        <FiMail className="text-[#1D4ED8]" size={16} />
                         Email Address
                       </label>
                       <input
@@ -824,7 +875,7 @@ export default function UserManagementPage() {
                     {/* Phone Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiPhone className="text-[#A21C1C]" size={16} />
+                        <FiPhone className="text-[#1D4ED8]" size={16} />
                         Phone Number
                       </label>
                       <input
@@ -839,7 +890,7 @@ export default function UserManagementPage() {
                     {/* Address Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiMapPin className="text-[#A21C1C]" size={16} />
+                        <FiMapPin className="text-[#1D4ED8]" size={16} />
                         Address
                       </label>
                       <input
@@ -854,7 +905,7 @@ export default function UserManagementPage() {
                     {/* Role Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiShield className="text-[#A21C1C]" size={16} />
+                        <FiShield className="text-[#1D4ED8]" size={16} />
                         Role
                       </label>
                       <select
@@ -870,7 +921,7 @@ export default function UserManagementPage() {
                     {/* Password Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiShield className="text-[#A21C1C]" size={16} />
+                        <FiShield className="text-[#1D4ED8]" size={16} />
                         Password
                       </label>
                       <input
@@ -882,10 +933,25 @@ export default function UserManagementPage() {
                       />
                     </div>
 
+                    {/* Confirm Password Field */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <FiShield className="text-[#1D4ED8]" size={16} />
+                        Confirm Password
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="Confirm password"
+                        value={newUser.confirmPassword}
+                        onChange={(e) => setNewUser({ ...newUser, confirmPassword: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent transition-all"
+                      />
+                    </div>
+
                     {/* Company Field - Note: This will be automatically set to current user's company */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiShield className="text-[#A21C1C]" size={16} />
+                        <FiShield className="text-[#1D4ED8]" size={16} />
                         Company
                       </label>
                       <div className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
@@ -898,16 +964,19 @@ export default function UserManagementPage() {
                 {/* Modal Footer */}
                 <div className="bg-gray-50 px-6 py-4 flex gap-3">
                   <button
-                    onClick={() => setOpenModalCreateUser(false)}
+                    onClick={() => {
+                      setOpenModalCreateUser(false)
+                      resetNewUser()
+                    }}
                     className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium"
                   >
                     Cancel
                   </button>
-                  <button
-                    onClick={handleCreateUser}
-                    disabled={creating || !newUser.name || !newUser.email || !newUser.password}
-                    className="flex-1 px-4 py-3 bg-[#A21C1C] text-white rounded-lg hover:bg-[#7C1D1D] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
+                    <button
+                      onClick={handleCreateUser}
+                      disabled={creating || !newUser.name || !newUser.email || !newUser.password || !newUser.confirmPassword}
+                      className="flex-1 px-4 py-3 bg-[#1D4ED8] text-white rounded-lg hover:bg-[#1E3A8A] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
                     {creating ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -946,7 +1015,7 @@ export default function UserManagementPage() {
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Modal Header */}
-                <div className="bg-gradient-to-r from-[#A21C1C] to-[#7C1D1D] px-6 py-4">
+                <div className="bg-gradient-to-r from-[#1D4ED8] to-[#1E3A8A] px-6 py-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -985,7 +1054,7 @@ export default function UserManagementPage() {
                           height={80}
                           className="rounded-full object-cover border-4 border-[#E2C275]"
                         />
-                        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#A21C1C] rounded-full flex items-center justify-center">
+                        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#1D4ED8] rounded-full flex items-center justify-center">
                           <FiEdit2 className="text-white" size={14} />
                         </div>
                       </div>
@@ -994,7 +1063,7 @@ export default function UserManagementPage() {
                     {/* Name Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiUser className="text-[#A21C1C]" size={16} />
+                        <FiUser className="text-[#1D4ED8]" size={16} />
                         Full Name
                       </label>
                       <input
@@ -1009,7 +1078,7 @@ export default function UserManagementPage() {
                     {/* Email Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiMail className="text-[#A21C1C]" size={16} />
+                        <FiMail className="text-[#1D4ED8]" size={16} />
                         Email Address
                       </label>
                       <input
@@ -1024,7 +1093,7 @@ export default function UserManagementPage() {
                     {/* Phone Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiPhone className="text-[#A21C1C]" size={16} />
+                        <FiPhone className="text-[#1D4ED8]" size={16} />
                         Phone Number
                       </label>
                       <input
@@ -1039,7 +1108,7 @@ export default function UserManagementPage() {
                     {/* Address Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiMapPin className="text-[#A21C1C]" size={16} />
+                        <FiMapPin className="text-[#1D4ED8]" size={16} />
                         Address
                       </label>
                       <input
@@ -1054,7 +1123,7 @@ export default function UserManagementPage() {
                     {/* Role Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiShield className="text-[#A21C1C]" size={16} />
+                        <FiShield className="text-[#1D4ED8]" size={16} />
                         Role
                       </label>
                       <select
@@ -1071,7 +1140,7 @@ export default function UserManagementPage() {
                     {/* Company Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiShield className="text-[#A21C1C]" size={16} />
+                        <FiShield className="text-[#1D4ED8]" size={16} />
                         Company
                       </label>
                       <div className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
@@ -1092,7 +1161,7 @@ export default function UserManagementPage() {
                   <button
                     onClick={handleUpdateProfile}
                     disabled={updating || !updateUser.name || !updateUser.email}
-                    className="flex-1 px-4 py-3 bg-[#A21C1C] text-white rounded-lg hover:bg-[#7C1D1D] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-3 bg-[#1D4ED8] text-white rounded-lg hover:bg-[#1E3A8A] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {updating ? (
                       <>
@@ -1203,6 +1272,43 @@ export default function UserManagementPage() {
                     {confirmDialog.type === "warning" && <FiActivity size={16} />}
                     {confirmDialog.type === "info" && <FiCheckCircle size={16} />}
                     {confirmDialog.confirmText}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Success Dialog */}
+        <AnimatePresence>
+          {showSuccessDialog && (
+            <motion.div
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4"
+              variants={overlayVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              onClick={() => setShowSuccessDialog(false)}
+            >
+              <motion.div
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+                variants={modalVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-8 text-center">
+                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <FiCheckCircle className="text-green-600 text-4xl" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Success!</h3>
+                  <p className="text-gray-600 mb-8">{successDialogMessage}</p>
+                  <button
+                    onClick={() => setShowSuccessDialog(false)}
+                    className="w-full bg-[#1D4ED8] text-white py-3 rounded-xl font-bold hover:bg-[#1E3A8A] transition-colors"
+                  >
+                    Great!
                   </button>
                 </div>
               </motion.div>

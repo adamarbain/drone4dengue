@@ -205,21 +205,21 @@ export default function DashboardPage() {
     {
       label: "Risk Prediction Today",
       value: dashboardStats.riskPredictionsToday,
-      icon: <FiActivity className="text-[#A21C1C]" />,
+      icon: <FiActivity className="text-[#1D4ED8]" />,
       change: 0, // This would need historical data to calculate
       isIncrease: true,
     },
     {
       label: "Drone Insights Uploaded",
       value: dashboardStats.droneInsightsUploaded,
-      icon: <FiCamera className="text-[#A21C1C]" />,
+      icon: <FiCamera className="text-[#1D4ED8]" />,
       change: 0, // This would need historical data to calculate
       isIncrease: true,
     },
     {
       label: "Active Users",
       value: dashboardStats.activeUsers,
-      icon: <FiUsers className="text-[#A21C1C]" />,
+      icon: <FiUsers className="text-[#1D4ED8]" />,
       change: 0, // This would need historical data to calculate
       isIncrease: false,
     },
@@ -258,7 +258,7 @@ export default function DashboardPage() {
                   Welcome Back, {user?.name || 'Admin'}
                 </h1>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-[#A21C1C]"></div>
+                  <div className="w-2 h-2 rounded-full bg-[#1D4ED8]"></div>
                   <div className="text-lg text-gray-600">
                     Organisation: {company?.name || user?.organization || 'University Malaya'}
                   </div>
@@ -267,7 +267,7 @@ export default function DashboardPage() {
               <button
                 onClick={handleRefresh}
                 disabled={isLoading}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-[#A21C1C] text-[#A21C1C] rounded-lg hover:bg-[#FFF7E3] transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-[#1D4ED8] text-[#1D4ED8] rounded-lg hover:bg-[#EFF6FF] transition-colors disabled:opacity-50"
               >
                 <FiRefreshCw className={isLoading ? 'animate-spin' : ''} />
                 Refresh
@@ -333,14 +333,14 @@ export default function DashboardPage() {
             <div className="flex gap-4">
               <button 
                 onClick={() => setIsPredictionModalOpen(true)}
-                className="bg-[#A21C1C] text-white px-6 py-3 rounded-lg font-bold text-base hover:bg-[#7C1D1D] transition-all flex items-center gap-2 shadow-md hover:shadow-lg"
+                className="bg-[#1D4ED8] text-white px-6 py-3 rounded-lg font-bold text-base hover:bg-[#1E3A8A] transition-all flex items-center gap-2 shadow-md hover:shadow-lg"
               >
                 <FiPlus />
                 New Risk Prediction
               </button>
               <Link 
                 href="/drone-management"
-                className="bg-white text-[#A21C1C] border border-[#A21C1C] px-6 py-3 rounded-lg font-bold text-base hover:bg-[#FFF7E3] transition-all flex items-center gap-2"
+                className="bg-white text-[#1D4ED8] border border-[#1D4ED8] px-6 py-3 rounded-lg font-bold text-base hover:bg-[#EFF6FF] transition-all flex items-center gap-2"
               >
                 <FiUpload />
                 Upload New Drone Images
@@ -352,7 +352,7 @@ export default function DashboardPage() {
           <motion.div variants={item} className="mb-10">
             <div className="flex justify-between items-center mb-4">
               <div className="font-bold text-xl">Recent Predictions</div>
-              <button className="text-[#A21C1C] hover:underline text-sm font-medium flex items-center gap-1">
+              <button className="text-[#1D4ED8] hover:underline text-sm font-medium flex items-center gap-1">
                 View all <FiArrowUp className="rotate-45" size={14} />
               </button>
             </div>
@@ -420,10 +420,10 @@ export default function DashboardPage() {
                         </td>
                         <td className="py-4 px-6">
                           <div className="flex gap-2">
-                            <button className="p-2 rounded-lg hover:bg-[#FFF7E3] text-[#A21C1C]">
+                            <button className="p-2 rounded-lg hover:bg-[#EFF6FF] text-[#1D4ED8]">
                               <FiEye size={18} />
                             </button>
-                            <button className="p-2 rounded-lg hover:bg-[#FFF7E3] text-[#A21C1C]">
+                            <button className="p-2 rounded-lg hover:bg-[#EFF6FF] text-[#1D4ED8]">
                               <FiDownload size={18} />
                             </button>
                           </div>
@@ -447,7 +447,7 @@ export default function DashboardPage() {
             <div className="font-bold text-xl mb-4">Recent Drone Images</div>
             {loadingImages ? (
               <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#A21C1C] mx-auto mb-4"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1D4ED8] mx-auto mb-4"></div>
                 <p className="text-gray-500">Loading images...</p>
               </div>
             ) : recentDroneImages.length > 0 ? (
@@ -486,7 +486,7 @@ export default function DashboardPage() {
                           </div>
                         )}
                       </div>
-                      <button className="text-[#A21C1C] hover:bg-[#FFF7E3] p-1.5 rounded-lg transition-colors">
+                      <button className="text-[#1D4ED8] hover:bg-[#EFF6FF] p-1.5 rounded-lg transition-colors">
                         <FiEye size={16} />
                       </button>
                     </div>

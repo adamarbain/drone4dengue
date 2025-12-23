@@ -513,7 +513,7 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
                 <button
                   onClick={createPredictionsForAllLocations}
                   disabled={autoPredicting || !isServiceHealthy}
-                  className="bg-[#A21C1C] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#7C1D1D] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="bg-[#1D4ED8] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#1E3A8A] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   <FiTarget className={autoPredicting ? 'animate-spin' : ''} />
                   {autoPredicting 
@@ -647,7 +647,7 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
                     className={`px-4 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto ${
                       selectedLocation.locationId && (hasPredictionToday(selectedLocation.locationId) || predictionStatuses.get(selectedLocation.locationId) === 'processing')
                         ? 'bg-gray-500 text-white cursor-not-allowed'
-                        : 'bg-[#A21C1C] text-white hover:bg-[#7C1D1D]'
+                        : 'bg-[#1D4ED8] text-white hover:bg-[#1E3A8A]'
                     }`}
                   >
                     <FiRefreshCw className={loading ? 'animate-spin' : ''} />

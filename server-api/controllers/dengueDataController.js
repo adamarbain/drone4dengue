@@ -59,16 +59,27 @@ try {
   redisConnected = false;
 }
 
-// Get all dengue data (with filters)
+// Get all dengue data (with filters and pagination)
 async function getAll(req, res) {
   try {
-    const { location, date, status, startDate, endDate } = req.query;
+    const { location, date, status, startDate, endDate, page = 1, limit = 20, search } = req.query;
     
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
     const where = { };
     if (location) where.location = location;
     if (status) where.status = status;
     if (date) where.date = new Date(date);
     
+    if (search) {
+      where.OR = [
+        { location: { contains: search, mode: 'insensitive' } },
+        { status: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
     // Support date range filtering
     if (startDate || endDate) {
       where.date = {};
@@ -83,16 +94,25 @@ async function getAll(req, res) {
       }
     }
     
+    // Get total count for pagination
+    const totalCount = await prisma.dengueData.count({ where });
+
     const data = await prisma.dengueData.findMany({ 
       where, 
-      // include: {
-      //   companyLocation: {
-      //     select: { name: true, address: true }
-      //   }
-      // },
-      orderBy: { date: 'desc' } 
+      orderBy: { date: 'desc' },
+      skip: skip,
+      take: limitNum
     });
-    res.json(data);
+
+    res.json({
+      data,
+      pagination: {
+        total: totalCount,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(totalCount / limitNum)
+      }
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -319,13 +339,20 @@ async function getMapData(req, res) {
 // Export data in multiple formats
 async function exportData(req, res) {
   try {
-    const { location, date, status, startDate, endDate, format = 'csv' } = req.query;
+    const { location, date, status, startDate, endDate, format = 'csv', search } = req.query;
     
     const where = { };
     if (location) where.location = location;
     if (status) where.status = status;
     if (date) where.date = new Date(date);
     
+    if (search) {
+      where.OR = [
+        { location: { contains: search, mode: 'insensitive' } },
+        { status: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
     // Support date range filtering
     if (startDate || endDate) {
       where.date = {};
