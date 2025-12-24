@@ -14,6 +14,9 @@ export default function ActionPage() {
         <Text className="text-4xl font-extrabold text-black mb-2" style={{ fontFamily: 'SF Pro' }}>
           Action
         </Text>
+        <Text className="text-sm text-gray-600">
+          Get preventive recommendations based on dengue risk levels
+        </Text>
       </View>
 
       {/* Action Cards */}

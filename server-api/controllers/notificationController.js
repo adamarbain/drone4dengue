@@ -17,7 +17,7 @@ async function getNotifications(req, res) {
   try {
     const userId = req.user?.userId;
     const companyId = req.companyId || req.user?.companyId;
-    const { limit = 50, offset = 0, unreadOnly = false } = req.query;
+    const { limit = 50, offset = 0, unreadOnly = false, readStatus, type } = req.query;
 
     // Validate required fields
     if (!companyId) {
@@ -38,8 +38,17 @@ async function getNotifications(req, res) {
       ]
     };
 
-    if (unreadOnly === 'true') {
+    // Filter by read status
+    if (unreadOnly === 'true' || readStatus === 'unread') {
       where.isRead = false;
+    } else if (readStatus === 'read') {
+      where.isRead = true;
+    }
+    // If readStatus is 'all' or not provided, show all (no filter)
+
+    // Filter by notification type
+    if (type && type !== 'all') {
+      where.type = type;
     }
 
     // console.log('[GET NOTIFICATIONS] Query params:', { userId, companyId, limit, offset, unreadOnly });

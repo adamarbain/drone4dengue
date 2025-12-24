@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Modal, ScrollView, StatusBar, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNav from './components/BottomNav';
@@ -47,8 +47,6 @@ export default function RecommendationsPage() {
     const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
     const riskLevel: RiskLevel = (typeof risk === 'string' && ['high', 'medium', 'low'].includes(risk)) ? (risk as RiskLevel) : 'low';
     const riskConfig = getRiskConfig(riskLevel);
-    const screenHeight = Dimensions.get('window').height;
-    const maxModalHeight = screenHeight * 0.8;
 
     useEffect(() => {
         fetch(`${API_URL}/recommendations/${riskLevel}`)
@@ -77,59 +75,41 @@ export default function RecommendationsPage() {
                     className="flex-1"
                     contentContainerClassName="pb-20"
                 >
-                    {recommendations.map((rec: Recommendation, idx: number) => (
-                        <TouchableOpacity
-                            key={rec.title}
-                            className="py-4 px-0 border-b border-gray-100 flex-row items-center justify-between"
-                            onPress={() => setSelected(idx)}
-                            activeOpacity={0.7}
-                        >
-                            <View className="flex-1 mr-4">
-                                <Text className="text-lg font-semibold text-black mb-2">
-                                    {rec.title}
-                                </Text>
-                                <Text className="text-sm text-gray-500" numberOfLines={2}>
-                                    {rec.details.length > 50 ? rec.details.substring(0, 50) + '...' : rec.details}
-                                </Text>
+                    {recommendations.map((rec: Recommendation, idx: number) => {
+                        const isExpanded = selected === idx;
+                        return (
+                            <View key={rec.title} className="border-b border-gray-100">
+                                <TouchableOpacity
+                                    className="py-4 px-0 flex-row items-center justify-between"
+                                    onPress={() => setSelected(isExpanded ? null : idx)}
+                                    activeOpacity={0.7}
+                                >
+                                    <View className="flex-1 mr-4">
+                                        <Text className="text-lg font-semibold text-black mb-2">
+                                            {rec.title}
+                                        </Text>
+                                        {!isExpanded && (
+                                            <Text className="text-sm text-gray-500" numberOfLines={2}>
+                                                {rec.details.length > 50 ? rec.details.substring(0, 50) + '...' : rec.details}
+                                            </Text>
+                                        )}
+                                    </View>
+                                    <Text className="text-lg text-gray-300">
+                                        {isExpanded ? '▼' : '›'}
+                                    </Text>
+                                </TouchableOpacity>
+                                {isExpanded && (
+                                    <View className="pb-4 px-0">
+                                        <Text className="text-base text-gray-600 leading-6">
+                                            {rec.details}
+                                        </Text>
+                                    </View>
+                                )}
                             </View>
-                            <Text className="text-lg text-gray-300">›</Text>
-                        </TouchableOpacity>
-                    ))}
+                        );
+                    })}
                 </ScrollView>
             </View>
-
-            {/* Modal for details */}
-            <Modal
-                visible={selected !== null}
-                transparent
-                animationType="slide"
-                onRequestClose={() => setSelected(null)}
-            >
-                <View className="flex-1 items-center justify-center bg-black bg-opacity-50 p-4">
-                    <View 
-                        className="bg-white rounded-lg p-6 w-full max-w-[90%]"
-                        style={{ maxHeight: maxModalHeight }}
-                    >
-                        <ScrollView 
-                            showsVerticalScrollIndicator={false}
-                            contentContainerClassName="pb-4"
-                        >
-                            <Text className="text-2xl font-bold text-gray-800 mb-3">
-                                {selected !== null ? recommendations[selected].title : ''}
-                            </Text>
-                            <Text className="text-base text-gray-600 mb-6 leading-6">
-                                {selected !== null ? recommendations[selected].details : ''}
-                            </Text>
-                        </ScrollView>
-                        <TouchableOpacity
-                            onPress={() => setSelected(null)}
-                            className="bg-gray-800 rounded-lg px-4 py-2 self-end mt-4"
-                        >
-                            <Text className="text-white font-semibold">Close</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </Modal>
             <BottomNav />
         </SafeAreaView>
     );

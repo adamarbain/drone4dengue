@@ -674,7 +674,7 @@ export default function RiskAnalysisPage() {
             </View>
 
             {/* Actions Section */}
-            {riskLevel === 'high' || riskLevel === 'medium' ? (
+            {riskLevel === 'high' ? (
               <>
                 <Text className="text-xl font-extrabold text-black mb-3 mt-2" style={{ fontFamily: 'SF Pro' }}>
                   Required Actions
@@ -699,21 +699,47 @@ export default function RiskAnalysisPage() {
                 </View>
 
                 {/* Call Local Authority Button - Only for High Risk */}
-                {riskLevel === 'high' && (
-                  <TouchableOpacity
-                    onPress={callLocalAuthority}
-                    className="bg-[#BF3131] rounded-2xl py-4 px-6 mb-6 items-center justify-center"
-                    style={{
-                      shadowColor: '#BF3131',
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.3,
-                      shadowRadius: 8,
-                      elevation: 6,
-                    }}
-                  >
-                    <Text className="text-white font-bold text-lg">Call Local Authority Now</Text>
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity
+                  onPress={callLocalAuthority}
+                  className="bg-[#BF3131] rounded-2xl py-4 px-6 mb-6 items-center justify-center"
+                  style={{
+                    shadowColor: '#BF3131',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 8,
+                    elevation: 6,
+                  }}
+                >
+                  <Text className="text-white font-bold text-lg">Call Local Authority Now</Text>
+                </TouchableOpacity>
+              </>
+            ) : riskLevel === 'medium' ? (
+              <>
+                <Text className="text-xl font-extrabold text-black mb-3 mt-2" style={{ fontFamily: 'SF Pro' }}>
+                  Recommended Actions
+                </Text>
+                <View className="mb-4">
+                  <View className="flex-row items-start mb-3">
+                    <View className="w-2 h-2 rounded-full bg-gray-400 mt-2 mr-3" />
+                    <Text className="flex-1 text-base text-gray-800">Regularly check and remove standing water</Text>
+                  </View>
+                  <View className="flex-row items-start mb-3">
+                    <View className="w-2 h-2 rounded-full bg-gray-400 mt-2 mr-3" />
+                    <Text className="flex-1 text-base text-gray-800">Use mosquito nets while sleeping</Text>
+                  </View>
+                  <View className="flex-row items-start mb-3">
+                    <View className="w-2 h-2 rounded-full bg-gray-400 mt-2 mr-3" />
+                    <Text className="flex-1 text-base text-gray-800">Apply mosquito repellent when outdoors</Text>
+                  </View>
+                  <View className="flex-row items-start mb-3">
+                    <View className="w-2 h-2 rounded-full bg-gray-400 mt-2 mr-3" />
+                    <Text className="flex-1 text-base text-gray-800">Keep windows and doors closed during peak hours</Text>
+                  </View>
+                  <View className="flex-row items-start mb-3">
+                    <View className="w-2 h-2 rounded-full bg-gray-400 mt-2 mr-3" />
+                    <Text className="flex-1 text-base text-gray-800">Maintain clean surroundings and proper drainage</Text>
+                  </View>
+                </View>
               </>
             ) : (
               <>
