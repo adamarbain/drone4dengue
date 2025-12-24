@@ -390,8 +390,8 @@ export default function DengueRiskCard({ onPredictionUpdate }: DengueRiskCardPro
 
   const getRiskTextColor = (riskLevel: string) => {
     switch (riskLevel) {
-      case 'high': return '#7D0A0A';
-      case 'medium': return '#7D0A0A';
+      case 'high': return '#1D4ED8';
+      case 'medium': return '#1D4ED8';
       case 'low': return '#2E7D32';
       default: return '#374151';
     }
@@ -432,7 +432,7 @@ export default function DengueRiskCard({ onPredictionUpdate }: DengueRiskCardPro
       {location && (
         <View className="mb-4 p-3 bg-gray-50 rounded-2xl border border-gray-100">
           <View className="flex-row items-center mb-2">
-            <Feather name="map-pin" size={18} color="#7D0A0A" />
+            <Feather name="map-pin" size={18} color="#1D4ED8" />
             <Text className="text-sm font-semibold text-gray-700 ml-2">
               Current Location
             </Text>
@@ -483,10 +483,10 @@ export default function DengueRiskCard({ onPredictionUpdate }: DengueRiskCardPro
               className={`mt-3 py-3 px-4 rounded-xl flex-row items-center justify-center ${
                 loading || !location || !serviceHealthy
                   ? 'bg-gray-300' 
-                  : 'bg-[#7D0A0A]'
+                  : 'bg-[#1D4ED8]'
               }`}
               style={{
-                shadowColor: loading || !location || !serviceHealthy ? '#000' : '#7D0A0A',
+                shadowColor: loading || !location || !serviceHealthy ? '#000' : '#1D4ED8',
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.2,
                 shadowRadius: 4,
@@ -516,10 +516,10 @@ export default function DengueRiskCard({ onPredictionUpdate }: DengueRiskCardPro
           className={`py-4 px-6 rounded-2xl ${
             loading || !location || !serviceHealthy || !canPredict
               ? 'bg-gray-300' 
-              : 'bg-[#7D0A0A]'
+              : 'bg-[#1D4ED8]'
           }`}
           style={{
-            shadowColor: loading || !location || !serviceHealthy || !canPredict ? '#000' : '#7D0A0A',
+            shadowColor: loading || !location || !serviceHealthy || !canPredict ? '#000' : '#1D4ED8',
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.3,
             shadowRadius: 8,

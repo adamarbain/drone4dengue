@@ -92,7 +92,7 @@ export default function NotificationPage() {
     // Handle different notification types
     if (type === 'dengue_case' || type === 'drone' || type === 'drone_image' || type === 'location') {
       return (
-        <View className="w-12 h-12 bg-[#7D0A0A] rounded-lg items-center justify-center">
+        <View className="w-12 h-12 bg-[#1D4ED8] rounded-lg items-center justify-center">
           <Feather name="bell" size={24} color="#FFFFFF" />
         </View>
       );
@@ -117,7 +117,7 @@ export default function NotificationPage() {
       case 'medium':
         return (
           <View className="w-12 h-12 bg-[#EAD196] rounded-lg items-center justify-center">
-            <Feather name="alert-triangle" size={24} color="#7D0A0A" />
+            <Feather name="alert-triangle" size={24} color="#1D4ED8" />
           </View>
         );
       case 'low':
@@ -156,7 +156,7 @@ export default function NotificationPage() {
       {/* Notifications List */}
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#7D0A0A" />
+          <ActivityIndicator size="large" color="#1D4ED8" />
           <Text className="text-gray-600 mt-4">Loading notifications...</Text>
         </View>
       ) : notifications.length === 0 ? (
@@ -186,7 +186,7 @@ export default function NotificationPage() {
                   shadowRadius: 2,
                   elevation: 2,
                   borderLeftWidth: notification.isRead ? 0 : 4,
-                  borderLeftColor: '#7D0A0A',
+                  borderLeftColor: '#1D4ED8',
                 }}
               >
                 <View className="flex-row items-start">
@@ -222,16 +222,16 @@ export default function NotificationPage() {
                     {/* Location if available */}
                     {notification.location && notification.type !== 'daily_prediction' && (
                       <View className="flex-row items-center mb-1">
-                        <Feather name="map-pin" size={14} color="#BF3131" />
+                        <Feather name="map-pin" size={14} color="#1D4ED8" />
                         <Text className="text-sm text-gray-700 ml-2">{notification.location}</Text>
                       </View>
                     )}
 
                     {/* Type */}
-                    <View className="flex-row items-center">
-                      <Feather name="tag" size={14} color="#BF3131" />
+                    {/* <View className="flex-row items-center">
+                      <Feather name="tag" size={14} color="#1D4ED8" />
                       <Text className="text-sm text-gray-700 ml-2 capitalize">{notification.type.replace('_', ' ')}</Text>
-                    </View>
+                    </View> */}
                   </View>
 
                   {/* Time */}
@@ -240,7 +240,7 @@ export default function NotificationPage() {
                       {formatTime(new Date(notification.createdAt))}
                     </Text>
                     {!notification.isRead && (
-                      <View className="w-2 h-2 bg-[#7D0A0A] rounded-full mt-1 ml-auto" />
+                      <View className="w-2 h-2 bg-[#1D4ED8] rounded-full mt-1 ml-auto" />
                     )}
                   </View>
                 </View>

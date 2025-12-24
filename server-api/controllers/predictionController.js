@@ -1381,8 +1381,8 @@ async function predictDailyUsers(req, res) {
         // Determine risk level
         let riskLevel = 'low';
         const riskScore = prediction.combined_score || prediction.risk_score || 0;
-        if (riskScore >= 0.7) riskLevel = 'high';
-        else if (riskScore >= 0.4) riskLevel = 'medium';
+        if (riskScore >= 3.0) riskLevel = 'high';
+        else if (riskScore >= 1.0) riskLevel = 'medium';
 
         // Send notification to user
         try {

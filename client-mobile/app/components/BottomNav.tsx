@@ -29,7 +29,7 @@ export default function BottomNav() {
 
   return (
     <View
-      className="flex-row bg-[#7D0A0A] px-3 pb-6 pt-3 justify-between items-center rounded-t-3xl"
+      className="flex-row bg-[#1D4ED8] px-3 pb-6 pt-3 justify-between items-center rounded-t-3xl"
       style={{
         position: 'absolute',
         bottom: 0,
@@ -67,11 +67,11 @@ export default function BottomNav() {
               <Ionicons
                 name={tab.icon as any}
                 size={22}
-                color={isActive ? '#7D0A0A' : '#fff'}
+                color={isActive ? '#1D4ED8' : '#fff'}
               />
             </View>
             <Text
-              className={`mt-0.5 font-bold text-xs tracking-tight ${isActive ? 'text-[#7D0A0A]' : 'text-white'}`}
+              className={`mt-0.5 font-bold text-xs tracking-tight ${isActive ? 'text-[#1D4ED8]' : 'text-white'}`}
             >
               {tab.label}
             </Text>

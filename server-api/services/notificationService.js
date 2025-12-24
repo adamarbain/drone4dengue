@@ -139,8 +139,8 @@ async function notifyCompanyPredictionCreated(prediction) {
     
     // Get risk level from risk score
     let riskLevel = 'low';
-    if (riskScore >= 0.7) riskLevel = 'high';
-    else if (riskScore >= 0.4) riskLevel = 'medium';
+    if (riskScore >= 3.0) riskLevel = 'high';
+    else if (riskScore >= 1.0) riskLevel = 'medium';
 
     // Get company location name
     let locationName = 'Unknown Location';
@@ -182,8 +182,13 @@ async function notifyCompanyPredictionCreated(prediction) {
       return;
     }
 
-    const title = `New Dengue Risk Prediction - ${riskLevel.toUpperCase()} Risk`;
-    const message = `A new dengue risk prediction has been created for ${locationName}. Risk Level: ${riskLevel.toUpperCase()}`;
+    // const title = `New Dengue Risk Prediction - ${riskLevel.toUpperCase()} Risk`;
+    // const message = `A new dengue risk prediction has been created for ${locationName}. Risk Level: ${riskLevel.toUpperCase()}`;
+    let riskEmoji = '🟢';
+    if (riskLevel === 'high') riskEmoji = '🔴';
+    else if (riskLevel === 'medium') riskEmoji = '🟠';
+    const title = `${riskEmoji} ${locationName}`;
+    const message = `${riskLevel} dengue risk detected in ${locationName}`;
 
     // Create notifications for all users (mobile + admin)
     await createNotification({

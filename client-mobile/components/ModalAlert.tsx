@@ -14,7 +14,7 @@ interface ModalAlertProps {
 
 const iconMap = {
   success: { name: 'checkmark-circle', color: '#4BB543' },
-  error: { name: 'close-circle', color: '#BF3131' },
+  error: { name: 'close-circle', color: '#1D4ED8' },
   info: { name: 'information-circle', color: '#EAD196' },
 };
 
@@ -34,7 +34,7 @@ export default function ModalAlert({
         {title && <Text className="text-xl font-bold mb-2 text-[#181D27]">{title}</Text>}
         <Text className="text-base text-center mb-6 text-gray-700">{message}</Text>
         <TouchableOpacity
-          className="bg-[#BF3131] px-8 py-3 rounded-xl"
+          className="bg-[#1D4ED8] px-8 py-3 rounded-xl"
           onPress={onClose}
           activeOpacity={0.85}
         >
