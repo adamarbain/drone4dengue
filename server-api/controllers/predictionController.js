@@ -8,6 +8,7 @@ const {
   sendNotFoundError,
   sendInternalError
 } = require('../utils/errorResponse');
+const { getRiskLevel } = require('../utils/riskLevelUtils');
 
 const prisma = new PrismaClient();
 
@@ -792,9 +793,10 @@ async function getCompanyPredictions(req, res) {
     const { companyId } = req.params;
     const { limit = 10, offset = 0, companyLocationId } = req.query;
 
-    // Verify company exists
+    // Verify company exists and get prediction model parameters
     const company = await prisma.company.findUnique({
-      where: { id: companyId }
+      where: { id: companyId },
+      select: { predictionModelParameters: true }
     });
 
     if (!company) {
@@ -826,6 +828,8 @@ async function getCompanyPredictions(req, res) {
       skip: parseInt(offset)
     });
 
+    const predictionModelParameters = company?.predictionModelParameters || {};
+    
     res.json({
       success: true,
       predictions: predictions.map(p => ({
@@ -835,7 +839,7 @@ async function getCompanyPredictions(req, res) {
         latitude: p.latitude,
         longitude: p.longitude,
         riskScore: p.riskScore,
-        riskLevel: p.riskScore >= 3 ? 'high' : p.riskScore >= 1 ? 'medium' : 'low',
+        riskLevel: getRiskLevel(p.riskScore || p.combinedScore, predictionModelParameters),
         model1Score: p.model1Score,
         model2Score: p.model2Score,
         model3Score: p.model3Score,
@@ -1378,11 +1382,16 @@ async function predictDailyUsers(req, res) {
 
         const prediction = mlResult.prediction;
         
-        // Determine risk level
-        let riskLevel = 'low';
+        // Get company settings for risk level thresholds
+        const company = await prisma.company.findUnique({
+          where: { id: user.companyId },
+          select: { predictionModelParameters: true }
+        });
+        const predictionModelParameters = company?.predictionModelParameters || {};
+        
+        // Determine risk level using company-specific thresholds
         const riskScore = prediction.combined_score || prediction.risk_score || 0;
-        if (riskScore >= 3.0) riskLevel = 'high';
-        else if (riskScore >= 1.0) riskLevel = 'medium';
+        const riskLevel = getRiskLevel(riskScore, predictionModelParameters);
 
         // Send notification to user
         try {

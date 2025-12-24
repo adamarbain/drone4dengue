@@ -101,3 +101,13 @@ input:focus {
   outline: none;
   box-shadow: none;
 }
+
+/* Shimmer animation for lazy loader */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}

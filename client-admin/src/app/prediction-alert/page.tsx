@@ -601,10 +601,10 @@ export default function PredictionAlertPage() {
                     </span>
                   </div>
                   <div><span className="font-semibold">Risk Score:</span> {showDetails.riskScore.toFixed(3)}</div>
-                  <div><span className="font-semibold">Model 1 Score:</span> {showDetails.model1Score ? showDetails.model1Score.toFixed(3) : 'N/A'}</div>
-                  <div><span className="font-semibold">Model 2 Score:</span> {showDetails.model2Score ? showDetails.model2Score.toFixed(3) : 'N/A'}</div>
+                  <div><span className="font-semibold">Historical Data Score:</span> {showDetails.model1Score ? showDetails.model1Score.toFixed(3) : 'N/A'}</div>
+                  <div><span className="font-semibold">Weather Score:</span> {showDetails.model2Score ? showDetails.model2Score.toFixed(3) : 'N/A'}</div>
                   {showDetails.model3Score != null && (
-                    <div><span className="font-semibold">Model 3 Score:</span> {showDetails.model3Score.toFixed(3)}</div>
+                    <div><span className="font-semibold">Breeding Area Detection Score:</span> {showDetails.model3Score.toFixed(3)}</div>
                   )}
                   {showDetails.combinedScore !== undefined && (
                     <div><span className="font-semibold">Combined Score:</span> {showDetails.combinedScore.toFixed(3)}</div>

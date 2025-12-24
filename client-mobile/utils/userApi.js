@@ -258,4 +258,26 @@ export async function markAllNotificationsAsRead() {
   
   const data = await res.json();
   return data;
+}
+
+// Company API functions
+export async function getCompanySettings(companyId) {
+  const token = await AsyncStorage.getItem('token');
+  if (!token) throw new Error('No token found');
+
+  const res = await fetch(`${API_URL}/companies/${companyId}/getcompanybyId`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to fetch company settings');
+  }
+  
+  const data = await res.json();
+  return data;
 } 

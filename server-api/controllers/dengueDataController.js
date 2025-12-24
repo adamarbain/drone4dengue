@@ -13,6 +13,7 @@ const {
   sendNotFoundError,
   sendInternalError
 } = require('../utils/errorResponse');
+const { getRiskLevelStats } = require('../utils/riskLevelUtils');
 
 // Redis client configuration
 let redisClient = null;
@@ -495,7 +496,14 @@ async function generateReport(req, res) {
 
     // Fetch company predictions if companyId is provided
     let predictions = [];
+    let company = null;
     if (companyId) {
+      // Fetch company to get prediction model parameters
+      company = await prisma.company.findUnique({
+        where: { id: companyId },
+        select: { predictionModelParameters: true }
+      });
+
       predictions = await prisma.companyPrediction.findMany({
         where: {
           companyId: companyId,
@@ -579,16 +587,19 @@ async function generateReport(req, res) {
       latestValue = totalValue;
     }
 
-    // Calculate overall stats
+    // Calculate overall stats using company-specific thresholds
+    const predictionModelParameters = company?.predictionModelParameters || {};
+    const riskStats = getRiskLevelStats(predictions, predictionModelParameters);
+    
     const stats = {
       totalDataPoints: dengueData.length,
       predictionsCount: predictions.length,
       averageRiskScore: predictions.length > 0 
-        ? predictions.reduce((sum, p) => sum + (p.riskScore || 0), 0) / predictions.length 
+        ? predictions.reduce((sum, p) => sum + (p.riskScore || p.combinedScore || 0), 0) / predictions.length 
         : 0,
-      highRiskPredictions: predictions.filter(p => p.riskScore >= 0.7).length,
-      mediumRiskPredictions: predictions.filter(p => p.riskScore >= 0.4 && p.riskScore < 0.7).length,
-      lowRiskPredictions: predictions.filter(p => p.riskScore < 0.4).length
+      highRiskPredictions: riskStats.highRiskPredictions,
+      mediumRiskPredictions: riskStats.mediumRiskPredictions,
+      lowRiskPredictions: riskStats.lowRiskPredictions
     };
 
     res.json({
@@ -599,8 +610,8 @@ async function generateReport(req, res) {
         latestValue,
         trend,
         stats,
-        dengueData: dengueData.slice(0, 100), // Limit to first 100 for response size
-        predictions: predictions.slice(0, 100)
+        dengueData,
+        predictions
       }
     });
   } catch (err) {
