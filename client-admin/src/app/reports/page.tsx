@@ -17,7 +17,43 @@ import { useState, useEffect } from "react"
 import { useAuth } from "@/context/AuthContext"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
-const dataTypes = ["Active Cases", "Total Cases"]
+const dataTypes = [
+  { value: "Active Cases", label: "Active Dengue Cases" },
+  { value: "Total Cases", label: "Cumulative Dengue Cases" },
+]
+
+const formatDate = (dateInput?: string | Date | null) => {
+  if (!dateInput) return "N/A"
+  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput
+  if (isNaN(date.getTime())) return "N/A"
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  })
+}
+
+const getWeekRange = (dateInput?: string | Date | null) => {
+  if (!dateInput) return null
+  const start = typeof dateInput === "string" ? new Date(dateInput) : dateInput
+  if (isNaN(start.getTime())) return null
+  const end = new Date(start)
+  end.setDate(start.getDate() + 6)
+  return { start, end }
+}
+
+const getRiskLevel = (combinedScore?: number | null): string => {
+  if (combinedScore === null || combinedScore === undefined || isNaN(combinedScore)) {
+    return "N/A"
+  }
+  if (combinedScore < 1) {
+    return "Low Dengue Risk"
+  } else if (combinedScore >= 1 && combinedScore < 3) {
+    return "Medium Dengue Risk"
+  } else {
+    return "High Dengue Risk"
+  }
+}
 
 const container = {
   hidden: { opacity: 0 },
@@ -38,7 +74,7 @@ export default function ReportsPage() {
   const { companyId, token } = useAuth()
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
-  const [selectedDataType, setSelectedDataType] = useState("")
+  const [selectedDataType, setSelectedDataType] = useState("Active Cases")
   const [reportGenerated, setReportGenerated] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -102,7 +138,7 @@ export default function ReportsPage() {
   }, [token, companyId])
 
   // Helper to check if all filters are filled
-  const filtersComplete = startDate && endDate && selectedDataType
+  const filtersComplete = startDate && endDate
 
   // Reset report state on filter change
   const handleFilterChange = (setter: (value: string) => void) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -129,11 +165,21 @@ export default function ReportsPage() {
         ...(companyId ? { companyId } : {})
       })
 
-      const response = await fetch(`${API_URL}/dengue-data/generate-report?${params}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      })
+      // Create AbortController for timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 120000) // 120 seconds (2 minutes) timeout
+
+      let response: Response
+      try {
+        response = await fetch(`${API_URL}/dengue-data/generate-report?${params}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          signal: controller.signal
+        })
+      } finally {
+        clearTimeout(timeoutId)
+      }
 
       if (!response.ok) {
         const errorData = await response.json()
@@ -143,12 +189,17 @@ export default function ReportsPage() {
       const result = await response.json()
       if (result.success) {
         setReportData(result.data)
+        console.log("result.data =>>>>>>", result.data);
         setReportGenerated(true)
       } else {
         throw new Error("Report generation failed")
       }
     } catch (err: any) {
-      setError(err.message || "Report generation failed. Please try again.")
+      if (err.name === 'AbortError') {
+        setError("Request timeout: Report generation is taking too long. Please try again or reduce the date range.")
+      } else {
+        setError(err.message || "Report generation failed. Please try again.")
+      }
       setReportGenerated(false)
     } finally {
       setLoading(false)
@@ -158,7 +209,7 @@ export default function ReportsPage() {
   const handleClearFilters = () => {
     setStartDate("")
     setEndDate("")
-    setSelectedDataType("")
+    setSelectedDataType("Active Cases")
     setReportGenerated(false)
     setReportData(null)
     setError("")
@@ -319,7 +370,7 @@ export default function ReportsPage() {
                 <FiFilter className="text-[#1D4ED8]" />
                 Report Filters
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div className="flex flex-col gap-2">
                   <label className="font-semibold text-black text-sm flex items-center gap-2">
                     <FiCalendar className="text-[#1D4ED8]" size={16} />
@@ -344,24 +395,6 @@ export default function ReportsPage() {
                     className="rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent"
                   />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <label className="font-semibold text-black text-sm flex items-center gap-2">
-                    <FiBarChart2 className="text-[#1D4ED8]" size={16} />
-                    Data Type
-                  </label>
-                  <select
-                    value={selectedDataType}
-                    onChange={handleFilterChange(setSelectedDataType)}
-                    className="rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#E2C275]"
-                  >
-                    <option value="">Select Type</option>
-                    {dataTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
               {error && (
                 <div className="mb-4 text-red-600 font-semibold bg-red-100 rounded-lg px-4 py-2 border border-red-200">
@@ -370,16 +403,27 @@ export default function ReportsPage() {
               )}
               <div className="flex gap-4">
                 <button
-                  className={`bg-[#1D4ED8] text-white px-8 py-3 rounded-lg font-bold text-base flex items-center gap-2 shadow-md transition-all ${!filtersComplete || loading ? "opacity-60 cursor-not-allowed" : "hover:bg-[#1E3A8A]"}`}
+                  className={`bg-[#1D4ED8] text-white px-8 py-3 rounded-lg font-bold text-base flex items-center gap-2 shadow-md transition-all relative overflow-hidden ${!filtersComplete || loading ? "opacity-60 cursor-not-allowed" : "hover:bg-[#1E3A8A]"}`}
                   onClick={handleGenerateReport}
                   disabled={!filtersComplete || loading}
                 >
-                  {loading ? (
-                    <svg className="animate-spin h-5 w-5 mr-2 text-white" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>
-                  ) : (
-                    <FiBarChart2 />
+                  {loading && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent" style={{ animation: 'shimmer 1.5s infinite' }}></div>
                   )}
-                  {loading ? "Generating..." : "Generate Report"}
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 text-white relative z-10" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                      </svg>
+                      <span className="relative z-10">Generating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiBarChart2 />
+                      <span>Generate Report</span>
+                    </>
+                  )}
                 </button>
                 <button
                   className="bg-white text-[#1D4ED8] border border-[#1D4ED8] px-8 py-3 rounded-lg font-bold text-base hover:bg-[#EFF6FF] transition-all"
@@ -405,7 +449,7 @@ export default function ReportsPage() {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold text-lg flex items-center gap-2">
                     <FiBarChart2 className="text-[#1D4ED8]" />
-                    Weekly Overview
+                    Weekly Active Dengue Cases Overview
                   </h3>
                   <FiTrendingUp className="text-green-500" />
                 </div>
@@ -438,13 +482,23 @@ export default function ReportsPage() {
                 </div>
                 <div className="text-center mb-4">
                   <div className="text-2xl font-bold text-[#1D4ED8]">
-                    {reportGenerated && reportData ? reportData.latestValue : "-"}
-                  </div>
-                  <div className="text-sm text-gray-500">{selectedDataType || "Data"}</div>
-                  <div className="text-xs text-gray-400">
                     {reportGenerated && reportData && reportData.weeklyData && reportData.weeklyData.length > 0
-                      ? new Date(reportData.weeklyData[reportData.weeklyData.length - 1].date).toLocaleDateString()
-                      : "No data"}
+                      ? reportData.weeklyData
+                          .reduce(
+                            (sum: number, entry: any) =>
+                              sum + (typeof entry.value === "number" ? entry.value : 0),
+                            0
+                          )
+                          .toLocaleString()
+                      : "-"}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Total Dengue Cases
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    {startDate && endDate
+                      ? `${formatDate(startDate)} - ${formatDate(endDate)}`
+                      : "No date range selected"}
                   </div>
                 </div>
                 <button
@@ -465,80 +519,135 @@ export default function ReportsPage() {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold text-lg flex items-center gap-2">
                     <FiPieChart className="text-[#1D4ED8]" />
-                    Cases Overview
+                    Dengue Prediction Overview
                   </h3>
                   <FiTrendingUp className="text-green-500" />
                 </div>
-                <div className="w-full h-32 mb-4 bg-gradient-to-r from-[#FFF7E3] to-[#F3EAD8] rounded-lg flex items-end p-4">
-                  {/* Enhanced area chart */}
-                  <svg width="100%" height="100%" viewBox="0 0 320 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                      <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="80" gradientUnits="userSpaceOnUse">
-                        <stop stopColor="#1D4ED8" stopOpacity="0.6" />
-                        <stop offset="1" stopColor="#1D4ED8" stopOpacity="0.1" />
-                      </linearGradient>
-                    </defs>
-                    {reportGenerated && reportData && reportData.weeklyData && reportData.weeklyData.length > 0 ? (() => {
-                      const chartData = generateAreaChartData()
-                      return (
+                <div className={`w-full h-32 mb-4 bg-gradient-to-r from-[#FFF7E3] to-[#F3EAD8] rounded-lg p-4 ${
+                  reportGenerated && reportData && reportData.stats && (
+                    Object.keys(reportData.stats).length > 0 && 
+                    (reportData.stats.highRiskPredictions > 0 || 
+                     reportData.stats.mediumRiskPredictions > 0 || 
+                     reportData.stats.lowRiskPredictions > 0)
+                  ) ? 'flex items-end' : 'flex items-center justify-center'
+                }`}>
+                  {reportGenerated && reportData && reportData.stats && (
+                    Object.keys(reportData.stats).length > 0 && 
+                    (reportData.stats.highRiskPredictions > 0 || 
+                     reportData.stats.mediumRiskPredictions > 0 || 
+                     reportData.stats.lowRiskPredictions > 0)
+                  ) ? (
+                    /* Enhanced area chart */
+                    <svg width="100%" height="100%" viewBox="0 0 320 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <defs>
+                        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="80" gradientUnits="userSpaceOnUse">
+                          <stop stopColor="#1D4ED8" stopOpacity="0.6" />
+                          <stop offset="1" stopColor="#1D4ED8" stopOpacity="0.1" />
+                        </linearGradient>
+                      </defs>
+                      {reportData.weeklyData && reportData.weeklyData.length > 0 ? (() => {
+                        const chartData = generateAreaChartData()
+                        return (
+                          <>
+                            <path
+                              d={`${chartData.path} V80 H0 Z`}
+                              fill="url(#areaGrad)"
+                            />
+                            <path
+                              d={chartData.path}
+                              stroke="#1D4ED8"
+                              strokeWidth="2"
+                              fill="none"
+                            />
+                            {chartData.points.map((point: any, idx: number) => (
+                              <circle key={idx} cx={point.x} cy={point.y} r="3" fill="#1D4ED8" />
+                            ))}
+                          </>
+                        )
+                      })() : (
                         <>
                           <path
-                            d={`${chartData.path} V80 H0 Z`}
+                            d="M0,60 Q40,40 80,50 Q120,70 160,40 Q200,20 240,50 Q280,80 320,40 V80 H0 Z"
                             fill="url(#areaGrad)"
                           />
                           <path
-                            d={chartData.path}
+                            d="M0,60 Q40,40 80,50 Q120,70 160,40 Q200,20 240,50 Q280,80 320,40"
                             stroke="#1D4ED8"
                             strokeWidth="2"
                             fill="none"
                           />
-                          {chartData.points.map((point: any, idx: number) => (
-                            <circle key={idx} cx={point.x} cy={point.y} r="3" fill="#1D4ED8" />
-                          ))}
+                          <circle cx="80" cy="50" r="3" fill="#1D4ED8" />
+                          <circle cx="160" cy="40" r="3" fill="#1D4ED8" />
+                          <circle cx="240" cy="50" r="3" fill="#1D4ED8" />
                         </>
-                      )
-                    })() : (
-                      <>
-                        <path
-                          d="M0,60 Q40,40 80,50 Q120,70 160,40 Q200,20 240,50 Q280,80 320,40 V80 H0 Z"
-                          fill="url(#areaGrad)"
-                        />
-                        <path
-                          d="M0,60 Q40,40 80,50 Q120,70 160,40 Q200,20 240,50 Q280,80 320,40"
-                          stroke="#1D4ED8"
-                          strokeWidth="2"
-                          fill="none"
-                        />
-                        <circle cx="80" cy="50" r="3" fill="#1D4ED8" />
-                        <circle cx="160" cy="40" r="3" fill="#1D4ED8" />
-                        <circle cx="240" cy="50" r="3" fill="#1D4ED8" />
-                      </>
-                    )}
-                  </svg>
+                      )}
+                    </svg>
+                  ) : reportGenerated && reportData ? (
+                    <div className="text-center text-gray-500 text-sm">
+                      No Prediction Data during this time period.
+                    </div>
+                  ) : (
+                    <svg width="100%" height="100%" viewBox="0 0 320 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <defs>
+                        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="80" gradientUnits="userSpaceOnUse">
+                          <stop stopColor="#1D4ED8" stopOpacity="0.6" />
+                          <stop offset="1" stopColor="#1D4ED8" stopOpacity="0.1" />
+                        </linearGradient>
+                      </defs>
+                      <path
+                        d="M0,60 Q40,40 80,50 Q120,70 160,40 Q200,20 240,50 Q280,80 320,40 V80 H0 Z"
+                        fill="url(#areaGrad)"
+                      />
+                      <path
+                        d="M0,60 Q40,40 80,50 Q120,70 160,40 Q200,20 240,50 Q280,80 320,40"
+                        stroke="#1D4ED8"
+                        strokeWidth="2"
+                        fill="none"
+                      />
+                      <circle cx="80" cy="50" r="3" fill="#1D4ED8" />
+                      <circle cx="160" cy="40" r="3" fill="#1D4ED8" />
+                      <circle cx="240" cy="50" r="3" fill="#1D4ED8" />
+                    </svg>
+                  )}
                 </div>
                 <div className="flex justify-center gap-6 text-xs mb-4">
-                  {reportGenerated && reportData && reportData.stats ? (
+                  {reportGenerated && reportData && reportData.stats && (
+                    Object.keys(reportData.stats).length > 0 && 
+                    (reportData.stats.highRiskPredictions > 0 || 
+                     reportData.stats.mediumRiskPredictions > 0 || 
+                     reportData.stats.lowRiskPredictions > 0)
+                  ) ? (
                     <>
                       <span className="flex items-center gap-2">
                         <span className="inline-block w-3 h-3 rounded-full bg-red-500"></span>
-                        High Risk: {reportData.stats.highRiskPredictions}
+                        High Dengue Risk: {reportData.stats.highRiskPredictions}
                       </span>
                       <span className="flex items-center gap-2">
                         <span className="inline-block w-3 h-3 rounded-full bg-yellow-500"></span>
-                        Medium Risk: {reportData.stats.mediumRiskPredictions}
+                        Medium Dengue Risk: {reportData.stats.mediumRiskPredictions}
                       </span>
                       <span className="flex items-center gap-2">
                         <span className="inline-block w-3 h-3 rounded-full bg-green-500"></span>
-                        Low Risk: {reportData.stats.lowRiskPredictions}
+                        Low Dengue Risk: {reportData.stats.lowRiskPredictions}
                       </span>
                     </>
+                  ) : reportGenerated && reportData ? (
+                    <span className="text-gray-400">No prediction data available.</span>
                   ) : (
                     <span className="text-gray-400">Generate a report to view risk insights.</span>
                   )}
                 </div>
                 <button
                   className="w-full bg-[#1D4ED8] text-white py-2 rounded-lg font-bold hover:bg-[#1E3A8A] transition-colors disabled:cursor-not-allowed"
-                  disabled={!reportGenerated}
+                  disabled={
+                    !reportGenerated || 
+                    !reportData || 
+                    !reportData.stats || 
+                    Object.keys(reportData.stats).length === 0 ||
+                    (reportData.stats.highRiskPredictions === 0 && 
+                     reportData.stats.mediumRiskPredictions === 0 && 
+                     reportData.stats.lowRiskPredictions === 0)
+                  }
                   onClick={() => handleViewDetails("cases")}
                 >
                   View Details
@@ -553,10 +662,14 @@ export default function ReportsPage() {
                 <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
                   <div>
                     <div className="text-lg font-bold">
-                      {detailView === "weekly" ? "Weekly Overview Details" : "Cases Overview Details"}
+                      {detailView === "weekly" ? "Weekly Overview Details" : "Prediction Overview Details"}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {startDate || "N/A"} - {endDate || "N/A"} · {selectedDataType || "All Data"}
+                      {formatDate(startDate || null)} - {formatDate(endDate || null)} ·{" "}
+                      {reportData && reportData.weeklyData && reportData.weeklyData.length > 0
+                        ? `${reportData.weeklyData.length} week${reportData.weeklyData.length > 1 ? "s" : ""}`
+                        : "No weeks"}{" "}
+                      · Active Dengue Cases
                     </div>
                   </div>
                   <button
@@ -571,19 +684,28 @@ export default function ReportsPage() {
                   {detailView === "weekly" ? (
                     reportData.weeklyData && reportData.weeklyData.length > 0 ? (
                       <div className="space-y-3">
-                        {reportData.weeklyData.map((entry: any, idx: number) => (
-                          <div
-                            key={`${entry.date}-${idx}`}
-                            className="flex items-center justify-between rounded-lg border border-gray-100 px-4 py-3"
-                          >
-                            <div className="font-medium text-gray-800">
-                              {entry.date ? new Date(entry.date).toLocaleDateString() : `Week ${idx + 1}`}
+                        {reportData.weeklyData.map((entry: any, idx: number) => {
+                          const weekRange = getWeekRange(entry.date)
+
+                          return (
+                            <div
+                              key={`${entry.date}-${idx}`}
+                              className="flex items-center justify-between rounded-lg border border-gray-100 px-4 py-3"
+                            >
+                              <div className="font-medium text-gray-800">
+                                <div>{`Week ${idx + 1}`}</div>
+                                <div className="text-xs text-gray-500">
+                                  {weekRange
+                                    ? `${formatDate(weekRange.start)} - ${formatDate(weekRange.end)}`
+                                    : formatDate(entry.date)}
+                                </div>
+                              </div>
+                              <div className="text-[#1D4ED8] font-semibold">
+                                {entry.value !== undefined ? `${entry.value.toLocaleString()} active cases` : "-"}
+                              </div>
                             </div>
-                            <div className="text-[#1D4ED8] font-semibold">
-                              {entry.value !== undefined ? entry.value.toLocaleString() : "-"}
-                            </div>
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     ) : (
                       <div className="text-sm text-gray-500">No weekly data available for the selected filters.</div>
@@ -593,9 +715,9 @@ export default function ReportsPage() {
                       {reportData.stats ? (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           {[
-                            { label: "High Risk", value: reportData.stats.highRiskPredictions, color: "bg-red-500" },
-                            { label: "Medium Risk", value: reportData.stats.mediumRiskPredictions, color: "bg-yellow-500" },
-                            { label: "Low Risk", value: reportData.stats.lowRiskPredictions, color: "bg-green-500" },
+                            { label: "High Dengue Risk", value: reportData.stats.highRiskPredictions, color: "bg-red-500" },
+                            { label: "Medium Dengue Risk", value: reportData.stats.mediumRiskPredictions, color: "bg-yellow-500" },
+                            { label: "Low Dengue Risk", value: reportData.stats.lowRiskPredictions, color: "bg-green-500" },
                           ].map((stat) => (
                             <div key={stat.label} className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2">
                               <div className="flex items-center gap-2 text-sm font-semibold text-gray-600">
@@ -615,20 +737,28 @@ export default function ReportsPage() {
                         <div>
                           <div className="text-sm font-semibold text-gray-600 mb-2">Latest Predictions</div>
                           <div className="space-y-2">
-                            {reportData.predictions.slice(0, 5).map((prediction: any, idx: number) => (
-                              <div key={idx} className="rounded-lg border border-gray-100 px-4 py-3">
-                                <div className="flex justify-between text-sm text-gray-500">
-                                  <span>{prediction.location || "Unknown Location"}</span>
-                                  <span>{prediction.riskLevel || "N/A"}</span>
+                            {reportData.predictions.slice(0, 5).map((prediction: any, idx: number) => {
+                              const riskLevel = getRiskLevel(prediction.combinedScore)
+                              const riskColor = 
+                                riskLevel === "High Risk" ? "text-red-600" :
+                                riskLevel === "Medium Risk" ? "text-yellow-600" :
+                                riskLevel === "Low Risk" ? "text-green-600" :
+                                "text-gray-500"
+                              
+                              return (
+                                <div key={idx} className="rounded-lg border border-gray-100 px-4 py-3">
+                                  <div className="flex justify-between text-sm text-gray-500">
+                                    <span>{prediction.companyLocation?.address || "Unknown Location"}</span>
+                                    <span className={`font-semibold ${riskColor}`}>
+                                      {riskLevel}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-gray-400">
+                                    {prediction.createdAt ? formatDate(prediction.createdAt) : ""}
+                                  </div>
                                 </div>
-                                <div className="text-lg font-semibold text-gray-800">
-                                  {prediction.totalCases !== undefined ? `${prediction.totalCases.toLocaleString()} cases` : "-"}
-                                </div>
-                                <div className="text-xs text-gray-400">
-                                  {prediction.date ? new Date(prediction.date).toLocaleDateString() : ""}
-                                </div>
-                              </div>
-                            ))}
+                              )
+                            })}
                           </div>
                         </div>
                       )}

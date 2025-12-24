@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const axios = require('axios');
+const { getRiskLevel } = require('../utils/riskLevelUtils');
 
 // Expo Push Notification API endpoint
 const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send';
@@ -137,10 +138,15 @@ async function notifyCompanyPredictionCreated(prediction) {
   try {
     const { companyId, companyLocationId, riskScore, latitude, longitude } = prediction;
     
-    // Get risk level from risk score
-    let riskLevel = 'low';
-    if (riskScore >= 3.0) riskLevel = 'high';
-    else if (riskScore >= 1.0) riskLevel = 'medium';
+    // Get company settings for risk level thresholds
+    const company = await prisma.company.findUnique({
+      where: { id: companyId },
+      select: { predictionModelParameters: true }
+    });
+    const predictionModelParameters = company?.predictionModelParameters || {};
+    
+    // Get risk level from risk score using company-specific thresholds
+    const riskLevel = getRiskLevel(riskScore, predictionModelParameters);
 
     // Get company location name
     let locationName = 'Unknown Location';

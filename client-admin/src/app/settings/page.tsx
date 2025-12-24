@@ -86,9 +86,12 @@ export default function SettingsPage() {
   const [predictionModelParams, setPredictionModelParams] = useState({
     temperatureWeight: 0.35,
     rainfallWeight: 0.40,
-    populationDensityWeight: 0.25
+    populationDensityWeight: 0.25,
+    lowThreshold: 1.0,  // Risk score threshold for low to medium
+    highThreshold: 3.0   // Risk score threshold for medium to high
   });
   const [showModelParamsEdit, setShowModelParamsEdit] = useState(false);
+  const [showRiskThresholdsEdit, setShowRiskThresholdsEdit] = useState(false);
 
   // Advanced settings state
   const [advancedSettingsLoading, setAdvancedSettingsLoading] = useState(false);
@@ -209,7 +212,9 @@ export default function SettingsPage() {
           setPredictionModelParams({
             temperatureWeight: data.predictionModelParameters.temperatureWeight || 0.35,
             rainfallWeight: data.predictionModelParameters.rainfallWeight || 0.40,
-            populationDensityWeight: data.predictionModelParameters.populationDensityWeight || 0.25
+            populationDensityWeight: data.predictionModelParameters.populationDensityWeight || 0.25,
+            lowThreshold: data.predictionModelParameters.lowThreshold || 1.0,
+            highThreshold: data.predictionModelParameters.highThreshold || 3.0
           });
         }
         if (data.advancedSettings) {
@@ -491,6 +496,7 @@ export default function SettingsPage() {
       setCompanySettings(data);
       setSystemConfigSuccess('System configuration saved successfully!');
       setShowModelParamsEdit(false);
+      setShowRiskThresholdsEdit(false);
       setTimeout(() => setSystemConfigSuccess(''), 3000);
     } catch (err) {
       setSystemConfigError(err instanceof Error ? err.message : 'Failed to update system configuration');
@@ -930,7 +936,7 @@ export default function SettingsPage() {
                       {showModelParamsEdit ? (
                         <div className="bg-gray-100 p-3 rounded-lg space-y-3">
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-700">Temperature Weight:</span>
+                            <span className="text-sm text-gray-700">Historical Data Weight:</span>
                             <Input
                               type="number"
                               step="0.01"
@@ -945,7 +951,7 @@ export default function SettingsPage() {
                             />
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-700">Rainfall Weight:</span>
+                            <span className="text-sm text-gray-700">Weather Weight:</span>
                             <Input
                               type="number"
                               step="0.01"
@@ -960,7 +966,7 @@ export default function SettingsPage() {
                             />
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-700">Population Density Weight:</span>
+                            <span className="text-sm text-gray-700">Breeding Area Detection Weight:</span>
                             <Input
                               type="number"
                               step="0.01"
@@ -978,16 +984,82 @@ export default function SettingsPage() {
                       ) : (
                         <div className="bg-gray-100 p-3 rounded-lg text-sm text-gray-600">
                           <div className="flex justify-between mb-1">
-                            <span>Temperature Weight:</span>
+                            <span>Historical Data Weight:</span>
                             <span>{predictionModelParams.temperatureWeight.toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between mb-1">
-                            <span>Rainfall Weight:</span>
+                            <span>Weather Weight:</span>
                             <span>{predictionModelParams.rainfallWeight.toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span>Population Density Weight:</span>
+                            <span>Breeding Area Detection Weight:</span>
                             <span>{predictionModelParams.populationDensityWeight.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <Label htmlFor="risk-thresholds">Risk Level Thresholds</Label>
+                        <button 
+                          onClick={() => setShowRiskThresholdsEdit(!showRiskThresholdsEdit)}
+                          className="text-[#1D4ED8] hover:bg-[#F3EAD8] p-2 rounded-lg flex items-center gap-1"
+                        >
+                          <FiSliders className="text-sm" />
+                          <span className="text-sm">{showRiskThresholdsEdit ? 'Cancel' : 'Edit Thresholds'}</span>
+                        </button>
+                      </div>
+                      {showRiskThresholdsEdit ? (
+                        <div className="bg-gray-100 p-3 rounded-lg space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-700">Low to Medium Threshold:</span>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              value={predictionModelParams.lowThreshold}
+                              onChange={(e) => setPredictionModelParams({
+                                ...predictionModelParams,
+                                lowThreshold: parseFloat(e.target.value) || 0
+                              })}
+                              className="w-20 border-[#E2C275] focus:border-[#1D4ED8]"
+                            />
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-700">Medium to High Threshold:</span>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              value={predictionModelParams.highThreshold}
+                              onChange={(e) => setPredictionModelParams({
+                                ...predictionModelParams,
+                                highThreshold: parseFloat(e.target.value) || 0
+                              })}
+                              className="w-20 border-[#E2C275] focus:border-[#1D4ED8]"
+                            />
+                          </div>
+                          <div className="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-300">
+                            <div>Low: &lt; {predictionModelParams.lowThreshold}</div>
+                            <div>Medium: {predictionModelParams.lowThreshold} - {predictionModelParams.highThreshold}</div>
+                            <div>High: &ge; {predictionModelParams.highThreshold}</div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-gray-100 p-3 rounded-lg text-sm text-gray-600">
+                          <div className="flex justify-between mb-1">
+                            <span>Low to Medium Threshold:</span>
+                            <span>{predictionModelParams.lowThreshold}</span>
+                          </div>
+                          <div className="flex justify-between mb-1">
+                            <span>Medium to High Threshold:</span>
+                            <span>{predictionModelParams.highThreshold}</span>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-300">
+                            <div>Low: &lt; {predictionModelParams.lowThreshold}</div>
+                            <div>Medium: {predictionModelParams.lowThreshold} - {predictionModelParams.highThreshold}</div>
+                            <div>High: &ge; {predictionModelParams.highThreshold}</div>
                           </div>
                         </div>
                       )}

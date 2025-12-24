@@ -12,6 +12,7 @@ module.exports = {
       supportsTablet: true,
       bundleIdentifier: "com.adamarbain.dengueeyemobileapp",
       infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
         NSLocationWhenInUseUsageDescription:
           "DengueEye needs your location to show nearby dengue risk areas and help protect your community.",
         NSLocationAlwaysAndWhenInUseUsageDescription:

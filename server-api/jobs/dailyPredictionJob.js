@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { notifyDailyPrediction } = require('../services/notificationService');
+const { getRiskLevel } = require('../utils/riskLevelUtils');
 
 // Import prediction function from controller
 // We'll need to extract the getMLPrediction function or create a utility
@@ -90,11 +91,16 @@ const scheduleDailyPredictions = () => {
 
           const prediction = mlResult.prediction;
           
-          // Determine risk level
-          let riskLevel = 'low';
+          // Get company settings for risk level thresholds
+          const company = await prisma.company.findUnique({
+            where: { id: user.companyId },
+            select: { predictionModelParameters: true }
+          });
+          const predictionModelParameters = company?.predictionModelParameters || {};
+          
+          // Determine risk level using company-specific thresholds
           const riskScore = prediction.combined_score || prediction.risk_score || 0;
-          if (riskScore >= 0.7) riskLevel = 'high';
-          else if (riskScore >= 0.4) riskLevel = 'medium';
+          const riskLevel = getRiskLevel(riskScore, predictionModelParameters);
 
           // Send notification to user
           await notifyDailyPrediction(user.id, user.companyId, {

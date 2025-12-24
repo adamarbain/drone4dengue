@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import BottomNav from './components/BottomNav';
 import DengueRiskCard from '../components/DengueRiskCard';
-import { fetchCurrentUser, getCompanyLocations, getCompanyPredictions } from '../utils/userApi';
+import { fetchCurrentUser, getCompanyLocations, getCompanyPredictions, getCompanySettings } from '../utils/userApi';
 
 interface CompanyLocation {
   id: string;
@@ -50,6 +50,9 @@ export default function Dashboard() {
   const [selectedLocation, setSelectedLocation] = useState<CompanyLocation | null>(null);
   const [selectedPrediction, setSelectedPrediction] = useState<CompanyPrediction | null>(null);
   const orgMapRef = useRef<MapView>(null);
+  
+  // Risk threshold settings
+  const [riskThresholds, setRiskThresholds] = useState({ lowThreshold: 1.0, highThreshold: 3.0 });
 
   useEffect(() => {
     let isMounted = true;
@@ -63,7 +66,24 @@ export default function Dashboard() {
             setCompanyId(user?.companyId || null); // Still store the companyId, but indicate "no company"
           } else {
             setHasCompany(Boolean(user?.companyId));
-            setCompanyId(user?.companyId || null);
+            const cId = user?.companyId || null;
+            setCompanyId(cId);
+            
+            // Fetch company settings for risk thresholds
+            if (cId) {
+              try {
+                const companySettings = await getCompanySettings(cId);
+                if (isMounted && companySettings?.predictionModelParameters) {
+                  const params = companySettings.predictionModelParameters;
+                  setRiskThresholds({
+                    lowThreshold: params.lowThreshold || 1.0,
+                    highThreshold: params.highThreshold || 3.0
+                  });
+                }
+              } catch (err) {
+                console.warn('Failed to fetch company settings, using defaults:', err);
+              }
+            }
           }
         }
       } catch (e) {
@@ -194,14 +214,14 @@ export default function Dashboard() {
   };
 
   const getRiskLevel = (riskScore: number): 'high' | 'medium' | 'low' => {
-    if (riskScore >= 3) return 'high';
-    if (riskScore >= 1) return 'medium';
+    if (riskScore >= riskThresholds.highThreshold) return 'high';
+    if (riskScore >= riskThresholds.lowThreshold) return 'medium';
     return 'low';
   };
 
   const getScoreRiskLevel = (score: number): 'high' | 'medium' | 'low' => {
-    if (score > 3) return 'high';
-    if (score >= 1 && score <= 3) return 'medium';
+    if (score >= riskThresholds.highThreshold) return 'high';
+    if (score >= riskThresholds.lowThreshold) return 'medium';
     return 'low';
   };
 
