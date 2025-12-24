@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
 import { FiSearch, FiLogOut, FiBell, FiMail, FiChevronDown, FiAlertCircle, FiCheckCircle, FiMapPin, FiCamera, FiPackage } from "react-icons/fi"
 import { useAuth } from '@/context/AuthContext';
-import { getNotifications, getUnreadNotificationCount, markNotificationAsRead, type Notification } from '@/lib/api';
+import { getNotifications, getUnreadNotificationCount, markNotificationAsRead, markAllNotificationsAsRead, type Notification } from '@/lib/api';
 import { setAuthToken } from '@/lib/api';
 
 export default function AdminHeader() {
@@ -94,6 +94,24 @@ export default function AdminHeader() {
       } catch (error) {
         console.error('Error marking notification as read:', error);
       }
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    if (unreadCount === 0) return;
+    try {
+      await markAllNotificationsAsRead();
+      // Update all notifications to read
+      setNotifications(prev =>
+        prev.map(n => ({ ...n, isRead: true }))
+      );
+      // Reset unread count
+      setUnreadCount(0);
+      // Refresh notifications to get updated state
+      fetchNotifications();
+      fetchUnreadCount();
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
     }
   };
 
@@ -280,16 +298,14 @@ export default function AdminHeader() {
                     ))
                   )}
                 </div>
-                {notifications.length > 0 && (
+                {notifications.length > 0 && unreadCount > 0 && (
                   <div className="px-4 py-2 border-t border-gray-100">
                     <button 
-                      className="text-[#1D4ED8] text-xs font-medium hover:underline w-full text-center"
-                      onClick={() => {
-                        // Navigate to full notifications page if it exists
-                        window.location.href = '/notifications';
-                      }}
+                      className="text-[#1D4ED8] text-xs font-medium hover:underline w-full text-center flex items-center justify-center gap-1"
+                      onClick={handleMarkAllAsRead}
                     >
-                      View all notifications
+                      <FiCheckCircle className="w-3 h-3" />
+                      Mark all as read
                     </button>
                   </div>
                 )}
