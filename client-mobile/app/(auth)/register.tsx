@@ -178,12 +178,20 @@ export default function RegisterScreen() {
                     {/* Terms and Checkbox */}
                     <View className="flex-row items-center mb-4">
                         <Pressable
-                            className={`w-6 h-6 rounded-md border border-red-600 flex items-center justify-center mr-2 ${agree ? 'bg-red-600' : 'bg-white'}`}
+                            className={`w-6 h-6 rounded-md border border-blue-600 flex items-center justify-center mr-2 ${agree ? 'bg-blue-600' : 'bg-white'}`}
                             onPress={() => setAgree(!agree)}
                         >
                             {agree && <MaterialCommunityIcons name="check" size={18} color="#fff" />}
                         </Pressable>
-                        <Text className="text-[13px] text-black">Agree to DengueEye's Terms and Condition Policy.</Text>
+                        <View className="flex-1 flex-row flex-wrap">
+                            <Text className="text-[13px] text-black">Agree to </Text>
+                            <TouchableOpacity onPress={() => router.push('/(auth)/terms')}>
+                                <Text className="text-[13px] text-[#1D4ED8] font-semibold underline">
+                                    DengueEye's Terms and Condition Policy
+                                </Text>
+                            </TouchableOpacity>
+                            <Text className="text-[13px] text-black">.</Text>
+                        </View>
                     </View>
                     {/* Error Message */}
                     {error ? (
@@ -191,7 +199,7 @@ export default function RegisterScreen() {
                     ) : null}
                     {/* Register Button */}
                     <TouchableOpacity
-                        className={`w-full rounded-xl py-4 shadow-lg shadow-red-200 mb-4 ${(!agree || loading) ? 'bg-gray-300' : 'bg-[#C7362F]'}`}
+                        className={`w-full rounded-xl py-4 shadow-lg shadow-blue-200 mb-4 ${(!agree || loading) ? 'bg-gray-300' : 'bg-[#1D4ED8]'}`}
                         onPress={handleRegister}
                         disabled={!agree || loading}
                     >

@@ -199,6 +199,12 @@ export default function Dashboard() {
     return 'low';
   };
 
+  const getScoreRiskLevel = (score: number): 'high' | 'medium' | 'low' => {
+    if (score > 3) return 'high';
+    if (score >= 1 && score <= 3) return 'medium';
+    return 'low';
+  };
+
   const handleLocationMarkerPress = (location: CompanyLocation) => {
     setSelectedLocation(location);
     // Find prediction for this location
@@ -256,7 +262,7 @@ export default function Dashboard() {
         {hasCompany ? (
           <View className="flex-row mb-6 rounded-lg overflow-hidden border border-gray-200">
             <TouchableOpacity 
-              className={`flex-1 py-3 ${activeTab === 'current' ? 'bg-[#7D0A0A]' : 'bg-[#ead196]'}`}
+              className={`flex-1 py-3 ${activeTab === 'current' ? 'bg-[#1D4ED8]' : 'bg-[#ead196]'}`}
               onPress={() => setActiveTab('current')}
             >
               <Text className={`text-center font-bold text-base ${activeTab === 'current' ? 'text-white' : 'text-white'}`}>
@@ -264,7 +270,7 @@ export default function Dashboard() {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              className={`flex-1 py-3 ${activeTab === 'organisation' ? 'bg-[#7D0A0A]' : 'bg-[#ead196]'}`}
+              className={`flex-1 py-3 ${activeTab === 'organisation' ? 'bg-[#1D4ED8]' : 'bg-[#ead196]'}`}
               onPress={() => setActiveTab('organisation')}
             >
               <Text className={`text-center font-bold text-base ${activeTab === 'organisation' ? 'text-white' : 'text-white'}`}>
@@ -283,7 +289,7 @@ export default function Dashboard() {
             >
               {locationLoading ? (
                 <View className="w-full h-full bg-gray-200 items-center justify-center">
-                  <ActivityIndicator size="large" color="#7D0A0A" />
+                  <ActivityIndicator size="large" color="#1D4ED8" />
                   <Text className="text-gray-600 mt-2 text-sm">Loading map...</Text>
                 </View>
               ) : location ? (
@@ -308,7 +314,7 @@ export default function Dashboard() {
                         longitude: location.longitude,
                       }}
                       title="Your Location"
-                      pinColor="#7D0A0A"
+                      pinColor="#1D4ED8"
                     />
                   </MapView>
                   
@@ -316,9 +322,9 @@ export default function Dashboard() {
                   {showLocationButton && (
                     <TouchableOpacity
                       onPress={returnToCurrentLocation}
-                      className="absolute bottom-2 right-2 bg-[#7D0A0A] rounded-full p-3 shadow-lg"
+                      className="absolute bottom-2 right-2 bg-[#1D4ED8] rounded-full p-3 shadow-lg"
                       style={{
-                        shadowColor: '#7D0A0A',
+                        shadowColor: '#1D4ED8',
                         shadowOffset: { width: 0, height: 4 },
                         shadowOpacity: 0.3,
                         shadowRadius: 8,
@@ -363,7 +369,7 @@ export default function Dashboard() {
           <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
             {loadingOrganisation ? (
               <View className="items-center justify-center py-8">
-                <ActivityIndicator size="large" color="#7D0A0A" />
+                <ActivityIndicator size="large" color="#1D4ED8" />
                 <Text className="text-gray-600 mt-4 text-sm">Loading organisation data...</Text>
               </View>
             ) : companyLocations.length === 0 ? (
@@ -418,6 +424,109 @@ export default function Dashboard() {
                   </MapView>
                 </View>
 
+                {/* Selected Location Prediction Details - Display below map if location is selected */}
+                {selectedLocation && selectedPrediction && (
+                  <View 
+                    className="bg-white rounded-2xl p-4 mb-4 border-l-4"
+                    style={{ 
+                      borderLeftColor: getRiskColor(getRiskLevel(selectedPrediction.riskScore)),
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 4,
+                      elevation: 3,
+                    }}
+                  >
+                    <Text className="text-lg font-bold text-black mb-3" style={{ fontFamily: 'SF Pro' }}>
+                      Prediction Details
+                    </Text>
+                    <View>
+                      <View className="flex-row justify-between items-center py-2 border-b border-gray-100 mb-2">
+                        <Text className="text-sm font-semibold text-gray-600">Dengue Risk Level</Text>
+                        <View 
+                          className="px-3 py-1 rounded-lg"
+                          style={{ backgroundColor: getRiskColor(getRiskLevel(selectedPrediction.riskScore)) + '20' }}
+                        >
+                          <Text 
+                            className="text-sm font-bold"
+                            style={{ color: getRiskColor(getRiskLevel(selectedPrediction.riskScore)) }}
+                          >
+                            {getRiskLevel(selectedPrediction.riskScore).toUpperCase()}
+                          </Text>
+                        </View>
+                      </View>
+                      {selectedPrediction.model1Score !== null && selectedPrediction.model1Score !== undefined && (
+                        <View className="flex-row justify-between items-center py-2 border-b border-gray-100 mb-2">
+                          <Text className="text-sm font-semibold text-gray-600">Historical Cases Factor</Text>
+                          <View 
+                            className="px-3 py-1 rounded-lg"
+                            style={{ backgroundColor: getRiskColor(getScoreRiskLevel(selectedPrediction.model1Score)) + '20' }}
+                          >
+                            <Text 
+                              className="text-sm font-bold"
+                              style={{ color: getRiskColor(getScoreRiskLevel(selectedPrediction.model1Score)) }}
+                            >
+                              {getScoreRiskLevel(selectedPrediction.model1Score).toUpperCase()}
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+                      {selectedPrediction.model2Score !== null && selectedPrediction.model2Score !== undefined && (
+                        <View className="flex-row justify-between items-center py-2 border-b border-gray-100 mb-2">
+                          <Text className="text-sm font-semibold text-gray-600">Weather-Based Factor</Text>
+                          <View 
+                            className="px-3 py-1 rounded-lg"
+                            style={{ backgroundColor: getRiskColor(getScoreRiskLevel(selectedPrediction.model2Score)) + '20' }}
+                          >
+                            <Text 
+                              className="text-sm font-bold"
+                              style={{ color: getRiskColor(getScoreRiskLevel(selectedPrediction.model2Score)) }}
+                            >
+                              {getScoreRiskLevel(selectedPrediction.model2Score).toUpperCase()}
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+                      {selectedPrediction.model3Score !== null && 
+                       selectedPrediction.model3Score !== undefined && 
+                       selectedPrediction.model3Score.toFixed(2) !== '0.00' && (
+                        <View className="flex-row justify-between items-center py-2 border-b border-gray-100 mb-2">
+                          <Text className="text-sm font-semibold text-gray-600">Breeding Area Detection Factor</Text>
+                          <View 
+                            className="px-3 py-1 rounded-lg"
+                            style={{ backgroundColor: getRiskColor(getScoreRiskLevel(selectedPrediction.model3Score)) + '20' }}
+                          >
+                            <Text 
+                              className="text-sm font-bold"
+                              style={{ color: getRiskColor(getScoreRiskLevel(selectedPrediction.model3Score)) }}
+                            >
+                              {getScoreRiskLevel(selectedPrediction.model3Score).toUpperCase()}
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+                      <View className="flex-row justify-between items-center py-2">
+                        <Text className="text-sm font-semibold text-gray-600">Updated at</Text>
+                        <Text className="text-xs text-gray-500">
+                          {new Date(selectedPrediction.createdAt).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                {/* No Prediction Message - Display below map if location is selected but no prediction */}
+                {selectedLocation && !selectedPrediction && (
+                  <View className="bg-gray-50 rounded-2xl p-4 mb-4 border border-gray-200">
+                    <View className="flex-row items-center">
+                      <Feather name="info" size={20} color="#6B7280" />
+                      <Text className="text-sm text-gray-600 ml-2">
+                        No prediction available for {selectedLocation.name}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
                 {/* Location List */}
                 <View className="mb-4">
                   <Text className="text-lg font-bold text-black mb-3" style={{ fontFamily: 'SF Pro' }}>
@@ -437,7 +546,7 @@ export default function Dashboard() {
                         key={loc.id}
                         onPress={() => handleLocationMarkerPress(loc)}
                         className={`bg-white rounded-2xl p-4 mb-3 border-l-4 ${
-                          selectedLocation?.id === loc.id ? 'border-[#7D0A0A]' : 'border-gray-200'
+                          selectedLocation?.id === loc.id ? 'border-[#1D4ED8]' : 'border-gray-200'
                         }`}
                         style={{
                           shadowColor: '#000',
@@ -450,7 +559,7 @@ export default function Dashboard() {
                         <View className="flex-row items-start justify-between">
                           <View className="flex-1">
                             <View className="flex-row items-center mb-2">
-                              <Feather name="map-pin" size={16} color="#7D0A0A" />
+                              <Feather name="map-pin" size={16} color="#1D4ED8" />
                               <Text className="text-base font-bold text-black ml-2" style={{ fontFamily: 'SF Pro' }}>
                                 {loc.name}
                               </Text>
@@ -482,81 +591,6 @@ export default function Dashboard() {
                     );
                   })}
                 </View>
-
-                {/* Selected Location Prediction Details */}
-                {selectedLocation && selectedPrediction && (
-                  <View 
-                    className="bg-white rounded-2xl p-4 mb-4 border-l-4 mb-8"
-                    style={{ 
-                      borderLeftColor: getRiskColor(getRiskLevel(selectedPrediction.riskScore)),
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.1,
-                      shadowRadius: 4,
-                      elevation: 3,
-                    }}
-                  >
-                    <Text className="text-lg font-bold text-black mb-3" style={{ fontFamily: 'SF Pro' }}>
-                      Prediction Details
-                    </Text>
-                    <View>
-                      <View className="flex-row justify-between items-center py-2 border-b border-gray-100 mb-2">
-                        <Text className="text-sm font-semibold text-gray-600">Dengue Risk Level</Text>
-                        <View 
-                          className="px-3 py-1 rounded-lg"
-                          style={{ backgroundColor: getRiskColor(getRiskLevel(selectedPrediction.riskScore)) + '20' }}
-                        >
-                          <Text 
-                            className="text-sm font-bold"
-                            style={{ color: getRiskColor(getRiskLevel(selectedPrediction.riskScore)) }}
-                          >
-                            {getRiskLevel(selectedPrediction.riskScore).toUpperCase()}
-                          </Text>
-                        </View>
-                      </View>
-                      <View className="flex-row justify-between items-center py-2 border-b border-gray-100 mb-2">
-                        <Text className="text-sm font-semibold text-gray-600">Dengue Risk Score</Text>
-                        <Text className="text-sm font-bold text-black">{selectedPrediction.riskScore.toFixed(2)}</Text>
-                      </View>
-                      {selectedPrediction.model1Score !== null && selectedPrediction.model1Score !== undefined && (
-                        <View className="flex-row justify-between items-center py-2 border-b border-gray-100 mb-2">
-                          <Text className="text-sm font-semibold text-gray-600">Historical Cases Score</Text>
-                          <Text className="text-sm text-black">{selectedPrediction.model1Score.toFixed(2)}</Text>
-                        </View>
-                      )}
-                      {selectedPrediction.model2Score !== null && selectedPrediction.model2Score !== undefined && (
-                        <View className="flex-row justify-between items-center py-2 border-b border-gray-100 mb-2">
-                          <Text className="text-sm font-semibold text-gray-600">Weather-Based Score</Text>
-                          <Text className="text-sm text-black">{selectedPrediction.model2Score.toFixed(2)}</Text>
-                        </View>
-                      )}
-                      {selectedPrediction.model3Score !== null && selectedPrediction.model3Score !== undefined && (
-                        <View className="flex-row justify-between items-center py-2 border-b border-gray-100 mb-2">
-                          <Text className="text-sm font-semibold text-gray-600">Breeding Area Detection Score</Text>
-                          <Text className="text-sm text-black">{selectedPrediction.model3Score.toFixed(2)}</Text>
-                        </View>
-                      )}
-                      <View className="flex-row justify-between items-center py-2">
-                        <Text className="text-sm font-semibold text-gray-600">Updated at</Text>
-                        <Text className="text-xs text-gray-500">
-                          {new Date(selectedPrediction.createdAt).toLocaleDateString()}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                )}
-
-                {/* No Prediction Message */}
-                {selectedLocation && !selectedPrediction && (
-                  <View className="bg-gray-50 rounded-2xl p-4 mb-4 border border-gray-200">
-                    <View className="flex-row items-center">
-                      <Feather name="info" size={20} color="#6B7280" />
-                      <Text className="text-sm text-gray-600 ml-2">
-                        No prediction available for {selectedLocation.name}
-                      </Text>
-                    </View>
-                  </View>
-                )}
               </>
             )}
           </ScrollView>

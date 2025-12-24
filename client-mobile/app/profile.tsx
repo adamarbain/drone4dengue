@@ -94,7 +94,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-[#F8F8F8] items-center justify-center">
-        <ActivityIndicator size="large" color="#7D0A0A" />
+        <ActivityIndicator size="large" color="#1D4ED8" />
       </SafeAreaView>
     );
   }
@@ -106,11 +106,11 @@ export default function ProfilePage() {
         <Text className="text-4xl font-extrabold text-[#181D27] mb-1" style={{ fontFamily: 'SF Pro' }}>
           Profile
         </Text>
-        <Text className="text-base text-[#7D0A0A] font-semibold mb-2">Welcome back, {user?.username || ''}!</Text>
+        <Text className="text-base text-[#1D4ED8] font-semibold mb-2">Welcome back, {user?.username || ''}!</Text>
       </View>
 
      {/* User Card */}
-     <View className="mx-6 bg-[#BF3131] rounded-2xl shadow-lg flex-row items-center p-4 mb-6">
+     <View className="mx-6 bg-[#1D4ED8] rounded-2xl shadow-lg flex-row items-center p-4 mb-6">
         <View className="w-16 h-16 rounded-full overflow-hidden border-4 border-white mr-4">
           <Image source={require('../assets/profile-user-image.png')} className="w-full h-full" resizeMode="cover" />
         </View>
@@ -123,8 +123,8 @@ export default function ProfilePage() {
           className="ml-2 flex-row items-center px-3 h-10 rounded-full bg-white"
           style={{ shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }}
         >
-          <Ionicons name="log-out-outline" size={22} color="#BF3131" />
-          <Text className="ml-2 text-[#BF3131] font-bold text-sm">Log Out</Text>
+          <Ionicons name="log-out-outline" size={22} color="#1D4ED8" />
+          <Text className="ml-2 text-[#1D4ED8] font-bold text-sm">Log Out</Text>
         </TouchableOpacity>
       </View>
 
@@ -132,8 +132,8 @@ export default function ProfilePage() {
       <View className="mx-6 space-y-5">
         {/* My Account */}
         <TouchableOpacity onPress={() => router.push('/edit-profile')} className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4">
-          <View className="w-12 h-12 rounded-full bg-[#7D0A0A]/10 items-center justify-center mr-4">
-            <Ionicons name="person-outline" size={26} color="#7D0A0A" />
+          <View className="w-12 h-12 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-4">
+            <Ionicons name="person-outline" size={26} color="#1D4ED8" />
           </View>
           <View className="flex-1">
             <Text className="text-lg font-semibold text-[#181D27]">My Account</Text>
@@ -142,8 +142,8 @@ export default function ProfilePage() {
         </TouchableOpacity>
         {/* Organisation Details */}
         <View className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4">
-          <View className="w-12 h-12 rounded-full bg-[#7D0A0A]/10 items-center justify-center mr-4">
-            <Ionicons name="shield-checkmark-outline" size={26} color="#7D0A0A" />
+          <View className="w-12 h-12 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-4">
+            <Ionicons name="shield-checkmark-outline" size={26} color="#1D4ED8" />
           </View>
           <View className="flex-1">
             <Text className="text-lg font-semibold text-[#181D27]">Organisation Details</Text>
@@ -156,8 +156,8 @@ export default function ProfilePage() {
             onPress={() => router.push('/verify-otp')}
             className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4"
           >
-            <View className="w-12 h-12 rounded-full bg-[#7D0A0A]/10 items-center justify-center mr-4">
-              <Ionicons name="keypad-outline" size={26} color="#7D0A0A" />
+            <View className="w-12 h-12 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-4">
+              <Ionicons name="keypad-outline" size={26} color="#1D4ED8" />
             </View>
             <View className="flex-1">
               <Text className="text-lg font-semibold text-[#181D27]">Verify Account</Text>
@@ -167,8 +167,8 @@ export default function ProfilePage() {
         )}
         {/* About App */}
         <View className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4">
-          <View className="w-12 h-12 rounded-full bg-[#7D0A0A]/10 items-center justify-center mr-4">
-            <Ionicons name="information-circle-outline" size={26} color="#7D0A0A" />
+          <View className="w-12 h-12 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-4">
+            <Ionicons name="information-circle-outline" size={26} color="#1D4ED8" />
           </View>
           <View className="flex-1">
             <Text className="text-lg font-semibold text-[#181D27]">About App</Text>

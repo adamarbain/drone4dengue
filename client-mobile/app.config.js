@@ -10,6 +10,13 @@ module.exports = {
     newArchEnabled: true,
     ios: {
       supportsTablet: true,
+      bundleIdentifier: "com.adamarbain.dengueeyemobileapp",
+      infoPlist: {
+        NSLocationWhenInUseUsageDescription:
+          "DengueEye needs your location to show nearby dengue risk areas and help protect your community.",
+        NSLocationAlwaysAndWhenInUseUsageDescription:
+          "DengueEye needs your location to show nearby dengue risk areas and provide alerts even when the app is in the background.",
+      },
       config: {
         googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
       },

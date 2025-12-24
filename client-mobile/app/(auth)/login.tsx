@@ -206,7 +206,7 @@ export default function LoginScreen() {
 
         {/* Login Button */}
         <TouchableOpacity
-          className="w-full bg-[#C7362F] rounded-xl py-4 shadow-lg shadow-red-200 mb-4"
+          className="w-full bg-[#1D4ED8] rounded-xl py-4 shadow-lg shadow-blue-200 mb-4"
           onPress={handleLogin}
           disabled={loginLoading}
         >
@@ -235,7 +235,7 @@ export default function LoginScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
-                <TouchableOpacity className="bg-[#C7362F] rounded-xl py-3 mb-2" onPress={handleResetRequest} disabled={resetLoading}>
+                <TouchableOpacity className="bg-[#1D4ED8] rounded-xl py-3 mb-2" onPress={handleResetRequest} disabled={resetLoading}>
                   {resetLoading ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-center font-bold">Send Reset Code</Text>}
                 </TouchableOpacity>
               </>
@@ -252,7 +252,7 @@ export default function LoginScreen() {
                   keyboardType="number-pad"
                   autoCapitalize="none"
                 />
-                <TouchableOpacity className="bg-[#C7362F] rounded-xl py-3 mb-2" onPress={handleResetVerify} disabled={resetLoading}>
+                <TouchableOpacity className="bg-[#1D4ED8] rounded-xl py-3 mb-2" onPress={handleResetVerify} disabled={resetLoading}>
                   {resetLoading ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-center font-bold">Verify Code</Text>}
                 </TouchableOpacity>
               </>
@@ -276,7 +276,7 @@ export default function LoginScreen() {
                   onChangeText={setResetConfirmPassword}
                   secureTextEntry
                 />
-                <TouchableOpacity className="bg-[#C7362F] rounded-xl py-3 mb-2" onPress={handleResetPassword} disabled={resetLoading}>
+                <TouchableOpacity className="bg-[#1D4ED8] rounded-xl py-3 mb-2" onPress={handleResetPassword} disabled={resetLoading}>
                   {resetLoading ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-center font-bold">Reset Password</Text>}
                 </TouchableOpacity>
               </>

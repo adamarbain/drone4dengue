@@ -33,6 +33,21 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   });
   console.log('[PUSH NOTIFICATIONS] App Ownership:', Constants.appOwnership);
 
+  // Expo Go does not support remote push notifications on Android starting from SDK 53
+  if (Constants.appOwnership === 'expo') {
+    console.warn(
+      '[PUSH NOTIFICATIONS] Push notifications are not supported in Expo Go. Use a development build instead.'
+    );
+    return null;
+  }
+
+  // Only physical devices can receive push notifications (emulators/simulators cannot)
+  if (!Device.isDevice) {
+    console.warn('[PUSH NOTIFICATIONS] Not a physical device. Must use physical device for Push Notifications.');
+    console.warn('[PUSH NOTIFICATIONS] Device.isDevice:', Device.isDevice);
+    return null;
+  }
+
   // Configure Android notification channel like the tutorial
   if (Platform.OS === 'android') {
     console.log('[PUSH NOTIFICATIONS] Configuring Android notification channel...');
@@ -50,83 +65,69 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     }
   }
 
-  // Expo Go does not support remote push notifications on Android starting from SDK 53
-  if (Constants.appOwnership === 'expo') {
-    console.warn(
-      '[PUSH NOTIFICATIONS] Push notifications are not supported in Expo Go. Use a development build instead.'
-    );
+  // Physical device detected, proceed with token generation
+  console.log('[PUSH NOTIFICATIONS] Physical device detected, checking permissions...');
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  console.log('[PUSH NOTIFICATIONS] Existing permission status:', existingStatus);
+  let finalStatus = existingStatus;
+
+  if (existingStatus !== 'granted') {
+    console.log('[PUSH NOTIFICATIONS] Requesting notification permissions...');
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+    console.log('[PUSH NOTIFICATIONS] Permission request result:', status);
+  }
+
+  if (finalStatus !== 'granted') {
+    console.error('[PUSH NOTIFICATIONS] Permission not granted! Status:', finalStatus);
     return null;
   }
 
-  // Only physical devices can receive push notifications
-  if (Device.isDevice) {
-    console.log('[PUSH NOTIFICATIONS] Physical device detected, checking permissions...');
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    console.log('[PUSH NOTIFICATIONS] Existing permission status:', existingStatus);
-    let finalStatus = existingStatus;
+  console.log('[PUSH NOTIFICATIONS] Permissions granted, fetching project ID...');
+  const projectId =
+    // Match tutorial: prefer expoConfig.extra.eas.projectId then easConfig.projectId
+    Constants?.expoConfig?.extra?.eas?.projectId ??
+    // Fallback for managed / EAS builds
+    Constants?.easConfig?.projectId;
 
-    if (existingStatus !== 'granted') {
-      console.log('[PUSH NOTIFICATIONS] Requesting notification permissions...');
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-      console.log('[PUSH NOTIFICATIONS] Permission request result:', status);
-    }
+  console.log('[PUSH NOTIFICATIONS] Project ID lookup:', {
+    fromExpoConfig: Constants?.expoConfig?.extra?.eas?.projectId,
+    fromEasConfig: Constants?.easConfig?.projectId,
+    finalProjectId: projectId,
+  });
 
-    if (finalStatus !== 'granted') {
-      console.error('[PUSH NOTIFICATIONS] Permission not granted! Status:', finalStatus);
-      return null;
-    }
-
-    console.log('[PUSH NOTIFICATIONS] Permissions granted, fetching project ID...');
-    const projectId =
-      // Match tutorial: prefer expoConfig.extra.eas.projectId then easConfig.projectId
-      Constants?.expoConfig?.extra?.eas?.projectId ??
-      // Fallback for managed / EAS builds
-      Constants?.easConfig?.projectId;
-
-    console.log('[PUSH NOTIFICATIONS] Project ID lookup:', {
-      fromExpoConfig: Constants?.expoConfig?.extra?.eas?.projectId,
-      fromEasConfig: Constants?.easConfig?.projectId,
-      finalProjectId: projectId,
-    });
-
-    if (!projectId) {
-      console.error('[PUSH NOTIFICATIONS] Project ID not found in Constants. Cannot request Expo push token.');
-      console.error('[PUSH NOTIFICATIONS] Available Constants keys:', Object.keys(Constants));
-      if (Constants.expoConfig) {
-        console.error('[PUSH NOTIFICATIONS] expoConfig keys:', Object.keys(Constants.expoConfig));
-        if (Constants.expoConfig.extra) {
-          console.error('[PUSH NOTIFICATIONS] expoConfig.extra keys:', Object.keys(Constants.expoConfig.extra));
-        }
+  if (!projectId) {
+    console.error('[PUSH NOTIFICATIONS] Project ID not found in Constants. Cannot request Expo push token.');
+    console.error('[PUSH NOTIFICATIONS] Available Constants keys:', Object.keys(Constants));
+    if (Constants.expoConfig) {
+      console.error('[PUSH NOTIFICATIONS] expoConfig keys:', Object.keys(Constants.expoConfig));
+      if (Constants.expoConfig.extra) {
+        console.error('[PUSH NOTIFICATIONS] expoConfig.extra keys:', Object.keys(Constants.expoConfig.extra));
       }
-      return null;
     }
+    return null;
+  }
 
-    console.log('[PUSH NOTIFICATIONS] Requesting Expo push token with projectId:', projectId);
-    try {
-      const pushTokenString = (
-        await Notifications.getExpoPushTokenAsync({
-          projectId,
-        })
-      ).data;
-      console.log('[PUSH NOTIFICATIONS] ✅ Expo push token obtained successfully!');
-      console.log('[PUSH NOTIFICATIONS] Token:', pushTokenString);
-      console.log('[PUSH NOTIFICATIONS] Token length:', pushTokenString.length);
-      return pushTokenString;
-    } catch (e: any) {
-      console.error('[PUSH NOTIFICATIONS] ❌ Error while getting Expo push token:');
-      console.error('[PUSH NOTIFICATIONS] Error type:', e?.constructor?.name);
-      console.error('[PUSH NOTIFICATIONS] Error message:', e?.message);
-      console.error('[PUSH NOTIFICATIONS] Error code:', e?.code);
-      console.error('[PUSH NOTIFICATIONS] Full error object:', JSON.stringify(e, null, 2));
-      if (e?.stack) {
-        console.error('[PUSH NOTIFICATIONS] Stack trace:', e.stack);
-      }
-      return null;
+  console.log('[PUSH NOTIFICATIONS] Requesting Expo push token with projectId:', projectId);
+  try {
+    const pushTokenString = (
+      await Notifications.getExpoPushTokenAsync({
+        projectId,
+      })
+    ).data;
+    console.log('[PUSH NOTIFICATIONS] ✅ Expo push token obtained successfully!');
+    console.log('[PUSH NOTIFICATIONS] Token:', pushTokenString);
+    console.log('[PUSH NOTIFICATIONS] Token length:', pushTokenString.length);
+    return pushTokenString;
+  } catch (e: any) {
+    console.error('[PUSH NOTIFICATIONS] ❌ Error while getting Expo push token:');
+    console.error('[PUSH NOTIFICATIONS] Error type:', e?.constructor?.name);
+    console.error('[PUSH NOTIFICATIONS] Error message:', e?.message);
+    console.error('[PUSH NOTIFICATIONS] Error code:', e?.code);
+    console.error('[PUSH NOTIFICATIONS] Full error object:', JSON.stringify(e, null, 2));
+    if (e?.stack) {
+      console.error('[PUSH NOTIFICATIONS] Stack trace:', e.stack);
     }
-  } else {
-    console.warn('[PUSH NOTIFICATIONS] Not a physical device. Must use physical device for Push Notifications.');
-    console.warn('[PUSH NOTIFICATIONS] Device.isDevice:', Device.isDevice);
     return null;
   }
 }
@@ -295,6 +296,22 @@ export async function initializePushNotifications(): Promise<void> {
     console.log('[PUSH NOTIFICATIONS] API URL:', API_URL);
     console.log('[PUSH NOTIFICATIONS] Platform:', Platform.OS);
     console.log('[PUSH NOTIFICATIONS] Timestamp:', new Date().toISOString());
+    
+    // Early exit: Expo Go does not support push notifications
+    if (Constants.appOwnership === 'expo') {
+      console.warn('[PUSH NOTIFICATIONS] ⚠️ Skipping push notification initialization: Running in Expo Go');
+      console.warn('[PUSH NOTIFICATIONS] Push notifications are not supported in Expo Go. Use a development build instead.');
+      console.log('[PUSH NOTIFICATIONS] ========================================');
+      return;
+    }
+
+    // Early exit: Emulators/simulators cannot receive push notifications
+    if (!Device.isDevice) {
+      console.warn('[PUSH NOTIFICATIONS] ⚠️ Skipping push notification initialization: Running in emulator/simulator');
+      console.warn('[PUSH NOTIFICATIONS] Must use physical device for Push Notifications.');
+      console.log('[PUSH NOTIFICATIONS] ========================================');
+      return;
+    }
     
     // Check stored token status
     const storedToken = await AsyncStorage.getItem('pushToken');

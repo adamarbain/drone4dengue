@@ -80,7 +80,7 @@ export default function VerifyOtpPage() {
       <Text className="text-2xl font-bold mb-4">Verify Your Account</Text>
       <Text className="mb-2">Email: {email}</Text>
       <TouchableOpacity
-        className="bg-[#7D0A0A] rounded-lg py-3 mb-4"
+        className="bg-[#1D4ED8] rounded-lg py-3 mb-4"
         onPress={sendOtp}
         disabled={sending}
       >

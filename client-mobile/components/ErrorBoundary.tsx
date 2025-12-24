@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 12,
     fontFamily: 'monospace',
-    color: '#dc2626',
+    color: '#1D4ED8',
   },
   buttonContainer: {
     width: '100%',

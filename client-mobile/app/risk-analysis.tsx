@@ -32,6 +32,7 @@ export default function RiskAnalysisPage() {
   const [loading, setLoading] = useState(true);
   const [showReturnButton, setShowReturnButton] = useState(false);
   const [nearbyCasesCount, setNearbyCasesCount] = useState<number | null>(null);
+  const [nearbyCasesData, setNearbyCasesData] = useState<Array<{latitude: number; longitude: number; location: string; state: string; totalCases: number}>>([]);
   const [loadingNearbyCases, setLoadingNearbyCases] = useState(false);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [loadingWeather, setLoadingWeather] = useState(false);
@@ -47,6 +48,24 @@ export default function RiskAnalysisPage() {
       fetchWeatherData();
     }
   }, [prediction]);
+
+  // Fit map to show all markers when nearby cases data is loaded
+  useEffect(() => {
+    if (prediction && nearbyCasesData.length > 0 && mapRef.current) {
+      fitMapToAllMarkers();
+    }
+  }, [nearbyCasesData, prediction]);
+
+  // Call returnToOriginalLocation when user arrives at the page (after data is loaded)
+  useEffect(() => {
+    if (prediction && mapRef.current && !loadingNearbyCases) {
+      // Small delay to ensure map is fully rendered before fitting to markers
+      const timer = setTimeout(() => {
+        returnToOriginalLocation();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [prediction, loadingNearbyCases]);
 
   const loadPredictionData = async () => {
     try {
@@ -168,11 +187,14 @@ export default function RiskAnalysisPage() {
       );
       // Use totalCases from the API response
       setNearbyCasesCount(result.totalCases || 0);
+      // Store the full data array for map markers
+      setNearbyCasesData(result.data || []);
     } catch (error) {
       console.error('Error fetching nearby cases:', error);
       // Fallback to estimated value if API fails
       const fallbackCount = getFallbackNearbyCases(prediction.riskLevel, prediction.model1Score);
       setNearbyCasesCount(fallbackCount);
+      setNearbyCasesData([]); // Clear data on error
     } finally {
       setLoadingNearbyCases(false);
     }
@@ -337,14 +359,65 @@ export default function RiskAnalysisPage() {
     }
   };
 
+  // Calculate region that fits all markers (prediction location + all nearby cases)
+  const fitMapToAllMarkers = () => {
+    if (!prediction || !mapRef.current) return;
+
+    // Collect all coordinates
+    const coordinates = [
+      { latitude: prediction.latitude, longitude: prediction.longitude },
+      ...nearbyCasesData.map(caseData => ({
+        latitude: caseData.latitude,
+        longitude: caseData.longitude,
+      })),
+    ];
+
+    if (coordinates.length === 0) return;
+
+    // Calculate min/max latitude and longitude
+    const latitudes = coordinates.map(coord => coord.latitude);
+    const longitudes = coordinates.map(coord => coord.longitude);
+    
+    const minLat = Math.min(...latitudes);
+    const maxLat = Math.max(...latitudes);
+    const minLon = Math.min(...longitudes);
+    const maxLon = Math.max(...longitudes);
+
+    // Calculate center
+    const centerLat = (minLat + maxLat) / 2;
+    const centerLon = (minLon + maxLon) / 2;
+
+    // Calculate deltas with padding (add 20% padding on each side)
+    const latDelta = (maxLat - minLat) * 1.4; // 1.4 = 1.0 + 0.2 padding on each side
+    const lonDelta = (maxLon - minLon) * 1.4;
+
+    // Ensure minimum delta for better visibility
+    const minDelta = 0.005;
+    const finalLatDelta = Math.max(latDelta, minDelta);
+    const finalLonDelta = Math.max(lonDelta, minDelta);
+
+    // Animate to the new region
+    mapRef.current.animateToRegion({
+      latitude: centerLat,
+      longitude: centerLon,
+      latitudeDelta: finalLatDelta,
+      longitudeDelta: finalLonDelta,
+    }, 500);
+  };
+
   const returnToOriginalLocation = () => {
     if (prediction && mapRef.current) {
-      mapRef.current.animateToRegion({
-        latitude: prediction.latitude,
-        longitude: prediction.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      }, 500);
+      // If there are nearby cases, fit to all markers, otherwise just show prediction location
+      if (nearbyCasesData.length > 0) {
+        fitMapToAllMarkers();
+      } else {
+        mapRef.current.animateToRegion({
+          latitude: prediction.latitude,
+          longitude: prediction.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        }, 500);
+      }
       setShowReturnButton(false);
     }
   };
@@ -440,6 +513,19 @@ export default function RiskAnalysisPage() {
                 pinColor={riskColor}
                 title="Risk Location"
               />
+              {/* Markers for nearby dengue cases */}
+              {nearbyCasesData.map((caseData, index) => (
+                <Marker
+                  key={`dengue-case-${index}`}
+                  coordinate={{
+                    latitude: caseData.latitude,
+                    longitude: caseData.longitude,
+                  }}
+                  pinColor="#BF3131"
+                  title={caseData.location || 'Dengue Case'}
+                  description={`${caseData.totalCases} case${caseData.totalCases !== 1 ? 's' : ''} - ${caseData.state || ''}`}
+                />
+              ))}
             </MapView>
             
             {/* Return to Original Location Button */}

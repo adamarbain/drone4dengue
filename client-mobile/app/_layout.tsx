@@ -15,25 +15,60 @@ export default function AppLayout() {
 
   useEffect(() => {
     const checkAuth = async () => {
+      console.log('[AUTH] Checking authentication status...');
       const token = await AsyncStorage.getItem('token');
       const tokenExp = await AsyncStorage.getItem('token_exp');
       const inAuthGroup = segments[0] as string === '(auth)';
+      
+      console.log('[AUTH] Token status:', {
+        hasToken: !!token,
+        hasTokenExp: !!tokenExp,
+        tokenExpValue: tokenExp,
+        inAuthGroup,
+        currentSegment: segments[0],
+      });
+      
       let isValid = false;
       if (token && tokenExp) {
         const now = Date.now();
-        if (now < parseInt(tokenExp, 10)) {
+        const expTime = parseInt(tokenExp, 10);
+        const timeUntilExpiry = expTime - now;
+        const daysUntilExpiry = Math.floor(timeUntilExpiry / (1000 * 60 * 60 * 24));
+        
+        console.log('[AUTH] Token expiration check:', {
+          now,
+          expTime,
+          timeUntilExpiry,
+          daysUntilExpiry,
+          isValid: now < expTime,
+        });
+        
+        if (now < expTime) {
           isValid = true;
+          console.log('[AUTH] ✅ Token is valid. User is authenticated.');
         } else {
           // Token expired, remove it
+          console.log('[AUTH] ❌ Token expired. Removing from storage.');
           await AsyncStorage.removeItem('token');
           await AsyncStorage.removeItem('token_exp');
         }
+      } else {
+        console.log('[AUTH] ❌ No token or token_exp found.');
       }
+      
       if (!isValid && !inAuthGroup) {
+        console.log('[AUTH] Redirecting to login (not authenticated and not in auth group)');
         setTimeout(() => {
-          router.replace('./login');
+          router.replace('/(auth)/login');
+        }, 0);
+      } else if (isValid && inAuthGroup) {
+        // User is authenticated but on auth screen, redirect to dashboard
+        console.log('[AUTH] User is authenticated but on auth screen. Redirecting to dashboard.');
+        setTimeout(() => {
+          router.replace('/dashboard');
         }, 0);
       } else if (isValid) {
+        console.log('[AUTH] User is authenticated. Setting up push notifications...');
         // Initialize push notifications if user is authenticated
         (async () => {
           try {
@@ -78,7 +113,7 @@ export default function AppLayout() {
       setIsAuthChecked(true);
     };
     checkAuth();
-  }, [segments]);
+  }, [segments, router]);
 
   if (!isAuthChecked) return null; // Optionally show a splash/loading screen
 

@@ -787,14 +787,15 @@ async function getNearbyCases(req, res) {
         
         totalNearbyCases += totalCases;
         
+        // Each case includes latitude and longitude for mapping/display purposes
         filteredData.push({
           location: location,
           state: state,
           totalCases: totalCases,
-          centroidX: centroidX,
-          centroidY: centroidY,
           latitude: centroidY, // centroidY is latitude
           longitude: centroidX, // centroidX is longitude
+          centroidX: centroidX, // Keep for reference
+          centroidY: centroidY, // Keep for reference
         });
       }
     }
