@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 import BottomNav from './components/BottomNav';
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../utils/userApi';
 
@@ -17,19 +18,32 @@ interface Notification {
   metadata?: any;
 }
 
+type ReadStatus = 'all' | 'read' | 'unread';
+type NotificationType = 'all' | 'prediction' | 'dengue_case' | 'drone' | 'drone_image' | 'location' | 'daily_prediction';
+
 export default function NotificationPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [readStatusFilter, setReadStatusFilter] = useState<ReadStatus>('all');
+  const [typeFilter, setTypeFilter] = useState<NotificationType>('all');
+  const [markingAllAsRead, setMarkingAllAsRead] = useState(false);
+  const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const [showTypePicker, setShowTypePicker] = useState(false);
 
   useEffect(() => {
     loadNotifications();
-  }, []);
+  }, [readStatusFilter, typeFilter]);
 
   const loadNotifications = async () => {
     try {
       setLoading(true);
-      const response = await getNotifications(50, 0, false);
+      const unreadOnly = readStatusFilter === 'unread';
+      const readStatus = readStatusFilter !== 'all' ? readStatusFilter : null;
+      const type = typeFilter !== 'all' ? typeFilter : null;
+      
+      // Type assertion needed because getNotifications accepts null but TypeScript infers string | null
+      const response = await getNotifications(50, 0, unreadOnly, readStatus as any, type as any);
       const formattedNotifications = response.notifications.map((notif: any) => ({
         id: notif.id,
         title: notif.title,
@@ -85,6 +99,52 @@ export default function NotificationPage() {
       } catch (error) {
         console.error('Error marking notification as read:', error);
       }
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      setMarkingAllAsRead(true);
+      await markAllNotificationsAsRead();
+      // Reload notifications to reflect changes
+      await loadNotifications();
+      // Update badge count
+      try {
+        const { setBadgeCount } = require('../utils/pushNotifications');
+        const { getUnreadNotificationCount } = require('../utils/userApi');
+        const count = await getUnreadNotificationCount();
+        await setBadgeCount(count);
+      } catch (error) {
+        console.error('Error updating badge count:', error);
+      }
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    } finally {
+      setMarkingAllAsRead(false);
+    }
+  };
+
+  const hasUnreadNotifications = notifications.some(n => !n.isRead);
+
+  const getStatusLabel = (status: ReadStatus) => {
+    switch (status) {
+      case 'all': return 'All';
+      case 'unread': return 'Unread';
+      case 'read': return 'Read';
+      default: return 'All';
+    }
+  };
+
+  const getTypeLabel = (type: NotificationType) => {
+    switch (type) {
+      case 'all': return 'All';
+      case 'prediction': return 'Prediction';
+      case 'daily_prediction': return 'Daily Tips';
+      case 'dengue_case': return 'Dengue Case';
+      case 'drone': return 'Drone';
+      case 'drone_image': return 'Drone Images';
+      case 'location': return 'Location';
+      default: return 'All';
     }
   };
 
@@ -148,9 +208,195 @@ export default function NotificationPage() {
     <SafeAreaView className="flex-1 bg-white">
       {/* Header */}
       <View className="px-6 pt-4 pb-4">
-        <Text className="text-4xl font-extrabold text-black" style={{ fontFamily: 'SF Pro' }}>
-          Notification
-        </Text>
+        <View className="mb-4">
+          <View className="flex-row items-start justify-between mb-2">
+            <View className="flex-1 mr-3">
+              <Text className="text-4xl font-extrabold text-black" style={{ fontFamily: 'SF Pro' }}>
+                Notification
+              </Text>
+              <Text className="text-sm text-gray-600 mt-1">
+                View and keep track of your dengue risk alerts and updates
+              </Text>
+            </View>
+            {hasUnreadNotifications && (
+              <TouchableOpacity
+                onPress={handleMarkAllAsRead}
+                disabled={markingAllAsRead}
+                className="flex-row items-center bg-[#1D4ED8] px-3 py-2 rounded-lg"
+              >
+                {markingAllAsRead ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Feather name="check-circle" size={16} color="#FFFFFF" />
+                    <Text className="text-white text-sm font-semibold ml-1">Mark All Read</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* Filters */}
+        <View className="mb-4">
+          {/* Read Status Filter */}
+          <View className="mb-3">
+            <Text className="text-sm font-semibold text-gray-700 mb-2">Notification Status</Text>
+            {Platform.OS === 'ios' ? (
+              <>
+                <TouchableOpacity
+                  onPress={() => setShowStatusPicker(true)}
+                  className="bg-white rounded-lg border border-gray-300 px-4 py-3 flex-row items-center justify-between"
+                >
+                  <Text className="text-base text-gray-800">{getStatusLabel(readStatusFilter)}</Text>
+                  <Feather name="chevron-down" size={20} color="#1D4ED8" />
+                </TouchableOpacity>
+                <Modal
+                  visible={showStatusPicker}
+                  transparent={true}
+                  animationType="slide"
+                  onRequestClose={() => setShowStatusPicker(false)}
+                >
+                  <TouchableOpacity 
+                    activeOpacity={1}
+                    onPress={() => setShowStatusPicker(false)}
+                    className="flex-1 justify-end"
+                    style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+                  >
+                    <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+                      <View className="bg-white rounded-t-3xl" style={{ paddingTop: 16, paddingBottom: 32, paddingHorizontal: 16 }}>
+                        <View className="flex-row justify-between items-center mb-4">
+                          <Text className="text-lg font-semibold text-gray-800">Select Notification Status</Text>
+                          <TouchableOpacity onPress={() => setShowStatusPicker(false)}>
+                            <Text className="text-[#1D4ED8] text-base font-semibold">Done</Text>
+                          </TouchableOpacity>
+                        </View>
+                        <View className="bg-gray-50 rounded-lg overflow-hidden">
+                          <Picker
+                            selectedValue={readStatusFilter}
+                            onValueChange={(itemValue: ReadStatus) => setReadStatusFilter(itemValue)}
+                            style={{ 
+                              height: 200,
+                              backgroundColor: '#F9FAFB',
+                            }}
+                            itemStyle={{
+                              fontSize: 18,
+                              color: '#181D27',
+                            }}
+                          >
+                            <Picker.Item label="All" value="all" color="#181D27" />
+                            <Picker.Item label="Unread" value="unread" color="#181D27" />
+                            <Picker.Item label="Read" value="read" color="#181D27" />
+                          </Picker>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                </Modal>
+              </>
+            ) : (
+              <View className="bg-white rounded-lg border border-gray-300 overflow-hidden">
+                <Picker
+                  selectedValue={readStatusFilter}
+                  onValueChange={(itemValue: ReadStatus) => setReadStatusFilter(itemValue)}
+                  style={{
+                    height: 50,
+                    backgroundColor: 'transparent',
+                  }}
+                  dropdownIconColor="#1D4ED8"
+                  mode="dropdown"
+                >
+                  <Picker.Item label="All" value="all" color="#181D27" />
+                  <Picker.Item label="Unread" value="unread" color="#181D27" />
+                  <Picker.Item label="Read" value="read" color="#181D27" />
+                </Picker>
+              </View>
+            )}
+          </View>
+
+          {/* Type Filter */}
+          <View>
+            <Text className="text-sm font-semibold text-gray-700 mb-2">Notification Type</Text>
+            {Platform.OS === 'ios' ? (
+              <>
+                <TouchableOpacity
+                  onPress={() => setShowTypePicker(true)}
+                  className="bg-white rounded-lg border border-gray-300 px-4 py-3 flex-row items-center justify-between"
+                >
+                  <Text className="text-base text-gray-800">{getTypeLabel(typeFilter)}</Text>
+                  <Feather name="chevron-down" size={20} color="#1D4ED8" />
+                </TouchableOpacity>
+                <Modal
+                  visible={showTypePicker}
+                  transparent={true}
+                  animationType="slide"
+                  onRequestClose={() => setShowTypePicker(false)}
+                >
+                  <TouchableOpacity 
+                    activeOpacity={1}
+                    onPress={() => setShowTypePicker(false)}
+                    className="flex-1 justify-end"
+                    style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+                  >
+                    <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+                      <View className="bg-white rounded-t-3xl" style={{ paddingTop: 16, paddingBottom: 32, paddingHorizontal: 16 }}>
+                        <View className="flex-row justify-between items-center mb-4">
+                          <Text className="text-lg font-semibold text-gray-800">Select Notification Type</Text>
+                          <TouchableOpacity onPress={() => setShowTypePicker(false)}>
+                            <Text className="text-[#1D4ED8] text-base font-semibold">Done</Text>
+                          </TouchableOpacity>
+                        </View>
+                        <View className="bg-gray-50 rounded-lg overflow-hidden">
+                          <Picker
+                            selectedValue={typeFilter}
+                            onValueChange={(itemValue: NotificationType) => setTypeFilter(itemValue)}
+                            style={{ 
+                              height: 200,
+                              backgroundColor: '#F9FAFB',
+                            }}
+                            itemStyle={{
+                              fontSize: 18,
+                              color: '#181D27',
+                            }}
+                          >
+                            <Picker.Item label="All" value="all" color="#181D27" />
+                            <Picker.Item label="Prediction" value="prediction" color="#181D27" />
+                            <Picker.Item label="Daily Tips" value="daily_prediction" color="#181D27" />
+                            <Picker.Item label="Dengue Case" value="dengue_case" color="#181D27" />
+                            <Picker.Item label="Drone" value="drone" color="#181D27" />
+                            <Picker.Item label="Drone Images" value="drone_image" color="#181D27" />
+                            <Picker.Item label="Location" value="location" color="#181D27" />
+                          </Picker>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                </Modal>
+              </>
+            ) : (
+              <View className="bg-white rounded-lg border border-gray-300 overflow-hidden">
+                <Picker
+                  selectedValue={typeFilter}
+                  onValueChange={(itemValue: NotificationType) => setTypeFilter(itemValue)}
+                  style={{
+                    height: 50,
+                    backgroundColor: 'transparent',
+                  }}
+                  dropdownIconColor="#1D4ED8"
+                  mode="dropdown"
+                >
+                  <Picker.Item label="All" value="all" color="#181D27" />
+                  <Picker.Item label="Prediction" value="prediction" color="#181D27" />
+                  <Picker.Item label="Daily Tips" value="daily_prediction" color="#181D27" />
+                  <Picker.Item label="Dengue Case" value="dengue_case" color="#181D27" />
+                  <Picker.Item label="Drone" value="drone" color="#181D27" />
+                  <Picker.Item label="Drone Images" value="drone_image" color="#181D27" />
+                  <Picker.Item label="Location" value="location" color="#181D27" />
+                </Picker>
+              </View>
+            )}
+          </View>
+        </View>
       </View>
 
       {/* Notifications List */}

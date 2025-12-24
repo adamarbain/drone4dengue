@@ -106,6 +106,9 @@ export default function ProfilePage() {
         <Text className="text-4xl font-extrabold text-[#181D27] mb-1" style={{ fontFamily: 'SF Pro' }}>
           Profile
         </Text>
+        <Text className="text-sm text-gray-600 mb-4">
+          Manage your account settings and personal information
+        </Text>
         <Text className="text-base text-[#1D4ED8] font-semibold mb-2">Welcome back, {user?.username || ''}!</Text>
       </View>
 

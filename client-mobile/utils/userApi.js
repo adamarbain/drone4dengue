@@ -173,20 +173,30 @@ export async function getNearbyDengueCases(latitude, longitude, tolerance = 0.01
 }
 
 // Notification API functions
-export async function getNotifications(limit = 50, offset = 0, unreadOnly = false) {
+export async function getNotifications(limit = 50, offset = 0, unreadOnly = false, readStatus = null, type = null) {
+  // readStatus can be: 'read', 'unread', null, or undefined
+  // type can be: any notification type string, null, or undefined
   const token = await AsyncStorage.getItem('token');
   if (!token) throw new Error('No token found');
 
-  const res = await fetch(
-    `${API_URL}/api/notifications?limit=${limit}&offset=${offset}&unreadOnly=${unreadOnly}`,
-    {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    }
-  );
+  let url = `${API_URL}/api/notifications?limit=${limit}&offset=${offset}`;
+  if (unreadOnly) {
+    url += `&unreadOnly=true`;
+  }
+  if (readStatus && readStatus !== null && readStatus !== undefined) {
+    url += `&readStatus=${readStatus}`;
+  }
+  if (type && type !== null && type !== undefined) {
+    url += `&type=${type}`;
+  }
+
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
   
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));

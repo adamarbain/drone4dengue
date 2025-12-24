@@ -225,6 +225,50 @@ export default function Dashboard() {
     return 'low';
   };
 
+  // Calculate initial region from company locations
+  const getInitialRegionFromCompanyLocations = (): Region | null => {
+    const validLocations = companyLocations.filter(
+      loc => loc.latitude && loc.longitude
+    );
+
+    if (validLocations.length === 0) {
+      // Fallback to user location if available
+      if (location) {
+        return {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        };
+      }
+      return null;
+    }
+
+    // Calculate bounds from all company locations
+    const latitudes = validLocations.map(loc => loc.latitude!);
+    const longitudes = validLocations.map(loc => loc.longitude!);
+    
+    const minLat = Math.min(...latitudes);
+    const maxLat = Math.max(...latitudes);
+    const minLon = Math.min(...longitudes);
+    const maxLon = Math.max(...longitudes);
+
+    // Calculate center
+    const centerLat = (minLat + maxLat) / 2;
+    const centerLon = (minLon + maxLon) / 2;
+
+    // Calculate deltas with padding (add 40% padding on each side)
+    const latDelta = Math.max((maxLat - minLat) * 1.4, 0.01);
+    const lonDelta = Math.max((maxLon - minLon) * 1.4, 0.01);
+
+    return {
+      latitude: centerLat,
+      longitude: centerLon,
+      latitudeDelta: latDelta,
+      longitudeDelta: lonDelta,
+    };
+  };
+
   const handleLocationMarkerPress = (location: CompanyLocation) => {
     setSelectedLocation(location);
     // Find prediction for this location
@@ -242,6 +286,55 @@ export default function Dashboard() {
         longitudeDelta: 0.01,
       }, 500);
     }
+  };
+
+  const handleCloseDetails = () => {
+    setSelectedLocation(null);
+    setSelectedPrediction(null);
+  };
+
+  // Get locations with predictions for navigation
+  const getLocationsWithPredictions = (): CompanyLocation[] => {
+    return companyLocations.filter(loc => 
+      companyPredictions.some(p => p.companyLocationId === loc.id)
+    );
+  };
+
+  const handleNavigateLocation = (direction: 'prev' | 'next') => {
+    const locationsWithPredictions = getLocationsWithPredictions();
+    if (!selectedLocation || locationsWithPredictions.length === 0) return;
+
+    const currentIndex = locationsWithPredictions.findIndex(
+      loc => loc.id === selectedLocation.id
+    );
+
+    if (currentIndex === -1) return;
+
+    let newIndex: number;
+    if (direction === 'next') {
+      newIndex = (currentIndex + 1) % locationsWithPredictions.length;
+    } else {
+      newIndex = currentIndex === 0 
+        ? locationsWithPredictions.length - 1 
+        : currentIndex - 1;
+    }
+
+    const newLocation = locationsWithPredictions[newIndex];
+    handleLocationMarkerPress(newLocation);
+  };
+
+  const getCurrentLocationIndex = (): { current: number; total: number } => {
+    const locationsWithPredictions = getLocationsWithPredictions();
+    if (!selectedLocation || locationsWithPredictions.length === 0) {
+      return { current: 0, total: 0 };
+    }
+    const currentIndex = locationsWithPredictions.findIndex(
+      loc => loc.id === selectedLocation.id
+    );
+    return {
+      current: currentIndex + 1,
+      total: locationsWithPredictions.length
+    };
   };
 
   const handleMapRegionChangeComplete = (region: Region) => {
@@ -275,9 +368,14 @@ export default function Dashboard() {
     <SafeAreaView className="flex-1 bg-white">
       <View className="flex-1 px-4 pt-2 pb-20">
         {/* Title */}
-        <Text className="text-4xl font-extrabold text-black mb-4" style={{ fontFamily: 'SF Pro' }}>
-          Dashboard
-        </Text>
+        <View className="mb-4">
+          <Text className="text-4xl font-extrabold text-black" style={{ fontFamily: 'SF Pro' }}>
+            Dashboard
+          </Text>
+          <Text className="text-sm text-gray-600 mt-1">
+            Monitor dengue risk predictions and case data in your area
+          </Text>
+        </View>
         {/* Tabs: Only show when user has a companyId; show Current and Organisation only */}
         {hasCompany ? (
           <View className="flex-row mb-6 rounded-lg overflow-hidden border border-gray-200">
@@ -415,6 +513,13 @@ export default function Dashboard() {
                     mapType="standard"
                     showsUserLocation={true}
                     showsMyLocationButton={false}
+                    onRegionChangeComplete={handleMapRegionChangeComplete}
+                    initialRegion={getInitialRegionFromCompanyLocations() || {
+                      latitude: location?.latitude || 0,
+                      longitude: location?.longitude || 0,
+                      latitudeDelta: 0.01,
+                      longitudeDelta: 0.01,
+                    }}
                   >
                     {companyLocations
                       .filter(loc => loc.latitude && loc.longitude)
@@ -445,22 +550,45 @@ export default function Dashboard() {
                 </View>
 
                 {/* Selected Location Prediction Details - Display below map if location is selected */}
-                {selectedLocation && selectedPrediction && (
-                  <View 
-                    className="bg-white rounded-2xl p-4 mb-4 border-l-4"
-                    style={{ 
-                      borderLeftColor: getRiskColor(getRiskLevel(selectedPrediction.riskScore)),
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.1,
-                      shadowRadius: 4,
-                      elevation: 3,
-                    }}
-                  >
-                    <Text className="text-lg font-bold text-black mb-3" style={{ fontFamily: 'SF Pro' }}>
-                      Prediction Details
-                    </Text>
-                    <View>
+                {selectedLocation && selectedPrediction && (() => {
+                  const locationIndex = getCurrentLocationIndex();
+                  const locationsWithPredictions = getLocationsWithPredictions();
+                  const canNavigate = locationsWithPredictions.length > 1;
+                  
+                  return (
+                    <View 
+                      className="bg-white rounded-2xl p-4 mb-4 border-l-4"
+                      style={{ 
+                        borderLeftColor: getRiskColor(getRiskLevel(selectedPrediction.riskScore)),
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 4,
+                        elevation: 3,
+                      }}
+                    >
+                      {/* Header with close button and navigation */}
+                      <View className="flex-row items-center justify-between mb-3">
+                        <View className="flex-1">
+                          <Text className="text-lg font-bold text-black mb-1" style={{ fontFamily: 'SF Pro' }}>
+                            {selectedLocation.name}
+                          </Text>
+                          {canNavigate && (
+                            <Text className="text-xs text-gray-500">
+                              Location {locationIndex.current} of {locationIndex.total}
+                            </Text>
+                          )}
+                        </View>
+                        <TouchableOpacity
+                          onPress={handleCloseDetails}
+                          className="ml-2 p-2"
+                          activeOpacity={0.7}
+                        >
+                          <Feather name="x" size={20} color="#6B7280" />
+                        </TouchableOpacity>
+                      </View>
+
+                      <View>
                       <View className="flex-row justify-between items-center py-2 border-b border-gray-100 mb-2">
                         <Text className="text-sm font-semibold text-gray-600">Dengue Risk Level</Text>
                         <View 
@@ -532,17 +660,49 @@ export default function Dashboard() {
                         </Text>
                       </View>
                     </View>
+
+                    {/* Navigation buttons */}
+                    {canNavigate && (
+                      <View className="flex-row items-center justify-center mt-4 pt-3 border-t border-gray-200">
+                        <TouchableOpacity
+                          onPress={() => handleNavigateLocation('prev')}
+                          className="flex-row items-center px-4 py-2 bg-gray-100 rounded-lg mr-2"
+                          activeOpacity={0.7}
+                        >
+                          <Feather name="chevron-left" size={18} color="#1D4ED8" />
+                          <Text className="text-sm font-semibold text-[#1D4ED8] ml-1">Previous</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => handleNavigateLocation('next')}
+                          className="flex-row items-center px-4 py-2 bg-gray-100 rounded-lg"
+                          activeOpacity={0.7}
+                        >
+                          <Text className="text-sm font-semibold text-[#1D4ED8] mr-1">Next</Text>
+                          <Feather name="chevron-right" size={18} color="#1D4ED8" />
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
-                )}
+                  );
+                })()}
 
                 {/* No Prediction Message - Display below map if location is selected but no prediction */}
                 {selectedLocation && !selectedPrediction && (
                   <View className="bg-gray-50 rounded-2xl p-4 mb-4 border border-gray-200">
-                    <View className="flex-row items-center">
-                      <Feather name="info" size={20} color="#6B7280" />
-                      <Text className="text-sm text-gray-600 ml-2">
-                        No prediction available for {selectedLocation.name}
-                      </Text>
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-row items-center flex-1">
+                        <Feather name="info" size={20} color="#6B7280" />
+                        <Text className="text-sm text-gray-600 ml-2">
+                          No prediction available for {selectedLocation.name}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={handleCloseDetails}
+                        className="ml-2 p-2"
+                        activeOpacity={0.7}
+                      >
+                        <Feather name="x" size={20} color="#6B7280" />
+                      </TouchableOpacity>
                     </View>
                   </View>
                 )}
