@@ -207,22 +207,14 @@ async function getPushTokensForUsers(userIds) {
 async function notifyCompanyPredictionCreated(prediction) {
   try {
     const { companyId, companyLocationId, riskScore, latitude, longitude } = prediction;
-    console.log(`[NOTIFICATION] Company prediction created:`, prediction);
-    console.log(`[NOTIFICATION] Company ID:`, companyId);
-    console.log(`[NOTIFICATION] Company Location ID:`, companyLocationId);
-    console.log(`[NOTIFICATION] Risk Score:`, riskScore);
-    console.log(`[NOTIFICATION] Latitude:`, latitude);
-    console.log(`[NOTIFICATION] Longitude:`, longitude);
     // Get company settings for risk level thresholds
     const company = await prisma.company.findUnique({
       where: { id: companyId },
       select: { predictionModelParameters: true }
     });
     const predictionModelParameters = company?.predictionModelParameters || {};
-    console.log(`[NOTIFICATION] Prediction Model Parameters:`, predictionModelParameters);
     // Get risk level from risk score using company-specific thresholds
     const riskLevel = getRiskLevel(riskScore, predictionModelParameters);
-    console.log(`[NOTIFICATION] Risk Level:`, riskLevel);
     // Get company location name
     let locationName = 'Unknown Location';
     if (companyLocationId) {
@@ -242,7 +234,6 @@ async function notifyCompanyPredictionCreated(prediction) {
       },
       select: { id: true }
     });
-    console.log(`[NOTIFICATION] Mobile users:`, mobileUsers);
 
     // Get all admin users (role='admin') in the company
     const adminUsers = await prisma.user.findMany({

@@ -290,4 +290,50 @@ export async function getCompanySettings(companyId) {
   
   const data = await res.json();
   return data;
+}
+
+// Get latest one day dengue cases (activeCases !== 0, totalCases === null)
+export async function getLatestDengueCases() {
+  try {
+    // Get today's date and yesterday's date
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    // Format dates for API
+    const startDate = yesterday.toISOString().split('T')[0];
+    const endDate = today.toISOString().split('T')[0];
+    
+    // Fetch data for the last day with a high limit to get all records
+    const res = await fetch(
+      `${API_URL}/dengue-data?startDate=${startDate}&endDate=${endDate}&limit=1000`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Failed to fetch dengue cases');
+    }
+    
+    const data = await res.json();
+    
+    // Filter: activeCases !== 0 AND totalCases === null AND has latitude/longitude
+    const filteredCases = (data.data || []).filter((case_) => 
+      case_.activeCases !== null && 
+      case_.activeCases !== 0 && 
+      case_.totalCases === null &&
+      case_.latitude !== null &&
+      case_.longitude !== null
+    );
+    
+    return filteredCases;
+  } catch (error) {
+    console.error('Error fetching latest dengue cases:', error);
+    throw error;
+  }
 } 

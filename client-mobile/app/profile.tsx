@@ -120,6 +120,19 @@ export default function ProfilePage() {
         <View className="flex-1">
           <Text className="text-lg font-bold text-white" style={{ fontFamily: 'SF Pro' }}>{user?.name || ''}</Text>
           <Text className="text-xs text-[#D7D7D7]" style={{ fontFamily: 'SF Pro' }}>@{user?.username || ''}</Text>
+          <View className="flex-row items-center mt-1">
+            {user?.status === 'Verified' ? (
+              <View className="flex-row items-center bg-green-500/20 px-2 py-1 rounded-full">
+                <Ionicons name="checkmark-circle" size={14} color="#4ADE80" />
+                <Text className="text-xs text-[#4ADE80] font-semibold ml-1" style={{ fontFamily: 'SF Pro' }}>Verified</Text>
+              </View>
+            ) : (
+              <View className="flex-row items-center bg-yellow-500/20 px-2 py-1 rounded-full">
+                <Ionicons name="time-outline" size={14} color="#FBBF24" />
+                <Text className="text-xs text-[#FBBF24] font-semibold ml-1" style={{ fontFamily: 'SF Pro' }}>Pending</Text>
+              </View>
+            )}
+          </View>
         </View>
         <TouchableOpacity
           onPress={handleLogout}
