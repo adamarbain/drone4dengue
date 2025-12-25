@@ -114,19 +114,89 @@ async function sendPushNotification(pushTokens, notification) {
  */
 async function getPushTokensForUsers(userIds) {
   try {
-    const deviceTokens = await prisma.deviceToken.findMany({
+    if (!userIds || userIds.length === 0) {
+      console.log('[PUSH NOTIFICATION] No user IDs provided for push token lookup');
+      return [];
+    }
+
+    // Filter out any null, undefined, or empty string values
+    const validUserIds = userIds.filter(id => id && typeof id === 'string' && id.trim().length > 0);
+    
+    if (validUserIds.length === 0) {
+      console.log('[PUSH NOTIFICATION] No valid user IDs after filtering:', userIds);
+      return [];
+    }
+
+    if (validUserIds.length !== userIds.length) {
+      console.log(`[PUSH NOTIFICATION] Filtered out ${userIds.length - validUserIds.length} invalid user ID(s). Original:`, userIds, 'Valid:', validUserIds);
+    }
+
+    console.log(`[PUSH NOTIFICATION] Looking up push tokens for ${validUserIds.length} user(s):`, validUserIds);
+
+    // First, check ALL device tokens (including inactive) for these users to diagnose the issue
+    const allDeviceTokens = await prisma.deviceToken.findMany({
       where: {
-        userId: { in: userIds },
-        isActive: true
+        userId: { in: validUserIds }
       },
       select: {
-        pushToken: true
+        pushToken: true,
+        userId: true,
+        isActive: true,
+        platform: true
       }
     });
 
-    return deviceTokens.map(dt => dt.pushToken);
+    console.log(`[PUSH NOTIFICATION] Found ${allDeviceTokens.length} total device token(s) (active + inactive) for these users`);
+    if (allDeviceTokens.length > 0) {
+      console.log(`[PUSH NOTIFICATION] Device token details:`, allDeviceTokens.map(dt => ({
+        userId: dt.userId,
+        isActive: dt.isActive,
+        platform: dt.platform,
+        hasToken: !!dt.pushToken
+      })));
+    }
+
+    // Now get only active tokens
+    const deviceTokens = await prisma.deviceToken.findMany({
+      where: {
+        userId: { in: validUserIds },
+        isActive: true
+      },
+      select: {
+        pushToken: true,
+        userId: true
+      }
+    });
+
+    const pushTokens = deviceTokens.map(dt => dt.pushToken);
+    
+    if (pushTokens.length === 0) {
+      if (allDeviceTokens.length > 0) {
+        const inactiveCount = allDeviceTokens.filter(dt => !dt.isActive).length;
+        console.log(`[PUSH NOTIFICATION] WARNING: Found ${allDeviceTokens.length} device token(s) but ${inactiveCount} are inactive. Only active tokens are used for push notifications.`);
+      } else {
+        console.log(`[PUSH NOTIFICATION] No device tokens found for ${validUserIds.length} user(s). Checking if userIds match...`);
+        // Check if any device tokens exist for these user IDs (case-insensitive check)
+        const anyTokens = await prisma.deviceToken.findMany({
+          select: {
+            userId: true,
+            isActive: true
+          },
+          take: 10
+        });
+        if (anyTokens.length > 0) {
+          console.log(`[PUSH NOTIFICATION] Sample userIds in DeviceToken table:`, anyTokens.map(t => t.userId).slice(0, 5));
+          console.log(`[PUSH NOTIFICATION] Querying for userIds:`, validUserIds);
+        }
+      }
+    } else {
+      console.log(`[PUSH NOTIFICATION] Found ${pushTokens.length} active push token(s) for ${validUserIds.length} user(s)`);
+    }
+
+    return pushTokens;
   } catch (error) {
     console.error('[PUSH NOTIFICATION ERROR] Failed to get push tokens:', error);
+    console.error('[PUSH NOTIFICATION ERROR] Stack:', error.stack);
     return [];
   }
 }
@@ -188,8 +258,6 @@ async function notifyCompanyPredictionCreated(prediction) {
       return;
     }
 
-    // const title = `New Dengue Risk Prediction - ${riskLevel.toUpperCase()} Risk`;
-    // const message = `A new dengue risk prediction has been created for ${locationName}. Risk Level: ${riskLevel.toUpperCase()}`;
     let riskEmoji = 'ℹ️';
     if (riskLevel === 'high') riskEmoji = '🚨';
     else if (riskLevel === 'medium') riskEmoji = '⚠️';
@@ -215,6 +283,9 @@ async function notifyCompanyPredictionCreated(prediction) {
 
     // Send push notifications (only to mobile users who have push tokens)
     const mobileUserIds = mobileUsers.map(u => u.id);
+    if (mobileUserIds.length > 0) {
+      console.log(`[NOTIFICATION] Attempting to fetch push tokens for ${mobileUserIds.length} mobile user(s)`);
+    }
     const pushTokens = await getPushTokensForUsers(mobileUserIds);
     if (pushTokens.length > 0) {
       console.log(`[PUSH NOTIFICATION] Sending to ${pushTokens.length} device(s):`, pushTokens);
@@ -231,6 +302,8 @@ async function notifyCompanyPredictionCreated(prediction) {
           predictionId: prediction.id
         }
       });
+    } else if (mobileUserIds.length > 0) {
+      console.log(`[PUSH NOTIFICATION] No push tokens available for ${mobileUserIds.length} mobile user(s). They may need to register their device tokens.`);
     }
 
     console.log(`[NOTIFICATION] Sent prediction notification to ${allUserIds.length} users (${mobileUsers.length} mobile, ${adminUsers.length} admin, ${pushTokens.length} push notifications)`);
@@ -529,8 +602,10 @@ async function notifyDailyPrediction(userId, companyId, prediction) {
     });
 
     // Send push notification
+    console.log(`[NOTIFICATION] Attempting to fetch push tokens for user ${userId}`);
     const pushTokens = await getPushTokensForUsers([userId]);
     if (pushTokens.length > 0) {
+      console.log(`[PUSH NOTIFICATION] Sending daily recommendation to ${pushTokens.length} device(s) for user ${userId}`);
       await sendPushNotification(pushTokens, {
         title,
         message,
@@ -544,6 +619,8 @@ async function notifyDailyPrediction(userId, companyId, prediction) {
           recommendations: recommendationMessage.recommendations || []
         }
       });
+    } else {
+      console.log(`[PUSH NOTIFICATION] No push tokens available for user ${userId}. User may need to register their device token.`);
     }
 
     console.log(`[NOTIFICATION] Sent daily recommendation notification to user ${userId} (${pushTokens.length} push notifications)`);
