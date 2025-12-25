@@ -190,11 +190,11 @@ async function notifyCompanyPredictionCreated(prediction) {
 
     // const title = `New Dengue Risk Prediction - ${riskLevel.toUpperCase()} Risk`;
     // const message = `A new dengue risk prediction has been created for ${locationName}. Risk Level: ${riskLevel.toUpperCase()}`;
-    let riskEmoji = '🟢';
-    if (riskLevel === 'high') riskEmoji = '🔴';
-    else if (riskLevel === 'medium') riskEmoji = '🟠';
+    let riskEmoji = 'ℹ️';
+    if (riskLevel === 'high') riskEmoji = '🚨';
+    else if (riskLevel === 'medium') riskEmoji = '⚠️';
     const title = `${riskEmoji} ${locationName}`;
-    const message = `${riskLevel} dengue risk detected in ${locationName}`;
+    const message = `${riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1).toLowerCase()} dengue risk detected in ${locationName}`;
 
     // Create notifications for all users (mobile + admin)
     await createNotification({
@@ -217,6 +217,7 @@ async function notifyCompanyPredictionCreated(prediction) {
     const mobileUserIds = mobileUsers.map(u => u.id);
     const pushTokens = await getPushTokensForUsers(mobileUserIds);
     if (pushTokens.length > 0) {
+      console.log(`[PUSH NOTIFICATION] Sending to ${pushTokens.length} device(s):`, pushTokens);
       await sendPushNotification(pushTokens, {
         title,
         message,
