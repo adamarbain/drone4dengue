@@ -116,6 +116,14 @@ export default function LoginScreen() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Login failed');
+      
+      // Prevent admin users from logging in through mobile app
+      if (data.user && data.user.role === 'admin') {
+        setLoginError('Admin users cannot log in through the mobile app. Please use the admin portal.');
+        setLoginLoading(false);
+        return;
+      }
+      
       // Store token in AsyncStorage
       await AsyncStorage.setItem('token', data.token);
       // Decode JWT to get expiration (exp)

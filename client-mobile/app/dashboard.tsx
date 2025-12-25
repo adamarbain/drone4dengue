@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator, Alert, TextInput, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker, Region } from 'react-native-maps';
 import { Feather } from '@expo/vector-icons';
@@ -7,7 +7,9 @@ import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import BottomNav from './components/BottomNav';
 import DengueRiskCard from '../components/DengueRiskCard';
-import { fetchCurrentUser, getCompanyLocations, getCompanyPredictions, getCompanySettings } from '../utils/userApi';
+import { fetchCurrentUser, getCompanyLocations, getCompanyPredictions, getCompanySettings, getLatestDengueCases } from '../utils/userApi';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
 
 interface CompanyLocation {
   id: string;
@@ -51,6 +53,27 @@ export default function Dashboard() {
   const [selectedPrediction, setSelectedPrediction] = useState<CompanyPrediction | null>(null);
   const orgMapRef = useRef<MapView>(null);
   
+  // Dengue Cases tab states (for comp-999)
+  interface DengueCase {
+    id: string;
+    location: string;
+    date: string;
+    activeCases: number;
+    latitude: number;
+    longitude: number;
+    totalCases?: number | null;
+    status?: string | null;
+    coverageArea?: string | null;
+    source?: string | null;
+  }
+  const [dengueCases, setDengueCases] = useState<DengueCase[]>([]);
+  const [loadingDengueCases, setLoadingDengueCases] = useState(false);
+  const [selectedDengueCase, setSelectedDengueCase] = useState<DengueCase | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showLocationButtonDengue, setShowLocationButtonDengue] = useState(false);
+  
   // Risk threshold settings
   const [riskThresholds, setRiskThresholds] = useState({ lowThreshold: 1.0, highThreshold: 3.0 });
 
@@ -60,10 +83,10 @@ export default function Dashboard() {
       try {
         const user = await fetchCurrentUser();
         if (isMounted) {
-          // If companyId is 'comp-999', treated as NO company
+          // If companyId is 'comp-999', show Dengue Cases tab instead of Organisation tab
           if (user?.companyId === 'comp-999') {
-            setHasCompany(false);
-            setCompanyId(user?.companyId || null); // Still store the companyId, but indicate "no company"
+            setHasCompany(true); // Set to true to show tabs
+            setCompanyId(user?.companyId || null);
           } else {
             setHasCompany(Boolean(user?.companyId));
             const cId = user?.companyId || null;
@@ -99,7 +122,11 @@ export default function Dashboard() {
   // Fetch organisation data when switching to organisation tab
   useEffect(() => {
     if (activeTab === 'organisation' && companyId) {
-      fetchOrganisationData();
+      if (companyId === 'comp-999') {
+        fetchDengueCases();
+      } else {
+        fetchOrganisationData();
+      }
     }
   }, [activeTab, companyId]);
 
@@ -152,6 +179,35 @@ export default function Dashboard() {
   }, []);
   const handlePredictionUpdate = (prediction: any) => {
     setHasPrediction(prediction !== null);
+  };
+
+  const fetchDengueCases = async () => {
+    setLoadingDengueCases(true);
+    try {
+      const cases = await getLatestDengueCases();
+      setDengueCases(cases);
+      
+      // Fit map to show all dengue cases if available
+      if (cases.length > 0 && orgMapRef.current) {
+        setTimeout(() => {
+          orgMapRef.current?.fitToCoordinates(
+            cases.map((case_: DengueCase) => ({
+              latitude: case_.latitude,
+              longitude: case_.longitude,
+            })),
+            {
+              edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+              animated: true,
+            }
+          );
+        }, 100);
+      }
+    } catch (error: any) {
+      console.error('Error fetching dengue cases:', error);
+      Alert.alert('Error', error.message || 'Failed to load dengue cases');
+    } finally {
+      setLoadingDengueCases(false);
+    }
   };
 
   const fetchOrganisationData = async () => {
@@ -352,6 +408,84 @@ export default function Dashboard() {
     }
   };
 
+  const handleDengueMapRegionChangeComplete = (region: Region) => {
+    if (location) {
+      // Check if the map center is significantly different from user location
+      const latDiff = Math.abs(region.latitude - location.latitude);
+      const lonDiff = Math.abs(region.longitude - location.longitude);
+      const threshold = 0.002; // approximately 200 meters
+      
+      if (latDiff > threshold || lonDiff > threshold) {
+        setShowLocationButtonDengue(true);
+      } else {
+        setShowLocationButtonDengue(false);
+      }
+    }
+  };
+
+  const searchLocation = async (query: string) => {
+    if (!query || query.trim().length === 0) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await fetch(`${API_URL}/geocode/search?q=${encodeURIComponent(query)}&limit=5`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Search failed');
+      }
+
+      const data = await response.json();
+      setSearchResults(data);
+    } catch (error) {
+      console.error('Error searching location:', error);
+      Alert.alert('Error', 'Failed to search location');
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearchResultSelect = (result: any) => {
+    if (orgMapRef.current) {
+      const lat = parseFloat(result.lat);
+      const lon = parseFloat(result.lon);
+      
+      orgMapRef.current.animateToRegion({
+        latitude: lat,
+        longitude: lon,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      }, 500);
+      
+      setSearchQuery('');
+      setSearchResults([]);
+    }
+  };
+
+  const handleDengueCaseMarkerPress = (case_: DengueCase) => {
+    setSelectedDengueCase(case_);
+  };
+
+  const returnToCurrentLocationDengue = () => {
+    if (location && orgMapRef.current) {
+      orgMapRef.current.animateToRegion({
+        latitude: location.latitude,
+        longitude: location.longitude,
+        latitudeDelta: 0.1,
+        longitudeDelta: 0.1,
+      }, 500);
+      setShowLocationButtonDengue(false);
+    }
+  };
+
   const returnToCurrentLocation = () => {
     if (location && mapRef.current) {
       mapRef.current.animateToRegion({
@@ -392,7 +526,7 @@ export default function Dashboard() {
               onPress={() => setActiveTab('organisation')}
             >
               <Text className={`text-center font-bold text-base ${activeTab === 'organisation' ? 'text-white' : 'text-white'}`}>
-                Organisation
+                {companyId === 'comp-999' ? 'Dengue Cases' : 'Organisation'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -482,72 +616,336 @@ export default function Dashboard() {
           </ScrollView>
         )}
 
-        {/* Organisation Tab Content */}
+        {/* Organisation Tab Content / Dengue Cases Tab Content */}
         {activeTab === 'organisation' && (
           <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-            {loadingOrganisation ? (
-              <View className="items-center justify-center py-8">
-                <ActivityIndicator size="large" color="#1D4ED8" />
-                <Text className="text-gray-600 mt-4 text-sm">Loading organisation data...</Text>
-              </View>
-            ) : companyLocations.length === 0 ? (
-              <View className="bg-yellow-50 rounded-2xl p-6 items-center justify-center border border-yellow-200">
-                <Feather name="info" size={32} color="#EAD196" />
-                <Text className="text-gray-700 text-center mt-4 font-semibold">
-                  No company locations found
-                </Text>
-                <Text className="text-gray-500 text-center mt-2 text-sm">
-                  Please contact your administrator to add locations
-                </Text>
+            {companyId === 'comp-999' ? (
+              <View>
+                {loadingDengueCases ? (
+                  <View className="items-center justify-center py-8">
+                    <ActivityIndicator size="large" color="#1D4ED8" />
+                    <Text className="text-gray-600 mt-4 text-sm">Loading dengue cases...</Text>
+                  </View>
+                ) : dengueCases.length === 0 ? (
+                  <View className="bg-yellow-50 rounded-2xl p-6 items-center justify-center border border-yellow-200">
+                    <Feather name="info" size={32} color="#EAD196" />
+                    <Text className="text-gray-700 text-center mt-4 font-semibold">
+                      No dengue cases found
+                    </Text>
+                    <Text className="text-gray-500 text-center mt-2 text-sm">
+                      No active cases in the last 24 hours
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    {/* Location Search */}
+                    <View className="mb-4 relative">
+                      <View className="flex-row items-center bg-white rounded-xl border border-gray-200 px-3 py-2">
+                        <Feather name="search" size={20} color="#6B7280" />
+                        <TextInput
+                          className="ml-2 py-2 text-md"
+                          placeholder="Search location in Malaysia..."
+                          placeholderTextColor="#374151"
+                          value={searchQuery}
+                          onChangeText={(text) => {
+                            setSearchQuery(text);
+                            searchLocation(text);
+                          }}
+                          onSubmitEditing={() => searchLocation(searchQuery)}
+                        />
+                        {searchQuery.length > 0 && (
+                          <TouchableOpacity
+                            onPress={() => {
+                              setSearchQuery('');
+                              setSearchResults([]);
+                            }}
+                            className="ml-2"
+                          >
+                            <Feather name="x" size={20} color="#6B7280" />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                      
+                      {/* Search Results Dropdown */}
+                      {searchResults.length > 0 && (
+                        <View className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl border border-gray-200 shadow-lg z-10 max-h-48">
+                          <ScrollView>
+                            {searchResults.map((result, index) => (
+                              <TouchableOpacity
+                                key={index}
+                                onPress={() => handleSearchResultSelect(result)}
+                                className="px-4 py-3 border-b border-gray-100"
+                                activeOpacity={0.7}
+                              >
+                                <Text className="text-base font-semibold text-black">
+                                  {result.display_name?.split(',')[0] || result.name || 'Unknown'}
+                                </Text>
+                                <Text className="text-sm text-gray-600 mt-1" numberOfLines={1}>
+                                  {result.display_name || `${result.lat}, ${result.lon}`}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </ScrollView>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Dengue Cases Map */}
+                    <View
+                      className="rounded-2xl overflow-hidden mb-4 w-full"
+                      style={{ height: 600 }}
+                    >
+                      <MapView
+                        ref={orgMapRef}
+                        style={{ width: '100%', height: '100%' }}
+                        mapType="standard"
+                        showsUserLocation={true}
+                        showsMyLocationButton={false}
+                        onRegionChangeComplete={handleDengueMapRegionChangeComplete}
+                        initialRegion={location ? {
+                          latitude: location.latitude,
+                          longitude: location.longitude,
+                          latitudeDelta: 0.1,
+                          longitudeDelta: 0.1,
+                        } : {
+                          latitude: 0,
+                          longitude: 0,
+                          latitudeDelta: 0.01,
+                          longitudeDelta: 0.01,
+                        }}
+                      >
+                        {dengueCases.map((case_: DengueCase) => (
+                          <Marker
+                            key={case_.id}
+                            coordinate={{
+                              latitude: case_.latitude,
+                              longitude: case_.longitude,
+                            }}
+                            title={case_.location}
+                            description={`Active Dengue Cases: ${case_.activeCases}`}
+                            pinColor="#BF3131"
+                            onPress={() => handleDengueCaseMarkerPress(case_)}
+                          />
+                        ))}
+                      </MapView>
+                      
+                      {/* Return to Location Button */}
+                      {showLocationButtonDengue && (
+                        <TouchableOpacity
+                          onPress={returnToCurrentLocationDengue}
+                          className="absolute bottom-2 right-2 bg-[#1D4ED8] rounded-full p-3 shadow-lg"
+                          style={{
+                            shadowColor: '#1D4ED8',
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: 0.3,
+                            shadowRadius: 8,
+                            elevation: 6,
+                          }}
+                        >
+                          <Feather name="navigation" size={20} color="white" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    
+                    {/* Dengue Cases Summary */}
+                    <View className="mb-4">
+                      <Text className="text-lg font-bold text-black mb-3" style={{ fontFamily: 'SF Pro' }}>
+                        Latest Dengue Cases ({dengueCases.length})
+                      </Text>
+                      <Text className="text-sm text-gray-600 mb-3">
+                        Showing active cases from the last 24 hours
+                      </Text>
+                      <View className="bg-blue-50 rounded-xl p-3 border border-blue-200">
+                        <View className="flex-row items-start">
+                          <Feather name="info" size={16} color="#1D4ED8" style={{ marginTop: 2 }} />
+                          <Text className="text-xs text-blue-800 ml-2 flex-1">
+                            This map only covers locations in Malaysia
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Selected Dengue Case Details Modal */}
+                    <Modal
+                      visible={selectedDengueCase !== null}
+                      transparent={true}
+                      animationType="slide"
+                      onRequestClose={() => setSelectedDengueCase(null)}
+                    >
+                      <View className="flex-1 bg-black/50 justify-end">
+                        <TouchableOpacity
+                          className="flex-1"
+                          activeOpacity={1}
+                          onPress={() => setSelectedDengueCase(null)}
+                        />
+                        <View className="bg-white rounded-t-3xl p-6 max-h-[80%]">
+                          <View className="flex-row items-center justify-between mb-4">
+                            <Text className="text-2xl font-bold text-black" style={{ fontFamily: 'SF Pro' }}>
+                              Dengue Case Details
+                            </Text>
+                            <TouchableOpacity
+                              onPress={() => setSelectedDengueCase(null)}
+                              className="p-2"
+                              activeOpacity={0.7}
+                            >
+                              <Feather name="x" size={24} color="#6B7280" />
+                            </TouchableOpacity>
+                          </View>
+                          
+                          {selectedDengueCase && (
+                            <ScrollView showsVerticalScrollIndicator={false}>
+                              <View className="mb-4">
+                                <Text className="text-sm font-semibold text-gray-600 mb-1">Location</Text>
+                                <Text className="text-base text-black font-semibold">{selectedDengueCase.location}</Text>
+                              </View>
+                              
+                              <View className="mb-4">
+                                <Text className="text-sm font-semibold text-gray-600 mb-1">Date</Text>
+                                <Text className="text-base text-black">
+                                  {selectedDengueCase.date
+                                    ? (() => {
+                                        const dateObj = new Date(selectedDengueCase.date);
+                                        const day = dateObj.getDate();
+                                        const month = dateObj.toLocaleString('en-US', { month: 'long' });
+                                        const year = dateObj.getFullYear();
+                                        return `${day} ${month} ${year}`;
+                                      })()
+                                    : 'N/A'}
+                                </Text>
+                              </View>
+                              
+                              <View className="mb-4">
+                                <Text className="text-sm font-semibold text-gray-600 mb-1">Active Cases</Text>
+                                <Text className="text-base text-black font-semibold" style={{ color: '#BF3131' }}>
+                                  {selectedDengueCase.activeCases} Dengue cases
+                                </Text>
+                              </View>
+                              
+                              {selectedDengueCase.totalCases !== null && selectedDengueCase.totalCases !== undefined && (
+                                <View className="mb-4">
+                                  <Text className="text-sm font-semibold text-gray-600 mb-1">Total Cases</Text>
+                                  <Text className="text-base text-black">{selectedDengueCase.totalCases} Dengue cases</Text>
+                                </View>
+                              )}
+                              
+                              {/* {selectedDengueCase.status && (
+                                <View className="mb-4">
+                                  <Text className="text-sm font-semibold text-gray-600 mb-1">Status</Text>
+                                  <Text className="text-base text-black">{selectedDengueCase.status}</Text>
+                                </View>
+                              )} */}
+                              
+                              {selectedDengueCase.coverageArea && (
+                                <View className="mb-4">
+                                  <Text className="text-sm font-semibold text-gray-600 mb-1">Coverage Area</Text>
+                                  <Text className="text-base text-black">{selectedDengueCase.coverageArea}</Text>
+                                </View>
+                              )}
+                              
+                              {/* {selectedDengueCase.source && (
+                                <View className="mb-4">
+                                  <Text className="text-sm font-semibold text-gray-600 mb-1">Source</Text>
+                                  <Text className="text-base text-black">{selectedDengueCase.source}</Text>
+                                </View>
+                              )} */}
+                              
+                              {/* <View className="mb-4">
+                                <Text className="text-sm font-semibold text-gray-600 mb-1">Coordinates</Text>
+                                <Text className="text-base text-black">
+                                  {selectedDengueCase.latitude.toFixed(6)}, {selectedDengueCase.longitude.toFixed(6)}
+                                </Text>
+                              </View> */}
+                              
+                              <TouchableOpacity
+                                onPress={() => {
+                                  if (orgMapRef.current) {
+                                    orgMapRef.current.animateToRegion({
+                                      latitude: selectedDengueCase.latitude,
+                                      longitude: selectedDengueCase.longitude,
+                                      latitudeDelta: 0.01,
+                                      longitudeDelta: 0.01,
+                                    }, 500);
+                                    setSelectedDengueCase(null);
+                                  }
+                                }}
+                                className="bg-[#1D4ED8] rounded-xl py-3 px-4 items-center mt-4"
+                                activeOpacity={0.8}
+                              >
+                                <Text className="text-white font-bold text-base">View on Map</Text>
+                              </TouchableOpacity>
+                            </ScrollView>
+                          )}
+                        </View>
+                      </View>
+                    </Modal>
+                  </>
+                )}
               </View>
             ) : (
-              <>
-                {/* Organisation Map */}
-                <View
-                  className="rounded-2xl overflow-hidden mb-4 w-full"
-                  style={{ aspectRatio: 4 / 3 }}
-                >
-                  <MapView
-                    ref={orgMapRef}
-                    style={{ width: '100%', height: '100%' }}
-                    mapType="standard"
-                    showsUserLocation={true}
-                    showsMyLocationButton={false}
-                    onRegionChangeComplete={handleMapRegionChangeComplete}
-                    initialRegion={getInitialRegionFromCompanyLocations() || {
-                      latitude: location?.latitude || 0,
-                      longitude: location?.longitude || 0,
-                      latitudeDelta: 0.01,
-                      longitudeDelta: 0.01,
-                    }}
-                  >
-                    {companyLocations
-                      .filter(loc => loc.latitude && loc.longitude)
-                      .map((loc) => {
-                        const prediction = companyPredictions.find(
-                          p => p.companyLocationId === loc.id
-                        );
-                        const riskLevel = prediction 
-                          ? getRiskLevel(prediction.riskScore)
-                          : 'low';
-                        const riskColor = getRiskColor(riskLevel);
-                        
-                        return (
-                          <Marker
-                            key={loc.id}
-                            coordinate={{
-                              latitude: loc.latitude!,
-                              longitude: loc.longitude!,
-                            }}
-                            title={loc.name}
-                            description={prediction ? `Risk: ${riskLevel.toUpperCase()}` : 'No prediction'}
-                            pinColor={riskColor}
-                            onPress={() => handleLocationMarkerPress(loc)}
-                          />
-                        );
-                      })}
-                  </MapView>
-                </View>
+              <View>
+                {loadingOrganisation ? (
+                  <View className="items-center justify-center py-8">
+                    <ActivityIndicator size="large" color="#1D4ED8" />
+                    <Text className="text-gray-600 mt-4 text-sm">Loading organisation data...</Text>
+                  </View>
+                ) : companyLocations.length === 0 ? (
+                  <View className="bg-yellow-50 rounded-2xl p-6 items-center justify-center border border-yellow-200">
+                    <Feather name="info" size={32} color="#EAD196" />
+                    <Text className="text-gray-700 text-center mt-4 font-semibold">
+                      No company locations found
+                    </Text>
+                    <Text className="text-gray-500 text-center mt-2 text-sm">
+                      Please contact your administrator to add locations
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    {/* Organisation Map */}
+                    <View
+                      className="rounded-2xl overflow-hidden mb-4 w-full"
+                      style={{ aspectRatio: 4 / 3 }}
+                    >
+                      <MapView
+                        ref={orgMapRef}
+                        style={{ width: '100%', height: '100%' }}
+                        mapType="standard"
+                        showsUserLocation={true}
+                        showsMyLocationButton={false}
+                        onRegionChangeComplete={handleMapRegionChangeComplete}
+                        initialRegion={getInitialRegionFromCompanyLocations() || {
+                          latitude: location?.latitude || 0,
+                          longitude: location?.longitude || 0,
+                          latitudeDelta: 0.01,
+                          longitudeDelta: 0.01,
+                        }}
+                      >
+                        {companyLocations
+                          .filter(loc => loc.latitude && loc.longitude)
+                          .map((loc) => {
+                            const prediction = companyPredictions.find(
+                              p => p.companyLocationId === loc.id
+                            );
+                            const riskLevel = prediction 
+                              ? getRiskLevel(prediction.riskScore)
+                              : 'low';
+                            const riskColor = getRiskColor(riskLevel);
+                            
+                            return (
+                              <Marker
+                                key={loc.id}
+                                coordinate={{
+                                  latitude: loc.latitude!,
+                                  longitude: loc.longitude!,
+                                }}
+                                title={loc.name}
+                                description={prediction ? `Risk: ${riskLevel.toUpperCase()}` : 'No prediction'}
+                                pinColor={riskColor}
+                                onPress={() => handleLocationMarkerPress(loc)}
+                              />
+                            );
+                          })}
+                      </MapView>
+                    </View>
 
                 {/* Selected Location Prediction Details - Display below map if location is selected */}
                 {selectedLocation && selectedPrediction && (() => {
@@ -588,7 +986,6 @@ export default function Dashboard() {
                         </TouchableOpacity>
                       </View>
 
-                      <View>
                       <View className="flex-row justify-between items-center py-2 border-b border-gray-100 mb-2">
                         <Text className="text-sm font-semibold text-gray-600">Dengue Risk Level</Text>
                         <View 
@@ -659,7 +1056,6 @@ export default function Dashboard() {
                           {new Date(selectedPrediction.createdAt).toLocaleDateString()}
                         </Text>
                       </View>
-                    </View>
 
                     {/* Navigation buttons */}
                     {canNavigate && (
@@ -771,7 +1167,9 @@ export default function Dashboard() {
                     );
                   })}
                 </View>
-              </>
+                  </>
+                )}
+              </View>
             )}
           </ScrollView>
         )}
