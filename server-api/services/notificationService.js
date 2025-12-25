@@ -207,17 +207,22 @@ async function getPushTokensForUsers(userIds) {
 async function notifyCompanyPredictionCreated(prediction) {
   try {
     const { companyId, companyLocationId, riskScore, latitude, longitude } = prediction;
-    
+    console.log(`[NOTIFICATION] Company prediction created:`, prediction);
+    console.log(`[NOTIFICATION] Company ID:`, companyId);
+    console.log(`[NOTIFICATION] Company Location ID:`, companyLocationId);
+    console.log(`[NOTIFICATION] Risk Score:`, riskScore);
+    console.log(`[NOTIFICATION] Latitude:`, latitude);
+    console.log(`[NOTIFICATION] Longitude:`, longitude);
     // Get company settings for risk level thresholds
     const company = await prisma.company.findUnique({
       where: { id: companyId },
       select: { predictionModelParameters: true }
     });
     const predictionModelParameters = company?.predictionModelParameters || {};
-    
+    console.log(`[NOTIFICATION] Prediction Model Parameters:`, predictionModelParameters);
     // Get risk level from risk score using company-specific thresholds
     const riskLevel = getRiskLevel(riskScore, predictionModelParameters);
-
+    console.log(`[NOTIFICATION] Risk Level:`, riskLevel);
     // Get company location name
     let locationName = 'Unknown Location';
     if (companyLocationId) {
@@ -237,6 +242,7 @@ async function notifyCompanyPredictionCreated(prediction) {
       },
       select: { id: true }
     });
+    console.log(`[NOTIFICATION] Mobile users:`, mobileUsers);
 
     // Get all admin users (role='admin') in the company
     const adminUsers = await prisma.user.findMany({
@@ -283,27 +289,32 @@ async function notifyCompanyPredictionCreated(prediction) {
 
     // Send push notifications (only to mobile users who have push tokens)
     const mobileUserIds = mobileUsers.map(u => u.id);
+    let pushTokens = [];
+    
     if (mobileUserIds.length > 0) {
       console.log(`[NOTIFICATION] Attempting to fetch push tokens for ${mobileUserIds.length} mobile user(s)`);
-    }
-    const pushTokens = await getPushTokensForUsers(mobileUserIds);
-    if (pushTokens.length > 0) {
-      console.log(`[PUSH NOTIFICATION] Sending to ${pushTokens.length} device(s):`, pushTokens);
-      await sendPushNotification(pushTokens, {
-        title,
-        message,
-        type: 'prediction',
-        metadata: {
-          riskLevel,
-          riskScore,
-          latitude,
-          longitude,
-          companyLocationId,
-          predictionId: prediction.id
-        }
-      });
-    } else if (mobileUserIds.length > 0) {
-      console.log(`[PUSH NOTIFICATION] No push tokens available for ${mobileUserIds.length} mobile user(s). They may need to register their device tokens.`);
+      pushTokens = await getPushTokensForUsers(mobileUserIds);
+      
+      if (pushTokens.length > 0) {
+        console.log(`[PUSH NOTIFICATION] Sending to ${pushTokens.length} device(s):`, pushTokens);
+        await sendPushNotification(pushTokens, {
+          title,
+          message,
+          type: 'prediction',
+          metadata: {
+            riskLevel,
+            riskScore,
+            latitude,
+            longitude,
+            companyLocationId,
+            predictionId: prediction.id
+          }
+        });
+      } else {
+        console.log(`[PUSH NOTIFICATION] No push tokens available for ${mobileUserIds.length} mobile user(s). They may need to register their device tokens.`);
+      }
+    } else {
+      console.log(`[NOTIFICATION] No mobile users found, skipping push notification lookup`);
     }
 
     console.log(`[NOTIFICATION] Sent prediction notification to ${allUserIds.length} users (${mobileUsers.length} mobile, ${adminUsers.length} admin, ${pushTokens.length} push notifications)`);
@@ -602,28 +613,35 @@ async function notifyDailyPrediction(userId, companyId, prediction) {
     });
 
     // Send push notification
-    console.log(`[NOTIFICATION] Attempting to fetch push tokens for user ${userId}`);
-    const pushTokens = await getPushTokensForUsers([userId]);
-    if (pushTokens.length > 0) {
-      console.log(`[PUSH NOTIFICATION] Sending daily recommendation to ${pushTokens.length} device(s) for user ${userId}`);
-      await sendPushNotification(pushTokens, {
-        title,
-        message,
-        type: 'daily_prediction',
-        metadata: {
-          riskLevel,
-          riskScore,
-          latitude,
-          longitude,
-          timestamp: new Date().toISOString(),
-          recommendations: recommendationMessage.recommendations || []
-        }
-      });
+    let pushTokensCount = 0;
+    if (!userId) {
+      console.log(`[NOTIFICATION] No userId provided for daily prediction notification, skipping push notification`);
     } else {
-      console.log(`[PUSH NOTIFICATION] No push tokens available for user ${userId}. User may need to register their device token.`);
+      console.log(`[NOTIFICATION] Attempting to fetch push tokens for user ${userId}`);
+      const pushTokens = await getPushTokensForUsers([userId]);
+      pushTokensCount = pushTokens.length;
+      
+      if (pushTokens.length > 0) {
+        console.log(`[PUSH NOTIFICATION] Sending daily recommendation to ${pushTokens.length} device(s) for user ${userId}`);
+        await sendPushNotification(pushTokens, {
+          title,
+          message,
+          type: 'daily_prediction',
+          metadata: {
+            riskLevel,
+            riskScore,
+            latitude,
+            longitude,
+            timestamp: new Date().toISOString(),
+            recommendations: recommendationMessage.recommendations || []
+          }
+        });
+      } else {
+        console.log(`[PUSH NOTIFICATION] No push tokens available for user ${userId}. User may need to register their device token.`);
+      }
     }
 
-    console.log(`[NOTIFICATION] Sent daily recommendation notification to user ${userId} (${pushTokens.length} push notifications)`);
+    console.log(`[NOTIFICATION] Sent daily recommendation notification to user ${userId || 'unknown'} (${pushTokensCount} push notifications)`);
   } catch (error) {
     console.error('[NOTIFICATION ERROR] Failed to notify daily prediction:', error);
   }
