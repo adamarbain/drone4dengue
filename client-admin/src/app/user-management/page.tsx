@@ -106,12 +106,7 @@ export default function UserManagementPage() {
 
   const resetNewUser = () => {
     setNewUser({
-      name: "",
       email: "",
-      password: "",
-      confirmPassword: "",
-      phone: "",
-      address: "",
       role: "user",
       companyId: companyId ?? "",
     })
@@ -119,18 +114,12 @@ export default function UserManagementPage() {
   }
 
   const [newUser, setNewUser] = useState<any>({
-    name: "",
     email: "",
-    password: "",
-    confirmPassword: "",
-    phone: "",
-    address: "",
     role: "user",
     companyId: companyId ?? "",
   })
 
   const isEmailValid = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-  const isPasswordValid = (value: string) => /^(?=.*\d).{8,}$/.test(value);
   const [updating, setUpdating] = useState(false)
   const [updateUser, setUpdateUser] = useState<any>(null)
 
@@ -203,35 +192,24 @@ export default function UserManagementPage() {
     }
   }, [companyId])
 
-  // Create user
+  // Create user - Admin only needs to provide email and role
+  // Password is auto-generated and sent to user's email
   const handleCreateUser = async () => {
     setError(null)
 
-    // Validation
+    // Validation - only email is required from admin
     if (!isEmailValid(newUser.email)) {
       setError("Please enter a valid email address")
-      return
-    }
-    if (!isPasswordValid(newUser.password)) {
-      setError("Password must be at least 8 characters and include a number")
-      return
-    }
-    if (newUser.password !== newUser.confirmPassword) {
-      setError("The passwords do not match.")
       return
     }
 
     setCreating(true)
     try {
-      const res = await fetch(`${API_URL}/users`, {
+      const res = await fetch(`${API_URL}/users/invite`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({
-          name: newUser.name,
           email: newUser.email,
-          password: newUser.password,
-          phone: newUser.phone,
-          address: newUser.address,
           role: newUser.role,
           companyId: newUser.companyId,
         }),
@@ -241,11 +219,16 @@ export default function UserManagementPage() {
         if (res.status === 400 && errData.error?.includes("already registered")) {
           throw new Error("Email already registered")
         }
+        if (res.status === 409) {
+          throw new Error("Email already registered")
+        }
         throw new Error(errData.error || "Failed to create user")
       }
       resetNewUser()
       setCreating(false)
       setOpenModalCreateUser(false)
+      setSuccessDialogMessage("User created successfully! Login credentials have been sent to the user's email. They will need to verify their email address on first login.")
+      setShowSuccessDialog(true)
       fetchUsers()
       fetchSummary()
     } catch (err: any) {
@@ -342,26 +325,6 @@ export default function UserManagementPage() {
     } catch (err: any) {
       setError(err.message)
       setUpdating(false)
-    }
-  }
-
-  // Update user permission (role)
-  const handleUpdatePermission = async (id: string, role: string) => {
-    setError(null)
-    try {
-      const res = await fetch(`${API_URL}/users/${id}/permissions`, {
-        method: "PUT",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ role }),
-      })
-      if (!res.ok) {
-        const errData = await res.json()
-        throw new Error(errData.error || "Failed to update permission")
-      }
-      fetchUsers()
-      fetchSummary()
-    } catch (err: any) {
-      setError(err.message)
     }
   }
 
@@ -736,12 +699,6 @@ export default function UserManagementPage() {
                         >
                           {user.role}
                         </span>
-                        <button
-                          className="ml-2 text-xs underline text-blue-600"
-                          onClick={() => handleUpdatePermission(user.id, user.role === "admin" ? "user" : "admin")}
-                        >
-                          Set as {user.role === "admin" ? "User" : "Admin"}
-                        </button>
                       </td>
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-2">
@@ -841,27 +798,27 @@ export default function UserManagementPage() {
                     </div>
                   )}
 
-                  <div className="space-y-4">
-                    {/* Name Field */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiUser className="text-[#1D4ED8]" size={16} />
-                        Full Name
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Enter full name"
-                        value={newUser.name}
-                        onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent transition-all"
-                      />
+                  {/* Info Banner */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <FiMail className="text-blue-600 mt-0.5" size={18} />
+                      <div className="text-sm text-blue-800">
+                        <p className="font-medium mb-1">How it works:</p>
+                        <ul className="list-disc list-inside space-y-1 text-blue-700">
+                          <li>A password will be auto-generated for the new user</li>
+                          <li>Login credentials will be sent to the user's email</li>
+                          <li>User will need to verify their email address on first login</li>
+                        </ul>
+                      </div>
                     </div>
+                  </div>
 
+                  <div className="space-y-4">
                     {/* Email Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                         <FiMail className="text-[#1D4ED8]" size={16} />
-                        Email Address
+                        Email Address <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="email"
@@ -872,41 +829,11 @@ export default function UserManagementPage() {
                       />
                     </div>
 
-                    {/* Phone Field */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiPhone className="text-[#1D4ED8]" size={16} />
-                        Phone Number
-                      </label>
-                      <input
-                        type="tel"
-                        placeholder="Enter phone number"
-                        value={newUser.phone}
-                        onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent transition-all"
-                      />
-                    </div>
-
-                    {/* Address Field */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiMapPin className="text-[#1D4ED8]" size={16} />
-                        Address
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Enter address"
-                        value={newUser.address}
-                        onChange={(e) => setNewUser({ ...newUser, address: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent transition-all"
-                      />
-                    </div>
-
                     {/* Role Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                         <FiShield className="text-[#1D4ED8]" size={16} />
-                        Role
+                        Role <span className="text-red-500">*</span>
                       </label>
                       <select
                         value={newUser.role}
@@ -918,37 +845,7 @@ export default function UserManagementPage() {
                       </select>
                     </div>
 
-                    {/* Password Field */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiShield className="text-[#1D4ED8]" size={16} />
-                        Password
-                      </label>
-                      <input
-                        type="password"
-                        placeholder="Enter password"
-                        value={newUser.password}
-                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent transition-all"
-                      />
-                    </div>
-
-                    {/* Confirm Password Field */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiShield className="text-[#1D4ED8]" size={16} />
-                        Confirm Password
-                      </label>
-                      <input
-                        type="password"
-                        placeholder="Confirm password"
-                        value={newUser.confirmPassword}
-                        onChange={(e) => setNewUser({ ...newUser, confirmPassword: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent transition-all"
-                      />
-                    </div>
-
-                    {/* Company Field - Note: This will be automatically set to current user's company */}
+                    {/* Company Field - Read Only */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                         <FiShield className="text-[#1D4ED8]" size={16} />
@@ -974,18 +871,18 @@ export default function UserManagementPage() {
                   </button>
                     <button
                       onClick={handleCreateUser}
-                      disabled={creating || !newUser.name || !newUser.email || !newUser.password || !newUser.confirmPassword}
+                      disabled={creating || !newUser.email}
                       className="flex-1 px-4 py-3 bg-[#1D4ED8] text-white rounded-lg hover:bg-[#1E3A8A] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                     {creating ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        Creating...
+                        Creating & Sending Email...
                       </>
                     ) : (
                       <>
                         <FiSave size={16} />
-                        Create User
+                        Create User & Send Invite
                       </>
                     )}
                   </button>
@@ -1075,19 +972,16 @@ export default function UserManagementPage() {
                       />
                     </div>
 
-                    {/* Email Field */}
+                    {/* Email Field - Read Only */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                         <FiMail className="text-[#1D4ED8]" size={16} />
                         Email Address
+                        <span className="text-xs text-gray-400">(cannot be changed)</span>
                       </label>
-                      <input
-                        type="email"
-                        placeholder="Enter email address"
-                        value={updateUser.email}
-                        onChange={(e) => setUpdateUser({ ...updateUser, email: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent transition-all"
-                      />
+                      <div className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
+                        {updateUser.email}
+                      </div>
                     </div>
 
                     {/* Phone Field */}
@@ -1120,20 +1014,16 @@ export default function UserManagementPage() {
                       />
                     </div>
 
-                    {/* Role Field */}
+                    {/* Role Field - Read Only */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                         <FiShield className="text-[#1D4ED8]" size={16} />
                         Role
+                        <span className="text-xs text-gray-400">(cannot be changed)</span>
                       </label>
-                      <select
-                        value={updateUser.role || "user"}
-                        onChange={(e) => setUpdateUser({ ...updateUser, role: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent transition-all"
-                      >
-                        <option value="user">User</option>
-                        <option value="admin">Admin</option>
-                      </select>
+                      <div className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-600 capitalize">
+                        {updateUser.role || "user"}
+                      </div>
                     </div>
 
 

@@ -18,6 +18,9 @@ router.get('/', checkToken, userController.getAllUsers);
 // POST /users
 router.post('/', checkToken, userController.createUser);
 
+// POST /users/invite - Admin invites a new user (auto-generates password and sends email)
+router.post('/invite', checkToken, userController.inviteUser);
+
 // DELETE /users/:id
 router.delete('/:id', checkToken, userController.deleteUser);
 

@@ -499,4 +499,251 @@ exports.verifyOtp = async (req, res) => {
     logger.error('[VERIFY OTP ERROR]', { error: err.message, stack: err.stack, email });
     return sendInternalError(res, 'Failed to verify OTP', err);
   }
+};
+
+// --- PHONE OTP VERIFICATION (SMS via Twilio) ---
+
+// POST /auth/send/phone-otp
+exports.sendPhoneOtp = async (req, res) => {
+  const { phone } = req.body;
+  if (!phone) return sendValidationError(res, ['Phone number is required']);
+  
+  // Validate phone number format (basic validation)
+  const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+  if (!phoneRegex.test(phone.replace(/[\s-]/g, ''))) {
+    return sendValidationError(res, ['Please provide a valid phone number with country code (e.g., +60123456789)']);
+  }
+
+  try {
+    // Find user by phone number
+    const user = await prisma.user.findFirst({ where: { phone } });
+    if (!user) return sendNotFoundError(res, 'User with this phone number');
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
+
+    // Store OTP in database
+    await prisma.user.update({ 
+      where: { id: user.id }, 
+      data: { otpCode: otp, otpExpiry: expiry } 
+    });
+
+    // Send OTP via SMS using Twilio
+    if (!twilio_phone_number || !process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+      console.error('[SEND PHONE OTP ERROR] Twilio not configured');
+      return sendErrorResponse(res, 503, 'SMS service not configured. Please contact support.', 'SERVICE_UNAVAILABLE');
+    }
+
+    try {
+      await twilioClient.messages.create({
+        body: `Your DengueEye verification code is: ${otp}. This code expires in 10 minutes.`,
+        from: twilio_phone_number,
+        to: phone
+      });
+      console.log(`[SEND PHONE OTP SUCCESS] OTP sent to ${phone}`);
+      res.json({ message: 'OTP sent to your phone number.' });
+    } catch (smsErr) {
+      console.error('[SEND PHONE OTP ERROR] Twilio error:', smsErr.message);
+      logger.error('[SEND PHONE OTP ERROR]', { error: smsErr.message, phone });
+      
+      if (smsErr.code === 21211 || smsErr.code === 21614) {
+        return sendValidationError(res, ['Invalid phone number format. Please include country code (e.g., +60123456789)']);
+      } else if (smsErr.code === 21608) {
+        return sendErrorResponse(res, 503, 'SMS service is not available for this region.', 'SERVICE_UNAVAILABLE');
+      } else {
+        return sendErrorResponse(res, 503, 'Failed to send SMS. Please try again later.', 'SERVICE_UNAVAILABLE');
+      }
+    }
+  } catch (err) {
+    logger.error('[SEND PHONE OTP ERROR]', { error: err.message, stack: err.stack, phone });
+    return sendInternalError(res, 'Failed to send OTP', err);
+  }
+};
+
+// POST /auth/verify/phone-otp
+exports.verifyPhoneOtp = async (req, res) => {
+  const { phone, otp } = req.body;
+  if (!phone || !otp) return sendValidationError(res, ['Phone number and OTP are required']);
+  
+  try {
+    const user = await prisma.user.findFirst({ where: { phone } });
+    if (!user) return sendNotFoundError(res, 'User with this phone number');
+    
+    if (!user.otpCode || !user.otpExpiry) {
+      return sendValidationError(res, ['OTP not requested or expired']);
+    }
+    if (user.otpCode !== otp) {
+      return sendValidationError(res, ['Invalid OTP']);
+    }
+    if (new Date() > user.otpExpiry) {
+      return sendValidationError(res, ['OTP expired']);
+    }
+
+    // Mark user as Verified and clear OTP fields
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { status: 'Verified', otpCode: null, otpExpiry: null },
+    });
+
+    console.log(`[VERIFY PHONE OTP SUCCESS] User verified: ${user.email}`);
+    res.json({ message: 'Phone number verified successfully. Your account is now verified.' });
+  } catch (err) {
+    logger.error('[VERIFY PHONE OTP ERROR]', { error: err.message, stack: err.stack, phone });
+    return sendInternalError(res, 'Failed to verify OTP', err);
+  }
+};
+
+// POST /auth/update-phone - Update phone number and send OTP for verification
+exports.updatePhoneAndSendOtp = async (req, res) => {
+  const { newPhone, userId } = req.body;
+  if (!newPhone) return sendValidationError(res, ['New phone number is required']);
+  
+  // Validate phone number format
+  const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+  if (!phoneRegex.test(newPhone.replace(/[\s-]/g, ''))) {
+    return sendValidationError(res, ['Please provide a valid phone number with country code (e.g., +60123456789)']);
+  }
+
+  try {
+    // Get user from token or userId
+    const targetUserId = userId || req.userId;
+    if (!targetUserId) return sendValidationError(res, ['User ID is required']);
+
+    const user = await prisma.user.findUnique({ where: { id: targetUserId } });
+    if (!user) return sendNotFoundError(res, 'User');
+
+    // Check if phone number is already in use by another user
+    const existingUser = await prisma.user.findFirst({ 
+      where: { 
+        phone: newPhone,
+        id: { not: targetUserId }
+      } 
+    });
+    if (existingUser) {
+      return sendConflictError(res, 'This phone number is already registered to another account');
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
+
+    // Store OTP and pending phone number
+    await prisma.user.update({ 
+      where: { id: targetUserId }, 
+      data: { 
+        otpCode: otp, 
+        otpExpiry: expiry,
+        // Store the new phone temporarily - we'll update it after verification
+      } 
+    });
+
+    // Send OTP via SMS
+    if (!twilio_phone_number || !process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+      console.error('[UPDATE PHONE OTP ERROR] Twilio not configured');
+      return sendErrorResponse(res, 503, 'SMS service not configured. Please contact support.', 'SERVICE_UNAVAILABLE');
+    }
+
+    try {
+      await twilioClient.messages.create({
+        body: `Your DengueEye verification code is: ${otp}. This code expires in 10 minutes.`,
+        from: twilio_phone_number,
+        to: newPhone
+      });
+      console.log(`[UPDATE PHONE OTP SUCCESS] OTP sent to ${newPhone}`);
+      res.json({ message: 'OTP sent to your new phone number.' });
+    } catch (smsErr) {
+      console.error('[UPDATE PHONE OTP ERROR] Twilio error:', smsErr.message);
+      if (smsErr.code === 21211 || smsErr.code === 21614) {
+        return sendValidationError(res, ['Invalid phone number format. Please include country code (e.g., +60123456789)']);
+      }
+      return sendErrorResponse(res, 503, 'Failed to send SMS. Please try again later.', 'SERVICE_UNAVAILABLE');
+    }
+  } catch (err) {
+    logger.error('[UPDATE PHONE OTP ERROR]', { error: err.message, stack: err.stack });
+    return sendInternalError(res, 'Failed to send OTP', err);
+  }
+};
+
+// POST /auth/verify-phone-update - Verify OTP and update phone number
+exports.verifyPhoneUpdate = async (req, res) => {
+  const { newPhone, otp, userId } = req.body;
+  if (!newPhone || !otp) return sendValidationError(res, ['Phone number and OTP are required']);
+  
+  try {
+    const targetUserId = userId || req.userId;
+    if (!targetUserId) return sendValidationError(res, ['User ID is required']);
+
+    const user = await prisma.user.findUnique({ where: { id: targetUserId } });
+    if (!user) return sendNotFoundError(res, 'User');
+    
+    if (!user.otpCode || !user.otpExpiry) {
+      return sendValidationError(res, ['OTP not requested or expired']);
+    }
+    if (user.otpCode !== otp) {
+      return sendValidationError(res, ['Invalid OTP']);
+    }
+    if (new Date() > user.otpExpiry) {
+      return sendValidationError(res, ['OTP expired']);
+    }
+
+    // Update phone number and mark as verified
+    await prisma.user.update({
+      where: { id: targetUserId },
+      data: { 
+        phone: newPhone,
+        status: 'Verified', 
+        otpCode: null, 
+        otpExpiry: null 
+      },
+    });
+
+    console.log(`[VERIFY PHONE UPDATE SUCCESS] Phone updated for user: ${user.email}`);
+    res.json({ message: 'Phone number updated and verified successfully.' });
+  } catch (err) {
+    logger.error('[VERIFY PHONE UPDATE ERROR]', { error: err.message, stack: err.stack });
+    return sendInternalError(res, 'Failed to verify OTP', err);
+  }
+};
+
+// POST /auth/change-password - Change password for authenticated user
+exports.changePassword = async (req, res) => {
+  const { currentPassword, newPassword, userId } = req.body;
+  if (!currentPassword || !newPassword) {
+    return sendValidationError(res, ['Current password and new password are required']);
+  }
+
+  if (newPassword.length < 6) {
+    return sendValidationError(res, ['New password must be at least 6 characters']);
+  }
+
+  try {
+    // Get userId from token (req.user.userId) or from body
+    const targetUserId = userId || req.user?.userId;
+    if (!targetUserId) return sendValidationError(res, ['User ID is required']);
+
+    const user = await prisma.user.findUnique({ where: { id: targetUserId } });
+    if (!user) return sendNotFoundError(res, 'User');
+
+    // Verify current password
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isValid) {
+      return sendValidationError(res, ['Current password is incorrect']);
+    }
+
+    // Hash new password
+    const hash = await bcrypt.hash(newPassword, 10);
+    
+    // Update password
+    await prisma.user.update({
+      where: { id: targetUserId },
+      data: { password: hash }
+    });
+
+    console.log(`[CHANGE PASSWORD SUCCESS] Password changed for user: ${user.email}`);
+    res.json({ message: 'Password changed successfully.' });
+  } catch (err) {
+    logger.error('[CHANGE PASSWORD ERROR]', { error: err.message, stack: err.stack });
+    return sendInternalError(res, 'Failed to change password', err);
+  }
 }; 

@@ -12,6 +12,7 @@ export default function EditProfilePage() {
     const [name, setName] = useState('');
     const [username, setUsername] = useState('');
     const [phone, setPhone] = useState('');
+    const [address, setAddress] = useState('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [modal, setModal] = useState<{ visible: boolean; type: 'success' | 'error'; message: string }>({
@@ -23,18 +24,29 @@ export default function EditProfilePage() {
     useEffect(() => {
         fetchCurrentUser()
             .then(user => {
-                setName(user.name);
-                setUsername(user.username);
-                setPhone(user.phone);
+                setName(user.name || '');
+                setUsername(user.username || '');
+                setPhone(user.phone || '');
+                setAddress(user.address || '');
             })
             .catch(() => router.replace('/(auth)/login'))
             .finally(() => setLoading(false));
     }, []);
 
     const handleSave = async () => {
+        // Validation
+        if (!name.trim()) {
+            setModal({ visible: true, type: 'error', message: 'Full name is required' });
+            return;
+        }
+        if (!username.trim()) {
+            setModal({ visible: true, type: 'error', message: 'Username is required' });
+            return;
+        }
+
         setSaving(true);
         try {
-            await updateUserProfile({ name, username, phone });
+            await updateUserProfile({ name, username, phone, address });
             setModal({ visible: true, type: 'success', message: 'Profile updated successfully!' });
         } catch (err) {
             const message = (err instanceof Error) ? err.message : 'Failed to update profile';
@@ -60,9 +72,14 @@ export default function EditProfilePage() {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Header */}
-                <View className="px-6 pt-6 pb-4">
-                    <Text className="text-4xl font-extrabold text-[#181D27] mb-2" style={{ fontFamily: 'SF Pro' }}>
-                        Edit Profile
+                <View className="px-6 pt-6 pb-4 ml-4">
+                    <View className="flex-row items-center mb-2">
+                        <Text className="text-3xl font-extrabold text-[#181D27]" style={{ fontFamily: 'SF Pro' }}>
+                            Edit Profile
+                        </Text>
+                    </View>
+                    <Text className="text-sm text-gray-500">
+                        Update your personal information
                     </Text>
                 </View>
 
@@ -85,7 +102,9 @@ export default function EditProfilePage() {
                 >
                     {/* Full Name */}
                     <View className="mb-5">
-                        <Text className="text-sm font-semibold text-gray-700 mb-2">Full Name</Text>
+                        <Text className="text-sm font-semibold text-gray-700 mb-2">
+                            Full Name <Text className="text-red-500">*</Text>
+                        </Text>
                         <View className="flex-row items-center bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
                             <Ionicons name="person-outline" size={20} color="#1D4ED8" style={{ marginRight: 12 }} />
                             <TextInput
@@ -102,7 +121,9 @@ export default function EditProfilePage() {
 
                     {/* Username */}
                     <View className="mb-5">
-                        <Text className="text-sm font-semibold text-gray-700 mb-2">Username</Text>
+                        <Text className="text-sm font-semibold text-gray-700 mb-2">
+                            Username <Text className="text-red-500">*</Text>
+                        </Text>
                         <View className="flex-row items-center bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
                             <Ionicons name="at-outline" size={20} color="#1D4ED8" style={{ marginRight: 12 }} />
                             <TextInput
@@ -118,7 +139,7 @@ export default function EditProfilePage() {
                     </View>
 
                     {/* Phone Number */}
-                    <View className="mb-6">
+                    <View className="mb-5">
                         <Text className="text-sm font-semibold text-gray-700 mb-2">Phone Number</Text>
                         <View className="flex-row items-center bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
                             <Ionicons name="call-outline" size={20} color="#1D4ED8" style={{ marginRight: 12 }} />
@@ -131,6 +152,35 @@ export default function EditProfilePage() {
                                 keyboardType="phone-pad"
                                 style={{ color: '#181D27' }}
                             />
+                        </View>
+                    </View>
+
+                    {/* Address */}
+                    <View className="mb-6">
+                        <Text className="text-sm font-semibold text-gray-700 mb-2">Address</Text>
+                        <View className="flex-row items-start bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
+                            <Ionicons name="location-outline" size={20} color="#1D4ED8" style={{ marginRight: 12, marginTop: 2 }} />
+                            <TextInput
+                                className="flex-1 text-base"
+                                placeholder="Enter your address"
+                                placeholderTextColor="#9CA3AF"
+                                value={address}
+                                onChangeText={setAddress}
+                                multiline
+                                numberOfLines={3}
+                                textAlignVertical="top"
+                                style={{ color: '#181D27', minHeight: 60 }}
+                            />
+                        </View>
+                    </View>
+
+                    {/* Info Note */}
+                    <View className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-100">
+                        <View className="flex-row items-start">
+                            <Ionicons name="information-circle-outline" size={20} color="#1D4ED8" style={{ marginTop: 1 }} />
+                            <Text className="ml-2 text-xs text-blue-700 flex-1">
+                                To change your password, please use the dedicated option in your profile settings.
+                            </Text>
                         </View>
                     </View>
 
@@ -174,4 +224,4 @@ export default function EditProfilePage() {
             <BottomNav />
         </SafeAreaView>
     );
-} 
+}
