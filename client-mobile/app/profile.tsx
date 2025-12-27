@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, Image, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNav from './components/BottomNav';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -91,6 +91,25 @@ export default function ProfilePage() {
     }, [isInitialLoad, handleLogout])
   );
 
+  const formatPhoneDisplay = (phone: string | null | undefined) => {
+    if (!phone) return 'Not set';
+    // Mask middle digits for privacy
+    if (phone.length > 6) {
+      return phone.slice(0, 4) + '****' + phone.slice(-4);
+    }
+    return phone;
+  };
+
+  const formatEmailDisplay = (email: string | null | undefined) => {
+    if (!email) return 'Not set';
+    // Mask part of email for privacy
+    const [localPart, domain] = email.split('@');
+    if (localPart && domain && localPart.length > 2) {
+      return localPart.slice(0, 2) + '***@' + domain;
+    }
+    return email;
+  };
+
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-[#F8F8F8] items-center justify-center">
@@ -101,100 +120,123 @@ export default function ProfilePage() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#F8F8F8]">
-      {/* Header */}
-      <View className="px-6 pt-10 pb-2">
-        <Text className="text-4xl font-extrabold text-[#181D27] mb-1" style={{ fontFamily: 'SF Pro' }}>
-          Profile
-        </Text>
-        <Text className="text-sm text-gray-600 mb-4">
-          Manage your account settings and personal information
-        </Text>
-        <Text className="text-base text-[#1D4ED8] font-semibold mb-2">Welcome back, {user?.username || ''}!</Text>
-      </View>
-
-     {/* User Card */}
-     <View className="mx-6 bg-[#1D4ED8] rounded-2xl shadow-lg flex-row items-center p-4 mb-6">
-        <View className="w-16 h-16 rounded-full overflow-hidden border-4 border-white mr-4">
-          <Image source={require('../assets/profile-user-image.png')} className="w-full h-full" resizeMode="cover" />
+      <ScrollView 
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View className="px-6 pt-10 pb-2">
+          <Text className="text-4xl font-extrabold text-[#181D27] mb-1" style={{ fontFamily: 'SF Pro' }}>
+            Profile
+          </Text>
+          <Text className="text-sm text-gray-600 mb-4">
+            Manage your account settings and personal information
+          </Text>
+          <Text className="text-base text-[#1D4ED8] font-semibold mb-2">Welcome back, {user?.username || ''}!</Text>
         </View>
-        <View className="flex-1">
-          <Text className="text-lg font-bold text-white" style={{ fontFamily: 'SF Pro' }}>{user?.name || ''}</Text>
-          <Text className="text-xs text-[#D7D7D7]" style={{ fontFamily: 'SF Pro' }}>@{user?.username || ''}</Text>
-          <View className="flex-row items-center mt-1">
-            {user?.status === 'Verified' ? (
-              <View className="flex-row items-center bg-green-500/20 px-2 py-1 rounded-full">
-                <Ionicons name="checkmark-circle" size={14} color="#4ADE80" />
-                <Text className="text-xs text-[#4ADE80] font-semibold ml-1" style={{ fontFamily: 'SF Pro' }}>Verified</Text>
-              </View>
-            ) : (
-              <View className="flex-row items-center bg-yellow-500/20 px-2 py-1 rounded-full">
-                <Ionicons name="time-outline" size={14} color="#FBBF24" />
-                <Text className="text-xs text-[#FBBF24] font-semibold ml-1" style={{ fontFamily: 'SF Pro' }}>Pending</Text>
-              </View>
-            )}
-          </View>
-        </View>
-        <TouchableOpacity
-          onPress={handleLogout}
-          className="ml-2 flex-row items-center px-3 h-10 rounded-full bg-white"
-          style={{ shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }}
-        >
-          <Ionicons name="log-out-outline" size={22} color="#1D4ED8" />
-          <Text className="ml-2 text-[#1D4ED8] font-bold text-sm">Log Out</Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* Profile Options */}
-      <View className="mx-6 space-y-5">
-        {/* My Account */}
-        <TouchableOpacity onPress={() => router.push('/edit-profile')} className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4">
-          <View className="w-12 h-12 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-4">
-            <Ionicons name="person-outline" size={26} color="#1D4ED8" />
+        {/* User Card */}
+        <View className="mx-6 bg-[#1D4ED8] rounded-2xl shadow-lg flex-row items-center p-4 mb-6">
+          <View className="w-16 h-16 rounded-full overflow-hidden border-4 border-white mr-4">
+            <Image source={require('../assets/profile-user-image.png')} className="w-full h-full" resizeMode="cover" />
           </View>
           <View className="flex-1">
-            <Text className="text-lg font-semibold text-[#181D27]">My Account</Text>
-            <Text className="text-xs text-[#ABABAB]">Make changes to your account</Text>
+            <Text className="text-lg font-bold text-white" style={{ fontFamily: 'SF Pro' }}>{user?.name || ''}</Text>
+            <Text className="text-xs text-[#D7D7D7]" style={{ fontFamily: 'SF Pro' }}>@{user?.username || ''}</Text>
+            <View className="flex-row items-center mt-1">
+              {user?.status === 'Verified' ? (
+                <View className="flex-row items-center bg-green-500/20 px-2 py-1 rounded-full">
+                  <Ionicons name="checkmark-circle" size={14} color="#4ADE80" />
+                  <Text className="text-xs text-[#4ADE80] font-semibold ml-1" style={{ fontFamily: 'SF Pro' }}>Verified</Text>
+                </View>
+              ) : (
+                <View className="flex-row items-center bg-yellow-500/20 px-2 py-1 rounded-full">
+                  <Ionicons name="time-outline" size={14} color="#FBBF24" />
+                  <Text className="text-xs text-[#FBBF24] font-semibold ml-1" style={{ fontFamily: 'SF Pro' }}>Pending</Text>
+                </View>
+              )}
+            </View>
           </View>
-        </TouchableOpacity>
-        {/* Organisation Details */}
-        <View className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4">
-          <View className="w-12 h-12 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-4">
-            <Ionicons name="shield-checkmark-outline" size={26} color="#1D4ED8" />
-          </View>
-          <View className="flex-1">
-            <Text className="text-lg font-semibold text-[#181D27]">Organisation Details</Text>
-            <Text className="text-xs text-[#ABABAB]">View details about your organisation</Text>
-          </View>
-        </View>
-        {/* Verify Account */}
-        {user?.status !== 'Verified' && (
           <TouchableOpacity
-            onPress={() => router.push('/verify-otp')}
-            className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4"
+            onPress={handleLogout}
+            className="ml-2 flex-row items-center px-3 h-10 rounded-full bg-white"
+            style={{ shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }}
           >
+            <Ionicons name="log-out-outline" size={22} color="#1D4ED8" />
+            <Text className="ml-2 text-[#1D4ED8] font-bold text-sm">Log Out</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Profile Options */}
+        <View className="mx-6 space-y-5">
+
+          {/* Verify Account - Email OTP */}
+          {user?.status !== 'Verified' && (
+            <TouchableOpacity
+              onPress={() => router.push('/verify-otp')}
+              className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4 border-2 border-yellow-400"
+            >
+              <View className="w-12 h-12 rounded-full bg-yellow-100 items-center justify-center mr-4">
+                <Ionicons name="mail-outline" size={26} color="#F59E0B" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-lg font-semibold text-[#181D27]">Verify Account</Text>
+                <Text className="text-xs text-[#ABABAB]">Verify your email address via OTP</Text>
+              </View>
+              <View className="bg-yellow-100 px-2 py-1 rounded-full">
+                <Text className="text-xs text-yellow-700 font-semibold">Required</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+
+          {/* My Account */}
+          <TouchableOpacity onPress={() => router.push('/edit-profile')} className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4">
             <View className="w-12 h-12 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-4">
-              <Ionicons name="keypad-outline" size={26} color="#1D4ED8" />
+              <Ionicons name="person-outline" size={26} color="#1D4ED8" />
             </View>
             <View className="flex-1">
-              <Text className="text-lg font-semibold text-[#181D27]">Verify Account</Text>
-              <Text className="text-xs text-[#ABABAB]">Verify your phone number via Email OTP</Text>
+              <Text className="text-lg font-semibold text-[#181D27]">My Account</Text>
+              <Text className="text-xs text-[#ABABAB]">Update name, username, and address</Text>
             </View>
+            <Ionicons name="chevron-forward" size={20} color="#ABABAB" />
           </TouchableOpacity>
-        )}
-        {/* About App */}
-        <View className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4">
-          <View className="w-12 h-12 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-4">
-            <Ionicons name="information-circle-outline" size={26} color="#1D4ED8" />
+
+          {/* Change Password */}
+          <TouchableOpacity onPress={() => router.push('/change-password')} className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4">
+            <View className="w-12 h-12 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-4">
+              <Ionicons name="lock-closed-outline" size={26} color="#1D4ED8" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-lg font-semibold text-[#181D27]">Change Password</Text>
+              <Text className="text-xs text-[#ABABAB]">Update your account password</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#ABABAB" />
+          </TouchableOpacity>
+
+          {/* Organisation Details */}
+          <View className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4">
+            <View className="w-12 h-12 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-4">
+              <Ionicons name="shield-checkmark-outline" size={26} color="#1D4ED8" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-lg font-semibold text-[#181D27]">Organisation Details</Text>
+              <Text className="text-xs text-[#ABABAB]">View details about your organisation</Text>
+            </View>
           </View>
-          <View className="flex-1">
-            <Text className="text-lg font-semibold text-[#181D27]">About App</Text>
-            <Text className="text-xs text-[#ABABAB]">Learn more about DengueEye</Text>
+
+          {/* About App */}
+          <View className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4">
+            <View className="w-12 h-12 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-4">
+              <Ionicons name="information-circle-outline" size={26} color="#1D4ED8" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-lg font-semibold text-[#181D27]">About App</Text>
+              <Text className="text-xs text-[#ABABAB]">Learn more about DengueEye</Text>
+            </View>
           </View>
         </View>
-      </View>
-
-      {/* Spacer */}
-      <View className="flex-1" />
+      </ScrollView>
 
       {/* Bottom Navigation */}
       <BottomNav />

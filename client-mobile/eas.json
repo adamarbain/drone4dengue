@@ -21,10 +21,19 @@
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://server-api-772509861122.us-central1.run.app"
+      },
+      "ios": {
+        "resourceClass": "m-medium"
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "adamarbain2107@icloud.com",
+        "ascAppId": "6757015797",
+        "appleTeamId": "VLZUCTZK97"
+      }
+    }
   }
 }

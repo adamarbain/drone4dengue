@@ -1,5 +1,6 @@
 const prisma = require('../prisma/client');
 const bcrypt = require('bcrypt');
+const nodemailer = require('nodemailer');
 const logger = require('../utils/logger');
 const {
   sendErrorResponse,
@@ -8,7 +9,124 @@ const {
   sendConflictError,
   sendInternalError
 } = require('../utils/errorResponse');
+const { createNotification } = require('../services/notificationService');
 const SALT_ROUNDS = 10;
+
+// Email configuration
+const email_sender_email = process.env.SENDER_EMAIL;
+const email_sender_password = process.env.SENDER_EMAIL_PW;
+
+// SMTP configurations for email sending
+const getEmailConfigs = () => [
+  {
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: email_sender_email,
+      pass: email_sender_password,
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 5000,
+    socketTimeout: 10000,
+    tls: {
+      rejectUnauthorized: false,
+      ciphers: 'SSLv3'
+    },
+    requireTLS: true,
+  },
+  {
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: {
+      user: email_sender_email,
+      pass: email_sender_password,
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 5000,
+    socketTimeout: 10000,
+    tls: {
+      rejectUnauthorized: false,
+    },
+  },
+];
+
+// Helper function to send email with retry logic
+const sendEmailWithRetry = async (mailOptions, maxRetries = 3) => {
+  let lastError;
+  const configs = getEmailConfigs();
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    for (let configIndex = 0; configIndex < configs.length; configIndex++) {
+      let transporter = null;
+      try {
+        transporter = nodemailer.createTransport(configs[configIndex]);
+        console.log(`[EMAIL] Attempt ${attempt}/${maxRetries} using config ${configIndex + 1} (port ${configs[configIndex].port})`);
+        
+        const sendPromise = transporter.sendMail(mailOptions);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Send timeout')), 20000)
+        );
+        
+        const info = await Promise.race([sendPromise, timeoutPromise]);
+        console.log(`[EMAIL] Email sent successfully:`, info.messageId || 'messageId not available');
+        
+        if (transporter && transporter.close) {
+          transporter.close();
+        }
+        return info;
+      } catch (err) {
+        lastError = err;
+        console.error(`[EMAIL] Config ${configIndex + 1} failed:`, {
+          message: err.message,
+          code: err.code
+        });
+        
+        if (transporter && transporter.close) {
+          try { transporter.close(); } catch (closeErr) { }
+        }
+        
+        if (err.code === 'EAUTH' || err.code === 'EENVELOPE') {
+          throw err;
+        }
+      }
+    }
+    
+    if (attempt < maxRetries) {
+      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+      console.log(`[EMAIL] All configs failed. Retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError || new Error('Failed to send email after all retries');
+};
+
+// Generate a random password
+const generateRandomPassword = (length = 12) => {
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+  const numbers = '0123456789';
+  const special = '!@#$%^&*';
+  
+  const allChars = uppercase + lowercase + numbers + special;
+  let password = '';
+  
+  // Ensure at least one of each type
+  password += uppercase[Math.floor(Math.random() * uppercase.length)];
+  password += lowercase[Math.floor(Math.random() * lowercase.length)];
+  password += numbers[Math.floor(Math.random() * numbers.length)];
+  password += special[Math.floor(Math.random() * special.length)];
+  
+  // Fill the rest
+  for (let i = password.length; i < length; i++) {
+    password += allChars[Math.floor(Math.random() * allChars.length)];
+  }
+  
+  // Shuffle the password
+  return password.split('').sort(() => Math.random() - 0.5).join('');
+};
 
 // PATCH /users/:id
 exports.updateProfile = async (req, res) => {
@@ -414,5 +532,189 @@ exports.adminUpdateUserStatus = async (req, res) => {
   } catch (err) {
     logger.error('[UPDATE USER STATUS ERROR]', { error: err.message, stack: err.stack, userId: req.params.id });
     return sendInternalError(res, 'Failed to update user status', err);
+  }
+};
+
+// POST /users/invite
+// Admin invites a new user - password is auto-generated and sent via email
+exports.inviteUser = async (req, res) => {
+  const { email, role, companyId } = req.body;
+
+  // Validate required fields
+  if (!email) {
+    logger.warn('[INVITE USER ERROR] Missing email', { email });
+    return sendValidationError(res, ['Email is required']);
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    logger.warn('[INVITE USER ERROR] Invalid email format', { email });
+    return sendValidationError(res, ['Please provide a valid email address']);
+  }
+
+  try {
+    // Check if email already exists
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      logger.warn('[INVITE USER ERROR] Email already exists', { email });
+      return sendConflictError(res, 'Email already registered');
+    }
+
+    // Get company details
+    const company = await prisma.company.findUnique({
+      where: { id: companyId || req.companyId },
+      select: { id: true, name: true }
+    });
+
+    if (!company) {
+      logger.warn('[INVITE USER ERROR] Company not found', { companyId: companyId || req.companyId });
+      return sendNotFoundError(res, 'Company');
+    }
+
+    // Generate random password
+    const generatedPassword = generateRandomPassword(12);
+    
+    // Hash password
+    const hash = await bcrypt.hash(generatedPassword, 10);
+
+    // Generate a temporary name from email (user will update it later)
+    const tempName = email.split('@')[0];
+
+    // Create new user with status 'Pending' - requires phone verification on first login
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hash,
+        name: tempName,
+        role: role || 'user',
+        status: 'Pending', // User needs to verify phone number on first login
+        companyId: company.id
+      }
+    });
+
+    console.log(`[INVITE USER SUCCESS] New user invited: ${email} for company ${company.name}`);
+
+    // Send welcome email with credentials
+    const mailOptions = {
+      from: email_sender_email,
+      to: email,
+      subject: `Welcome to DengueEye - Your Account Has Been Created`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #1D4ED8, #1E3A8A); padding: 30px; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; text-align: center;">Welcome to DengueEye</h1>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 30px; border: 1px solid #e9ecef; border-radius: 0 0 10px 10px;">
+            <p style="color: #333; font-size: 16px;">Hello,</p>
+            
+            <p style="color: #333; font-size: 16px;">
+              You have been invited to join <strong>${company.name}</strong> on DengueEye. 
+              Below are your login credentials:
+            </p>
+            
+            <div style="background: white; border: 2px solid #1D4ED8; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <p style="margin: 5px 0; color: #333;">
+                <strong>Email:</strong> ${email}
+              </p>
+              <p style="margin: 5px 0; color: #333;">
+                <strong>Password:</strong> <code style="background: #f1f3f5; padding: 2px 8px; border-radius: 4px;">${generatedPassword}</code>
+              </p>
+            </div>
+            
+            <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin: 20px 0;">
+              <p style="color: #856404; margin: 0; font-size: 14px;">
+                <strong>⚠️ Important:</strong> On your first login, you will be required to verify your email address 
+                to complete your account setup.
+              </p>
+            </div>
+            
+            <p style="color: #333; font-size: 16px;">
+              We recommend changing your password after your first login for security purposes.
+            </p>
+            
+            <div style="text-align: center; margin-top: 30px;">
+              <a href="${process.env.MOBILE_APP_URL || process.env.CLIENT_BASE_URL || 'https://drone4dengue.vercel.app/'}" 
+                 style="background: #1D4ED8; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                Login to DengueEye
+              </a>
+            </div>
+            
+            <hr style="border: none; border-top: 1px solid #e9ecef; margin: 30px 0;">
+            
+            <p style="color: #6c757d; font-size: 12px; text-align: center;">
+              If you did not expect this invitation, please ignore this email or contact your administrator.
+            </p>
+          </div>
+        </div>
+      `,
+      text: `
+Welcome to DengueEye!
+
+You have been invited to join ${company.name} on DengueEye.
+
+Your login credentials:
+Email: ${email}
+Password: ${generatedPassword}
+
+IMPORTANT: On your first login, you will be required to verify your email address to complete your account setup.
+
+We recommend changing your password after your first login for security purposes.
+
+If you did not expect this invitation, please ignore this email or contact your administrator.
+      `
+    };
+
+    try {
+      await sendEmailWithRetry(mailOptions, 3);
+      console.log(`[INVITE USER] Welcome email sent to ${email}`);
+    } catch (emailErr) {
+      console.error(`[INVITE USER] Failed to send welcome email to ${email}:`, emailErr.message);
+      // Don't fail the request if email fails - user is still created
+    }
+
+    // Notify admins of the organization about the new user
+    try {
+      const admins = await prisma.user.findMany({
+        where: {
+          companyId: company.id,
+          role: 'admin',
+          id: { not: req.userId } // Exclude the admin who created the user
+        },
+        select: { id: true }
+      });
+
+      if (admins.length > 0) {
+        const adminIds = admins.map(a => a.id);
+        await createNotification({
+          title: 'New User Invited',
+          message: `A new ${role || 'user'} (${email}) has been invited to ${company.name}. They will need to verify their email address on first login.`,
+          type: 'user_invited',
+          companyId: company.id,
+          userIds: adminIds,
+          metadata: {
+            newUserEmail: email,
+            newUserRole: role || 'user',
+            invitedBy: req.userId
+          }
+        });
+        console.log(`[INVITE USER] Notification sent to ${adminIds.length} admin(s)`);
+      }
+    } catch (notifyErr) {
+      console.error(`[INVITE USER] Failed to notify admins:`, notifyErr.message);
+      // Don't fail the request if notification fails
+    }
+
+    // Return user without password
+    const { password: _, ...userWithoutPassword } = user;
+    res.status(201).json({
+      ...userWithoutPassword,
+      message: 'User invited successfully. Login credentials have been sent to their email.'
+    });
+
+  } catch (err) {
+    logger.error('[INVITE USER ERROR]', { error: err.message, stack: err.stack, email });
+    return sendInternalError(res, 'Failed to invite user', err);
   }
 };
