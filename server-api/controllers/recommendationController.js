@@ -13,15 +13,20 @@ exports.getRecommendationsByRisk = async (req, res) => {
   }
   try {
     const recommendations = await prisma.recommendation.findMany({
-      where: { 
-        risk,
-        companyId: req.companyId
+      where: { risk },
+      select: {
+        id: true,
+        risk: true,
+        title: true,
+        details: true,
+        referenceLink: true,
+        createdAt: true
       },
       orderBy: { createdAt: 'asc' }
     });
     res.json(recommendations);
   } catch (err) {
-    logger.error('[GET RECOMMENDATIONS ERROR]', { error: err.message, stack: err.stack, risk, companyId: req.companyId });
+    logger.error('[GET RECOMMENDATIONS ERROR]', { error: err.message, stack: err.stack, risk });
     return sendInternalError(res, 'Failed to fetch recommendations', err);
   }
 };

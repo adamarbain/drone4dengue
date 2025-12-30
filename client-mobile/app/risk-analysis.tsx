@@ -489,8 +489,15 @@ export default function RiskAnalysisPage() {
       >
         {/* White Card Container */}
         <View className="bg-white mx-4 mt-4 mb-4 rounded-3xl" style={{ overflow: 'hidden' }}>
+          {/* Risk Details Title - Above Map */}
+          <View className="px-4 pt-4">
+            <Text className="text-xl font-extrabold text-black mb-3" style={{ fontFamily: 'SF Pro' }}>
+              Risk Details
+            </Text>
+          </View>
+
           {/* Map Section */}
-          <View className="h-48 mx-4 mt-4 rounded-2xl overflow-hidden" style={{ position: 'relative' }}>
+          <View className="h-80 mx-4 rounded-2xl overflow-hidden" style={{ position: 'relative' }}>
             <MapView
               ref={mapRef}
               style={{ width: '100%', height: '100%' }}
@@ -503,6 +510,11 @@ export default function RiskAnalysisPage() {
               mapType="standard"
               showsUserLocation={true}
               showsMyLocationButton={false}
+              zoomEnabled={true}
+              zoomControlEnabled={true}
+              scrollEnabled={true}
+              pitchEnabled={true}
+              rotateEnabled={true}
               onRegionChangeComplete={handleMapRegionChangeComplete}
             >
               <Marker
@@ -528,11 +540,46 @@ export default function RiskAnalysisPage() {
               ))}
             </MapView>
             
+            {/* Floating Nearby Cases Card */}
+            <View
+              className="absolute bottom-3 left-3 right-3 rounded-2xl p-4 flex-row items-center justify-between"
+              style={{ 
+                backgroundColor: riskLevel === 'high' ? '#BF3131' : riskLevel === 'low' ? '#FEF3C7' : '#EAD196',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.25,
+                shadowRadius: 8,
+                elevation: 8,
+              }}
+            >
+              <View className="flex-row items-center flex-1">
+                <Feather 
+                  name={riskLevel === 'high' ? 'activity' : 'alert-circle'} 
+                  size={24} 
+                  color={riskLevel === 'high' ? '#FFFFFF' : '#7D0A0A'} 
+                />
+                <Text 
+                  className="ml-3 font-bold text-base"
+                  style={{ color: riskLevel === 'high' ? '#FFFFFF' : '#7D0A0A' }}
+                >
+                  {loadingNearbyCases 
+                    ? 'Loading...' 
+                    : nearbyCases === 0
+                      ? 'No Nearby Dengue Cases'
+                      : riskLevel === 'high'
+                        ? `${nearbyCases} Nearby Dengue Cases` 
+                        : riskLevel === 'low' 
+                          ? `${nearbyCases} Potential Dengue Cases` 
+                          : `${nearbyCases} Nearby Dengue Cases`}
+                </Text>
+              </View>
+            </View>
+            
             {/* Return to Original Location Button */}
             {showReturnButton && (
               <TouchableOpacity
                 onPress={returnToOriginalLocation}
-                className="absolute bottom-2 right-2 bg-[#7D0A0A] rounded-full p-3 shadow-lg"
+                className="absolute top-3 left-3 bg-[#7D0A0A] rounded-full p-3 shadow-lg"
                 style={{
                   shadowColor: '#7D0A0A',
                   shadowOffset: { width: 0, height: 4 },
@@ -548,51 +595,14 @@ export default function RiskAnalysisPage() {
 
           {/* Risk Details Section */}
           <View className="px-4 mt-4 pb-4">
-            <Text className="text-xl font-extrabold text-black mb-3" style={{ fontFamily: 'SF Pro' }}>
-              Risk Details
-            </Text>
-            
             {/* Location Info */}
-            <View className="mb-4">
+            {/* <View className="mb-4">
               <Text className="text-sm text-gray-600 mb-1">Current Location:</Text>
               <Text className="text-base font-semibold text-black">{locationName || `${prediction.latitude.toFixed(4)}, ${prediction.longitude.toFixed(4)}`}</Text>
-            </View>
+            </View> */}
 
             {/* Risk Cards */}
             <View className="gap-3 mb-4">
-            {/* Nearby Cases Card */}
-            <TouchableOpacity
-              className="rounded-2xl p-4 flex-row items-center justify-between"
-              style={{ backgroundColor: riskLevel === 'high' ? '#BF3131' : riskLevel === 'low' ? '#FEF3C7' : '#EAD196' }}
-              disabled={loadingNearbyCases}
-            >
-              <View className="flex-row items-center flex-1">
-                <Feather 
-                  name={riskLevel === 'high' ? 'activity' : 'alert-circle'} 
-                  size={24} 
-                  color={riskLevel === 'high' ? '#FFFFFF' : '#7D0A0A'} 
-                />
-                <Text 
-                  className="ml-3 font-bold text-base"
-                  style={{ color: riskLevel === 'high' ? '#FFFFFF' : '#7D0A0A' }}
-                >
-                  {loadingNearbyCases 
-                    ? 'Loading...' 
-                    : riskLevel === 'high' 
-                      ? `${nearbyCases} Nearby Dengue Cases` 
-                      : riskLevel === 'low' 
-                        ? `${nearbyCases} Potential Dengue Cases` 
-                        : `${nearbyCases} Nearby Dengue Cases`}
-                </Text>
-              </View>
-              {/* {!loadingNearbyCases && (
-                <Feather 
-                  name="chevron-right" 
-                  size={20} 
-                  color={riskLevel === 'high' ? '#FFFFFF' : '#7D0A0A'} 
-                />
-              )} */}
-            </TouchableOpacity>
 
             {/* Temperature Card */}
             <View

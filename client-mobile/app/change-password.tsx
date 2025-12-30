@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import ModalAlert from '../components/ModalAlert';
+import BottomNav from './components/BottomNav';
 
 export default function ChangePasswordPage() {
     const router = useRouter();
@@ -20,6 +21,7 @@ export default function ChangePasswordPage() {
         type: 'success',
         message: '',
     });
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -47,9 +49,13 @@ export default function ChangePasswordPage() {
         return true;
     };
 
-    const handleChangePassword = async () => {
+    const handleChangePasswordConfirm = () => {
         if (!validatePassword()) return;
+        setShowConfirmModal(true);
+    };
 
+    const handleChangePassword = async () => {
+        setShowConfirmModal(false);
         setSaving(true);
         try {
             const token = await AsyncStorage.getItem('token');
@@ -115,7 +121,7 @@ export default function ChangePasswordPage() {
             >
                 <ScrollView 
                     className="flex-1" 
-                    contentContainerStyle={{ paddingBottom: 40 }}
+                    contentContainerStyle={{ paddingBottom: 100 }}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                 >
@@ -256,7 +262,7 @@ export default function ChangePasswordPage() {
                             </TouchableOpacity>
                             <TouchableOpacity
                                 className="flex-1 bg-[#1D4ED8] rounded-xl py-4 items-center justify-center"
-                                onPress={handleChangePassword}
+                                onPress={handleChangePasswordConfirm}
                                 disabled={saving}
                                 activeOpacity={0.8}
                                 style={{ opacity: saving ? 0.7 : 1 }}
@@ -300,6 +306,45 @@ export default function ChangePasswordPage() {
                     if (modal.type === 'success') router.back();
                 }}
             />
+
+            {/* Confirmation Modal */}
+            <Modal
+                visible={showConfirmModal}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setShowConfirmModal(false)}
+            >
+                <View className="flex-1 bg-black/50 items-center justify-center px-6">
+                    <View className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl">
+                        <View className="items-center mb-4">
+                            <View className="w-16 h-16 rounded-full bg-[#1D4ED8]/10 items-center justify-center mb-3">
+                                <Ionicons name="key-outline" size={32} color="#1D4ED8" />
+                            </View>
+                            <Text className="text-xl font-bold text-[#181D27] text-center">Change Password</Text>
+                            <Text className="text-sm text-[#6B7280] text-center mt-2">
+                                Are you sure you want to change your password? You will need to use the new password for future logins.
+                            </Text>
+                        </View>
+                        <View className="flex-row gap-3 mt-4">
+                            <TouchableOpacity
+                                onPress={() => setShowConfirmModal(false)}
+                                className="flex-1 py-3 rounded-xl bg-gray-100"
+                            >
+                                <Text className="text-center font-semibold text-[#6B7280]">Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={handleChangePassword}
+                                className="flex-1 py-3 rounded-xl bg-[#1D4ED8]"
+                            >
+                                <Text className="text-center font-semibold text-white">Confirm</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Bottom Navigation */}
+            <BottomNav />
         </SafeAreaView>
     );
 }

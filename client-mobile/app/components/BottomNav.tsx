@@ -20,7 +20,7 @@ export default function BottomNav() {
   if (active === 'risk-analysis') {
     active = 'dashboard';
   }
-  if (active === 'edit-profile') {
+  if (active === 'edit-profile' || active === 'change-password' || active === 'organisation-details') {
     active = 'profile';
   }
   if (active === 'recommendations') {

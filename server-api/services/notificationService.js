@@ -515,24 +515,39 @@ async function notifyCompanyLocationChange(location, action = 'created') {
 }
 
 /**
+ * Shuffle array using Fisher-Yates algorithm
+ */
+function shuffleArray(array) {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+/**
  * Get recommendations message based on risk level
- * Returns a friendly, action-oriented message instead of alarming risk notification
+ * Returns a friendly, action-oriented message with randomized recommendations
+ * so users don't always receive the same message
  */
 async function getRecommendationMessage(riskLevel) {
   try {
-    // Fetch recommendations from database
-    const recommendations = await prisma.recommendation.findMany({
+    // Fetch ALL recommendations for this risk level
+    const allRecommendations = await prisma.recommendation.findMany({
       where: { 
         risk: riskLevel.toLowerCase()
-      },
-      orderBy: { createdAt: 'asc' },
-      take: 2 // Get top 2 recommendations
+      }
     });
 
-    if (recommendations.length > 0) {
-      // Create a friendly message with actionable recommendations
-      const primaryRecommendation = recommendations[0];
-      const secondaryRecommendation = recommendations.length > 1 ? recommendations[1] : null;
+    if (allRecommendations.length > 0) {
+      // Shuffle recommendations to get random ones each time
+      const shuffled = shuffleArray(allRecommendations);
+      
+      // Pick 2 random recommendations
+      const selectedRecommendations = shuffled.slice(0, 2);
+      const primaryRecommendation = selectedRecommendations[0];
+      const secondaryRecommendation = selectedRecommendations.length > 1 ? selectedRecommendations[1] : null;
       
       // Create concise message for push notification (max ~100 chars for body)
       let message = primaryRecommendation.title;
@@ -540,37 +555,62 @@ async function getRecommendationMessage(riskLevel) {
         message += `. Also: ${secondaryRecommendation.title}`;
       }
       
+      // Vary the title slightly based on day of week for more variety
+      const dayOfWeek = new Date().getDay();
+      const titles = [
+        'Daily Health Tips',
+        'Today\'s Prevention Tips',
+        'Health Reminder',
+        'Dengue Prevention Tips',
+        'Stay Protected Today',
+        'Your Daily Health Guide',
+        'Prevention Matters'
+      ];
+      const title = titles[dayOfWeek];
+      
       return {
-        title: 'Daily Health Tips',
+        title: title,
         message: message,
-        recommendations: recommendations.map(r => ({ title: r.title, details: r.details }))
+        recommendations: selectedRecommendations.map(r => ({ 
+          title: r.title, 
+          details: r.details,
+          referenceLink: r.referenceLink 
+        }))
       };
     } else {
       // Fallback messages if no recommendations found in database
+      // Also randomize fallback messages
       const fallbackMessages = {
-        high: {
-          title: 'Daily Health Tips',
-          message: 'Take preventive measures: Clear stagnant water and use mosquito repellent to stay protected.'
-        },
-        medium: {
-          title: 'Daily Health Tips',
-          message: 'Stay vigilant: Keep your surroundings clean and check for standing water regularly.'
-        },
-        low: {
-          title: 'Daily Health Tips',
-          message: 'Maintain good practices: Keep your area clean and stay hydrated for better health.'
-        }
+        high: [
+          { title: 'Daily Health Tips', message: 'Take preventive measures: Clear stagnant water and use mosquito repellent to stay protected.' },
+          { title: 'Stay Alert', message: 'High risk detected. Apply insect repellent and wear protective clothing when outdoors.' },
+          { title: 'Prevention Reminder', message: 'Eliminate standing water around your home. Check flower pots, gutters, and containers.' }
+        ],
+        medium: [
+          { title: 'Daily Health Tips', message: 'Stay vigilant: Keep your surroundings clean and check for standing water regularly.' },
+          { title: 'Health Reminder', message: 'Moderate risk in your area. Maintain clean surroundings and use mosquito nets.' },
+          { title: 'Prevention Tips', message: 'Check your home weekly for potential mosquito breeding sites.' }
+        ],
+        low: [
+          { title: 'Daily Health Tips', message: 'Maintain good practices: Keep your area clean and stay hydrated for better health.' },
+          { title: 'Wellness Tip', message: 'Great job keeping risk low! Continue your preventive habits and stay healthy.' },
+          { title: 'Health Reminder', message: 'Low risk today. Keep up the good work with regular cleaning routines.' }
+        ]
       };
       
-      return fallbackMessages[riskLevel.toLowerCase()] || fallbackMessages.low;
+      const levelMessages = fallbackMessages[riskLevel.toLowerCase()] || fallbackMessages.low;
+      const randomIndex = Math.floor(Math.random() * levelMessages.length);
+      return levelMessages[randomIndex];
     }
   } catch (error) {
     console.error('[NOTIFICATION ERROR] Failed to fetch recommendations:', error);
-    // Return safe fallback message
-    return {
-      title: 'Daily Health Tips',
-      message: 'Stay proactive with preventive measures to maintain a healthy environment.'
-    };
+    // Return safe fallback message with some variety
+    const fallbacks = [
+      { title: 'Daily Health Tips', message: 'Stay proactive with preventive measures to maintain a healthy environment.' },
+      { title: 'Health Reminder', message: 'Keep your surroundings clean and mosquito-free for better health.' },
+      { title: 'Prevention Tips', message: 'A clean environment is key to preventing mosquito-borne diseases.' }
+    ];
+    return fallbacks[Math.floor(Math.random() * fallbacks.length)];
   }
 }
 

@@ -4,6 +4,7 @@ const nodemailer = require('nodemailer');
 const prisma = require('../prisma/client');
 const twilio = require('twilio');
 const logger = require('../utils/logger');
+const admin = require('firebase-admin');
 const {
   sendErrorResponse,
   sendValidationError,
@@ -13,6 +14,18 @@ const {
   sendConflictError,
   sendInternalError
 } = require('../utils/errorResponse');
+
+// Initialize Firebase Admin for Google Auth verification (separate from storage)
+// Use the existing Firebase Admin instance if already initialized
+let firebaseAuthApp;
+try {
+  // Check if default app exists
+  firebaseAuthApp = admin.app();
+  console.log('[FIREBASE AUTH] Using existing Firebase Admin instance');
+} catch (error) {
+  // If no default app, it will be initialized by firebase_storage_utils
+  console.log('[FIREBASE AUTH] Firebase Admin will be initialized by storage utils');
+}
 
 const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
 const email_sender_email = process.env.SENDER_EMAIL;
@@ -157,14 +170,16 @@ exports.registerUser = async (req, res) => {
   const missingFields = [];
   if (!email) missingFields.push('email');
   if (!password) missingFields.push('password');
-  if (!name) missingFields.push('name');
-  if (!phone) missingFields.push('phone');
-  if (!username) missingFields.push('username');
   if (!companyId) missingFields.push('companyId');
   if (missingFields.length > 0) {
     logger.warn('[REGISTER ERROR] Missing required fields', { email: email || '[no email provided]', missingFields });
     return sendValidationError(res, [`Missing required fields: ${missingFields.join(', ')}`]);
   }
+
+  // Auto-generate name and username from email if not provided
+  const emailPrefix = email.split('@')[0];
+  const generatedName = name || emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1).replace(/[._-]/g, ' ');
+  const generatedUsername = username || emailPrefix.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   try {
     // Check if email already exists
@@ -184,14 +199,14 @@ exports.registerUser = async (req, res) => {
     // Hash password
     const hash = await bcrypt.hash(password, 10);
 
-    // Create new user
+    // Create new user (phone is optional, can be added later via edit profile)
     const user = await prisma.user.create({
       data: {
         email,
         password: hash,
-        name,
-        phone,
-        username,
+        name: generatedName,
+        phone: phone || null,
+        username: generatedUsername,
         role: 'user',
         status: 'Pending',
         companyId
@@ -725,6 +740,11 @@ exports.changePassword = async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: targetUserId } });
     if (!user) return sendNotFoundError(res, 'User');
 
+    // Check if user signed up with Google (no password)
+    if (!user.password && user.authProvider === 'google') {
+      return sendValidationError(res, ['Cannot change password for Google Sign-In accounts. Please use Google to sign in.']);
+    }
+
     // Verify current password
     const isValid = await bcrypt.compare(currentPassword, user.password);
     if (!isValid) {
@@ -745,5 +765,230 @@ exports.changePassword = async (req, res) => {
   } catch (err) {
     logger.error('[CHANGE PASSWORD ERROR]', { error: err.message, stack: err.stack });
     return sendInternalError(res, 'Failed to change password', err);
+  }
+};
+
+// --- GOOGLE AUTHENTICATION ---
+
+// POST /auth/google - Authenticate with Google Sign-In
+exports.googleAuth = async (req, res) => {
+  const { idToken, email, name, profilePicture, googleId } = req.body;
+
+  if (!idToken || !email || !googleId) {
+    return sendValidationError(res, ['ID token, email, and Google ID are required']);
+  }
+
+  try {
+    // Verify Firebase ID token
+    let decodedToken;
+    try {
+      decodedToken = await admin.auth().verifyIdToken(idToken);
+      console.log(`[GOOGLE AUTH] Token verified for: ${decodedToken.email}`);
+    } catch (tokenError) {
+      console.error('[GOOGLE AUTH] Token verification failed:', tokenError.message);
+      return sendUnauthorizedError(res, 'Invalid or expired Google token');
+    }
+
+    // Verify the token email matches the provided email
+    if (decodedToken.email !== email) {
+      return sendUnauthorizedError(res, 'Token email mismatch');
+    }
+
+    // Check if user already exists by googleId or email
+    let user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { googleId: googleId },
+          { email: email }
+        ]
+      }
+    });
+
+    let isNewUser = false;
+    let requiresVerification = false;
+
+    if (user) {
+      // Existing user found
+      console.log(`[GOOGLE AUTH] Existing user found: ${user.email}`);
+
+      // If user exists with email but not linked to Google, link the account
+      if (!user.googleId) {
+        console.log(`[GOOGLE AUTH] Linking Google account to existing user: ${user.email}`);
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            googleId: googleId,
+            profilePicture: profilePicture || user.profilePicture,
+            authProvider: user.authProvider === 'email' ? 'email' : 'google', // Keep email if they had password
+          }
+        });
+      }
+
+      // Check if user needs verification
+      if (user.status !== 'Verified') {
+        requiresVerification = true;
+      }
+
+      // Prevent admin users from logging in through mobile app
+      if (user.role === 'admin') {
+        return sendForbiddenError(res, 'Admin users cannot log in through the mobile app. Please use the admin portal.');
+      }
+    } else {
+      // New user - create account
+      isNewUser = true;
+      requiresVerification = true; // New users need to verify via OTP
+
+      // Auto-generate username from email
+      const emailPrefix = email.split('@')[0];
+      const generatedUsername = emailPrefix.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      // Get the public mobile user company (comp-999)
+      const publicCompany = await prisma.company.findFirst({
+        where: { id: 'comp-999' }
+      });
+
+      if (!publicCompany) {
+        console.error('[GOOGLE AUTH] Public company comp-999 not found');
+        return sendInternalError(res, 'System configuration error. Please contact support.');
+      }
+
+      user = await prisma.user.create({
+        data: {
+          email: email,
+          password: null, // No password for Google users
+          name: name || emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1),
+          username: generatedUsername,
+          role: 'user',
+          status: 'Pending', // Requires OTP verification
+          authProvider: 'google',
+          googleId: googleId,
+          profilePicture: profilePicture,
+          companyId: publicCompany.id,
+        }
+      });
+
+      console.log(`[GOOGLE AUTH] New user created: ${user.email}`);
+
+      // Send OTP email for verification
+      try {
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
+        
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { otpCode: otp, otpExpiry: expiry }
+        });
+
+        const mailOptions = {
+          from: email_sender_email,
+          to: email,
+          subject: 'DengueEye - Verify Your Account',
+          text: `Welcome to DengueEye! Your verification code is: ${otp}`,
+          html: `
+            <h2>Welcome to DengueEye!</h2>
+            <p>Thank you for signing up with Google. Please verify your account using the code below:</p>
+            <p style="font-size: 24px; font-weight: bold; color: #1D4ED8;">${otp}</p>
+            <p>This code will expire in 10 minutes.</p>
+          `,
+        };
+
+        await sendEmailWithRetry(mailOptions, 2);
+        console.log(`[GOOGLE AUTH] Verification OTP sent to ${email}`);
+      } catch (emailError) {
+        console.error('[GOOGLE AUTH] Failed to send verification email:', emailError.message);
+        // Don't fail the registration, user can request OTP again
+      }
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user.id, role: user.role, companyId: user.companyId },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    console.log(`[GOOGLE AUTH SUCCESS] User authenticated: ${user.email}, isNewUser: ${isNewUser}, requiresVerification: ${requiresVerification}`);
+
+    // Return user data without sensitive fields
+    const { password: _, otpCode: __, otpExpiry: ___, resetCode: ____, resetCodeExpiry: _____, ...userWithoutSensitive } = user;
+
+    res.json({
+      token,
+      user: userWithoutSensitive,
+      isNewUser,
+      requiresVerification,
+    });
+  } catch (err) {
+    logger.error('[GOOGLE AUTH ERROR]', { error: err.message, stack: err.stack, email });
+    return sendInternalError(res, 'Google authentication failed', err);
+  }
+};
+
+// POST /auth/link-google - Link existing account with Google
+exports.linkGoogleAccount = async (req, res) => {
+  const { idToken, googleId, profilePicture } = req.body;
+  const userId = req.user?.userId;
+
+  if (!idToken || !googleId) {
+    return sendValidationError(res, ['ID token and Google ID are required']);
+  }
+
+  if (!userId) {
+    return sendUnauthorizedError(res, 'Authentication required');
+  }
+
+  try {
+    // Verify Firebase ID token
+    let decodedToken;
+    try {
+      decodedToken = await admin.auth().verifyIdToken(idToken);
+    } catch (tokenError) {
+      console.error('[LINK GOOGLE] Token verification failed:', tokenError.message);
+      return sendUnauthorizedError(res, 'Invalid or expired Google token');
+    }
+
+    // Get current user
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return sendNotFoundError(res, 'User');
+    }
+
+    // Check if Google account is already linked to another user
+    const existingGoogleUser = await prisma.user.findFirst({
+      where: {
+        googleId: googleId,
+        id: { not: userId }
+      }
+    });
+
+    if (existingGoogleUser) {
+      return sendConflictError(res, 'This Google account is already linked to another user');
+    }
+
+    // Check if user already has Google linked
+    if (user.googleId) {
+      return sendConflictError(res, 'Your account is already linked to a Google account');
+    }
+
+    // Link Google account
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        googleId: googleId,
+        profilePicture: profilePicture || user.profilePicture,
+      }
+    });
+
+    console.log(`[LINK GOOGLE SUCCESS] Google account linked for user: ${user.email}`);
+
+    const { password: _, otpCode: __, otpExpiry: ___, resetCode: ____, resetCodeExpiry: _____, ...userWithoutSensitive } = updatedUser;
+
+    res.json({
+      message: 'Google account linked successfully',
+      user: userWithoutSensitive,
+    });
+  } catch (err) {
+    logger.error('[LINK GOOGLE ERROR]', { error: err.message, stack: err.stack, userId });
+    return sendInternalError(res, 'Failed to link Google account', err);
   }
 }; 

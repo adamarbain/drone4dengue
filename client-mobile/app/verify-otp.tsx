@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, Scro
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { fetchCurrentUser } from '../utils/userApi';
 
@@ -19,15 +19,25 @@ export default function VerifyOtpPage() {
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const router = useRouter();
+  const params = useLocalSearchParams();
 
   const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
 
-  // Fetch user email from storage or API
+  // Fetch user email from route params or storage/API
   useEffect(() => {
-    fetchCurrentUser().then(user => {
-      setEmail(user.email || '');
-    });
-  }, []);
+    // First check if email was passed as route param (e.g., from Google Sign-In)
+    if (params.email && typeof params.email === 'string') {
+      setEmail(params.email);
+    } else {
+      // Otherwise, try to fetch from current user
+      fetchCurrentUser().then(user => {
+        setEmail(user.email || '');
+      }).catch(() => {
+        // If fetch fails, email will remain empty
+        console.log('Could not fetch user email');
+      });
+    }
+  }, [params.email]);
 
   // Timer countdown
   useEffect(() => {

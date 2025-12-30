@@ -2,7 +2,7 @@ module.exports = {
   expo: {
     name: "DengueEye",
     slug: "dengueeye-mobile-app",
-    version: "1.0.0",
+    version: "1.0.2",
     orientation: "portrait",
     icon: "./assets/dengueeye_logo.png",
     scheme: "dengueeye",
@@ -11,6 +11,7 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.adamarbain.dengueeyemobileapp",
+      googleServicesFile: "./GoogleService-Info.plist",
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSLocationWhenInUseUsageDescription:
@@ -62,6 +63,17 @@ module.exports = {
           mode: "production",
         },
       ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-build-properties",
+        {
+          ios: {
+            useFrameworks: "static",
+          },
+        },
+      ],
     ],
     notification: {
       icon: "./assets/dengueeye_logo.png",
@@ -80,7 +92,7 @@ module.exports = {
         projectId: "fd6296bb-8c6f-4a3d-adbf-a42b3c032bea",
       },
       apiUrl: process.env.EXPO_PUBLIC_API_URL || "http://localhost:4000",
+      googleWebClientId: "93522668734-450k3d6bf46ibs47e5dnmkiavds24i13.apps.googleusercontent.com",
     },
   },
 };
-

@@ -14,7 +14,9 @@ const {
   verifyPhoneOtp,
   updatePhoneAndSendOtp,
   verifyPhoneUpdate,
-  changePassword
+  changePassword,
+  googleAuth,
+  linkGoogleAccount
 } = require('../controllers/authController');
 const { checkToken } = require('../middleware/authMiddleware');
 
@@ -25,6 +27,10 @@ router.post('/admin-login', adminLogin);
 router.post('/reset-request', resetRequest);
 router.post('/reset-verify', resetVerify);
 router.post('/reset', reset);
+
+// Google Authentication
+router.post('/google', googleAuth);
+router.post('/link-google', checkToken, linkGoogleAccount);
 
 // Email OTP verification
 router.post('/send/email-otp', sendOtp);

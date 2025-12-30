@@ -1,11 +1,12 @@
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, Pressable, ScrollView, Modal, ActivityIndicator } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Pressable, ScrollView, Modal, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { initGoogleSignIn, signInWithGoogle } from '../../utils/googleAuth';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -14,7 +15,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [resetVisible, setResetVisible] = useState(false);
-  const [resetStep, setResetStep] = useState(1); // 1=email, 2=code, 3=new password
+  const [resetStep, setResetStep] = useState(1);
   const [resetEmail, setResetEmail] = useState('');
   const [resetCode, setResetCode] = useState('');
   const [resetNewPassword, setResetNewPassword] = useState('');
@@ -24,7 +25,14 @@ export default function LoginScreen() {
   const [resetSuccess, setResetSuccess] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
   const router = useRouter();
+
+  // Initialize Google Sign-In on component mount
+  useEffect(() => {
+    initGoogleSignIn();
+  }, []);
 
   // Password reset handlers
   const handleResetRequest = async () => {
@@ -88,20 +96,24 @@ export default function LoginScreen() {
       if (!res.ok) throw new Error(data.error || 'Failed to reset password');
       setResetSuccess('Password reset successful! You can now log in.');
       setTimeout(() => {
-        setResetVisible(false);
-        setResetStep(1);
-        setResetEmail('');
-        setResetCode('');
-        setResetNewPassword('');
-        setResetConfirmPassword('');
-        setResetError('');
-        setResetSuccess('');
+        closeResetModal();
       }, 1500);
     } catch (err) {
       setResetError((err as Error).message);
     } finally {
       setResetLoading(false);
     }
+  };
+
+  const closeResetModal = () => {
+    setResetVisible(false);
+    setResetStep(1);
+    setResetEmail('');
+    setResetCode('');
+    setResetNewPassword('');
+    setResetConfirmPassword('');
+    setResetError('');
+    setResetSuccess('');
   };
 
   // Login handler
@@ -139,9 +151,7 @@ export default function LoginScreen() {
       );
       const { exp } = JSON.parse(jsonPayload);
       // Extend expiration to 1 month (30 days) from now for better user experience
-      // This allows users to stay logged in for 1 month
-      const oneMonthFromNow = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days in milliseconds
-      // Use the longer of: JWT expiration or 1 month from now
+      const oneMonthFromNow = Date.now() + (30 * 24 * 60 * 60 * 1000);
       const extendedExp = Math.max(exp * 1000, oneMonthFromNow);
       await AsyncStorage.setItem('token_exp', extendedExp.toString());
       
@@ -151,7 +161,6 @@ export default function LoginScreen() {
         await initializePushNotifications();
       } catch (error) {
         console.error('Error initializing push notifications:', error);
-        // Don't block login if push notifications fail
       }
       
       router.replace('/dashboard');
@@ -162,150 +171,543 @@ export default function LoginScreen() {
     }
   };
 
+  // Google Sign-In handler
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    setLoginError('');
+    try {
+      const result = await signInWithGoogle();
+      
+      if (!result.success) {
+        setLoginError(result.error || 'Google Sign-In failed');
+        return;
+      }
+
+      // Initialize push notifications after successful login
+      try {
+        const { initializePushNotifications } = require('../../utils/pushNotifications');
+        await initializePushNotifications();
+      } catch (error) {
+        console.error('Error initializing push notifications:', error);
+      }
+
+      // Check if user needs verification
+      if (result.data?.requiresVerification) {
+        // Redirect to OTP verification screen
+        router.replace({
+          pathname: '/verify-otp',
+          params: { email: result.data.user.email }
+        });
+      } else {
+        // User is verified, go to dashboard
+        router.replace('/dashboard');
+      }
+    } catch (err) {
+      setLoginError((err as Error).message);
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const getInputStyle = (fieldName: string) => {
+    const isFocused = focusedField === fieldName;
+    return {
+      borderColor: isFocused ? '#1D4ED8' : '#E5E7EB',
+      backgroundColor: isFocused ? '#EFF6FF' : '#F9FAFB',
+    };
+  };
+
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
       <StatusBar style="dark" />
-      {/* Top navigation: Log in | Sign Up */}
-      <View className="flex-row justify-end items-center mb-10 mt-2 px-10">
-        <Text className="text-black font-bold text-base mr-4">Log in</Text>
-        <Link href="./register" className="text-base text-black opacity-70">Sign Up</Link>
-      </View>
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" className="px-10 pt-0">
-        {/* Title */}
-        <Text className="text-5xl font-extrabold text-black mb-10">Log in</Text>
-
-        {/* Email Input */}
-        <Text className="text-lg text-gray-500 mb-1">Email</Text>
-        <TextInput
-          className="w-full border border-black rounded-xl px-4 py-4 text-md mb-6"
-          placeholder="Email"
-          placeholderTextColor="#A3A3A3"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-
-        {/* Password Input */}
-        <Text className="text-lg text-gray-500 mb-1">Password</Text>
-        <View className="flex-row items-center border border-black rounded-xl px-4 mb-2">
-          <TextInput
-            className="flex-1 py-4 text-md"
-            placeholder="Password"
-            placeholderTextColor="#A3A3A3"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPassword}
-          />
-          <Pressable onPress={() => setShowPassword(!showPassword)}>
-            <Feather name={showPassword ? 'eye' : 'eye-off'} size={24} color="#A3A3A3" />
-          </Pressable>
-        </View>
-
-        {/* Error Message */}
-        {loginError ? (
-          <Text className="text-red-600 mb-2 text-center">{loginError}</Text>
-        ) : null}
-
-        {/* Forgot Password */}
-        <TouchableOpacity className="self-end mb-8" onPress={() => setResetVisible(true)}>
-          <Text className="text-base font-bold text-gray-400">Forgot Password?</Text>
-        </TouchableOpacity>
-
-        {/* Login Button */}
-        <TouchableOpacity
-          className="w-full bg-[#1D4ED8] rounded-xl py-4 shadow-lg shadow-blue-200 mb-4"
-          onPress={handleLogin}
-          disabled={loginLoading}
+      
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
-          {loginLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text className="text-white text-center font-bold text-lg">LOG IN</Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
+          <ScrollView 
+            contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }} 
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={{ paddingHorizontal: 24 }}>
+              {/* Header with Logo */}
+              <View style={{ alignItems: 'center', marginTop: 40, marginBottom: 40 }}>
+                <View style={{ 
+                  width: 96, 
+                  height: 96, 
+                  borderRadius: 24, 
+                  backgroundColor: '#FFFFFF',
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  marginBottom: 20,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 12,
+                  elevation: 10,
+                }}>
+                  <Image 
+                    source={require('../../assets/dengueeye_logo.png')} 
+                    style={{ width: 64, height: 64 }}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#111827', letterSpacing: -0.5 }}>
+                  Welcome Back
+                </Text>
+                <Text style={{ fontSize: 16, color: '#6B7280', marginTop: 8, textAlign: 'center' }}>
+                  Sign in to continue protecting your community
+                </Text>
+              </View>
+
+              {/* Form Card */}
+              <View style={{ 
+                backgroundColor: '#FFFFFF', 
+                borderRadius: 24, 
+                padding: 24,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 15,
+                elevation: 4,
+              }}>
+                {/* Email Input */}
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8, marginLeft: 4 }}>
+                    Email Address
+                  </Text>
+                  <View style={[{ 
+                    flexDirection: 'row', 
+                    alignItems: 'center', 
+                    borderRadius: 16, 
+                    paddingHorizontal: 16,
+                    borderWidth: 2,
+                  }, getInputStyle('email')]}>
+                    <Ionicons 
+                      name="mail-outline" 
+                      size={20} 
+                      color={focusedField === 'email' ? '#1D4ED8' : '#9CA3AF'} 
+                      style={{ marginRight: 12 }} 
+                    />
+                    <TextInput
+                      style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: '#111827' }}
+                      placeholder="Enter your email"
+                      placeholderTextColor="#9CA3AF"
+                      value={email}
+                      onChangeText={setEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      onFocus={() => setFocusedField('email')}
+                      onBlur={() => setFocusedField(null)}
+                    />
+                  </View>
+                </View>
+
+                {/* Password Input */}
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8, marginLeft: 4 }}>
+                    Password
+                  </Text>
+                  <View style={[{ 
+                    flexDirection: 'row', 
+                    alignItems: 'center', 
+                    borderRadius: 16, 
+                    paddingHorizontal: 16,
+                    borderWidth: 2,
+                  }, getInputStyle('password')]}>
+                    <Ionicons 
+                      name="lock-closed-outline" 
+                      size={20} 
+                      color={focusedField === 'password' ? '#1D4ED8' : '#9CA3AF'} 
+                      style={{ marginRight: 12 }} 
+                    />
+                    <TextInput
+                      style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: '#111827' }}
+                      placeholder="Enter your password"
+                      placeholderTextColor="#9CA3AF"
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                      onFocus={() => setFocusedField('password')}
+                      onBlur={() => setFocusedField(null)}
+                    />
+                    <Pressable onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>
+                      <Feather 
+                        name={showPassword ? 'eye' : 'eye-off'} 
+                        size={20} 
+                        color={focusedField === 'password' ? '#1D4ED8' : '#9CA3AF'} 
+                      />
+                    </Pressable>
+                  </View>
+                </View>
+
+                {/* Forgot Password */}
+                <TouchableOpacity style={{ alignSelf: 'flex-end', marginBottom: 24 }} onPress={() => setResetVisible(true)}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#1D4ED8' }}>Forgot Password?</Text>
+                </TouchableOpacity>
+
+                {/* Error Message */}
+                {loginError ? (
+                  <View style={{ 
+                    backgroundColor: '#FEF2F2', 
+                    borderWidth: 1, 
+                    borderColor: '#FECACA', 
+                    borderRadius: 12, 
+                    padding: 12, 
+                    marginBottom: 16, 
+                    flexDirection: 'row', 
+                    alignItems: 'center' 
+                  }}>
+                    <Ionicons name="alert-circle" size={20} color="#DC2626" style={{ marginRight: 8 }} />
+                    <Text style={{ color: '#DC2626', fontSize: 14, flex: 1 }}>{loginError}</Text>
+                  </View>
+                ) : null}
+
+                {/* Login Button */}
+                <TouchableOpacity
+                  onPress={handleLogin}
+                  disabled={loginLoading || googleLoading}
+                  activeOpacity={0.8}
+                  style={{ 
+                    borderRadius: 16, 
+                    paddingVertical: 16, 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    backgroundColor: (loginLoading || googleLoading) ? '#D1D5DB' : '#1D4ED8',
+                    shadowColor: '#1D4ED8',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: (loginLoading || googleLoading) ? 0 : 0.3,
+                    shadowRadius: 8,
+                    elevation: 3,
+                  }}
+                >
+                  {loginLoading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 18, marginRight: 8 }}>
+                        Sign In
+                      </Text>
+                      <Ionicons name="arrow-forward" size={20} color="#fff" />
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                {/* Divider */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 24 }}>
+                  <View style={{ flex: 1, height: 1, backgroundColor: '#E5E7EB' }} />
+                  <Text style={{ marginHorizontal: 16, color: '#9CA3AF', fontSize: 14 }}>or</Text>
+                  <View style={{ flex: 1, height: 1, backgroundColor: '#E5E7EB' }} />
+                </View>
+
+                {/* Google Sign-In Button */}
+                <TouchableOpacity
+                  onPress={handleGoogleSignIn}
+                  disabled={loginLoading || googleLoading}
+                  activeOpacity={0.8}
+                  style={{ 
+                    borderRadius: 16, 
+                    paddingVertical: 16, 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    backgroundColor: '#FFFFFF',
+                    borderWidth: 2,
+                    borderColor: '#E5E7EB',
+                    flexDirection: 'row',
+                  }}
+                >
+                  {googleLoading ? (
+                    <ActivityIndicator color="#1D4ED8" size="small" />
+                  ) : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Image 
+                        source={{ uri: 'https://www.google.com/favicon.ico' }} 
+                        style={{ width: 20, height: 20, marginRight: 12 }}
+                      />
+                      <Text style={{ color: '#374151', fontWeight: '600', fontSize: 16 }}>
+                        Continue with Google
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {/* Sign Up Link */}
+              <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 32 }}>
+                <Text style={{ color: '#6B7280', fontSize: 16 }}>Don't have an account? </Text>
+                <Link href="./register" asChild>
+                  <TouchableOpacity>
+                    <Text style={{ color: '#1D4ED8', fontWeight: 'bold', fontSize: 16 }}>Sign Up</Text>
+                  </TouchableOpacity>
+                </Link>
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
 
       {/* Password Reset Modal */}
-      <Modal visible={resetVisible} animationType="slide" transparent>
-        <View className="flex-1 bg-black/40 justify-center items-center px-6">
-          <View className="bg-white rounded-2xl p-6 w-full max-w-md">
-            <Text className="text-2xl font-bold mb-4 text-center">Reset Password</Text>
+      <Modal visible={resetVisible} animationType="fade" transparent>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }}>
+          <View style={{ 
+            backgroundColor: '#FFFFFF', 
+            borderRadius: 24, 
+            padding: 24, 
+            width: '100%', 
+            maxWidth: 400,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.25,
+            shadowRadius: 20,
+            elevation: 10,
+          }}>
+            {/* Modal Header */}
+            <View style={{ alignItems: 'center', marginBottom: 24 }}>
+              <View style={{ 
+                width: 64, 
+                height: 64, 
+                borderRadius: 32, 
+                backgroundColor: '#EFF6FF', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                marginBottom: 16 
+              }}>
+                <Ionicons 
+                  name={resetStep === 1 ? 'mail-outline' : resetStep === 2 ? 'key-outline' : 'lock-closed-outline'} 
+                  size={28} 
+                  color="#1D4ED8" 
+                />
+              </View>
+              <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#111827' }}>
+                {resetStep === 1 ? 'Reset Password' : resetStep === 2 ? 'Enter Code' : 'New Password'}
+              </Text>
+              <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>
+                {resetStep === 1 
+                  ? 'Enter your email to receive a reset code' 
+                  : resetStep === 2 
+                    ? 'Check your email for the verification code'
+                    : 'Create a strong new password'}
+              </Text>
+            </View>
+
+            {/* Step Indicator */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 24 }}>
+              {[1, 2, 3].map((step) => (
+                <View key={step} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ 
+                    width: 32, 
+                    height: 32, 
+                    borderRadius: 16, 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    backgroundColor: resetStep >= step ? '#1D4ED8' : '#E5E7EB',
+                  }}>
+                    {resetStep > step ? (
+                      <Feather name="check" size={16} color="#fff" />
+                    ) : (
+                      <Text style={{ fontSize: 14, fontWeight: 'bold', color: resetStep >= step ? '#FFFFFF' : '#6B7280' }}>
+                        {step}
+                      </Text>
+                    )}
+                  </View>
+                  {step < 3 && (
+                    <View style={{ width: 32, height: 4, backgroundColor: resetStep > step ? '#1D4ED8' : '#E5E7EB' }} />
+                  )}
+                </View>
+              ))}
+            </View>
+
+            {/* Step 1: Email */}
             {resetStep === 1 && (
               <>
-                <Text className="mb-2">Enter your registered email address:</Text>
-                <TextInput
-                  className="border border-black rounded-xl px-4 py-3 mb-4"
-                  placeholder="Email"
-                  placeholderTextColor="#A3A3A3"
-                  value={resetEmail}
-                  onChangeText={setResetEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity className="bg-[#1D4ED8] rounded-xl py-3 mb-2" onPress={handleResetRequest} disabled={resetLoading}>
-                  {resetLoading ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-center font-bold">Send Reset Code</Text>}
+                <View style={[{ 
+                  borderRadius: 12, 
+                  paddingHorizontal: 16, 
+                  paddingVertical: 14, 
+                  borderWidth: 2,
+                }, getInputStyle('resetEmail')]}>
+                  <TextInput
+                    style={{ fontSize: 16, color: '#111827' }}
+                    placeholder="Enter your email address"
+                    placeholderTextColor="#9CA3AF"
+                    value={resetEmail}
+                    onChangeText={setResetEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    onFocus={() => setFocusedField('resetEmail')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                </View>
+                <TouchableOpacity 
+                  style={{ 
+                    marginTop: 16, 
+                    borderRadius: 12, 
+                    paddingVertical: 14, 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    backgroundColor: '#1D4ED8' 
+                  }}
+                  onPress={handleResetRequest} 
+                  disabled={resetLoading}
+                  activeOpacity={0.8}
+                >
+                  {resetLoading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 }}>Send Reset Code</Text>
+                  )}
                 </TouchableOpacity>
               </>
             )}
+
+            {/* Step 2: Verification Code */}
             {resetStep === 2 && (
               <>
-                <Text className="mb-2">Enter the code sent to your email:</Text>
-                <TextInput
-                  className="border border-black rounded-xl px-4 py-3 mb-4"
-                  placeholder="Reset Code"
-                  placeholderTextColor="#A3A3A3"
-                  value={resetCode}
-                  onChangeText={setResetCode}
-                  keyboardType="number-pad"
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity className="bg-[#1D4ED8] rounded-xl py-3 mb-2" onPress={handleResetVerify} disabled={resetLoading}>
-                  {resetLoading ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-center font-bold">Verify Code</Text>}
+                <View style={[{ 
+                  borderRadius: 12, 
+                  paddingHorizontal: 16, 
+                  paddingVertical: 14, 
+                  borderWidth: 2,
+                }, getInputStyle('resetCode')]}>
+                  <TextInput
+                    style={{ fontSize: 16, color: '#111827', textAlign: 'center', letterSpacing: 4 }}
+                    placeholder="Enter 6-digit code"
+                    placeholderTextColor="#9CA3AF"
+                    value={resetCode}
+                    onChangeText={setResetCode}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    onFocus={() => setFocusedField('resetCode')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                </View>
+                <TouchableOpacity 
+                  style={{ 
+                    marginTop: 16, 
+                    borderRadius: 12, 
+                    paddingVertical: 14, 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    backgroundColor: '#1D4ED8' 
+                  }}
+                  onPress={handleResetVerify} 
+                  disabled={resetLoading}
+                  activeOpacity={0.8}
+                >
+                  {resetLoading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 }}>Verify Code</Text>
+                  )}
                 </TouchableOpacity>
               </>
             )}
+
+            {/* Step 3: New Password */}
             {resetStep === 3 && (
               <>
-                <Text className="mb-2">Enter your new password:</Text>
-                <TextInput
-                  className="border border-black rounded-xl px-4 py-3 mb-2"
-                  placeholder="New Password"
-                  placeholderTextColor="#A3A3A3"
-                  value={resetNewPassword}
-                  onChangeText={setResetNewPassword}
-                  secureTextEntry
-                />
-                <TextInput
-                  className="border border-black rounded-xl px-4 py-3 mb-4"
-                  placeholder="Confirm New Password"
-                  placeholderTextColor="#A3A3A3"
-                  value={resetConfirmPassword}
-                  onChangeText={setResetConfirmPassword}
-                  secureTextEntry
-                />
-                <TouchableOpacity className="bg-[#1D4ED8] rounded-xl py-3 mb-2" onPress={handleResetPassword} disabled={resetLoading}>
-                  {resetLoading ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-center font-bold">Reset Password</Text>}
+                <View style={[{ 
+                  borderRadius: 12, 
+                  paddingHorizontal: 16, 
+                  paddingVertical: 14, 
+                  borderWidth: 2,
+                  marginBottom: 12,
+                }, getInputStyle('resetNewPassword')]}>
+                  <TextInput
+                    style={{ fontSize: 16, color: '#111827' }}
+                    placeholder="New password"
+                    placeholderTextColor="#9CA3AF"
+                    value={resetNewPassword}
+                    onChangeText={setResetNewPassword}
+                    secureTextEntry
+                    onFocus={() => setFocusedField('resetNewPassword')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                </View>
+                <View style={[{ 
+                  borderRadius: 12, 
+                  paddingHorizontal: 16, 
+                  paddingVertical: 14, 
+                  borderWidth: 2,
+                }, getInputStyle('resetConfirmPassword')]}>
+                  <TextInput
+                    style={{ fontSize: 16, color: '#111827' }}
+                    placeholder="Confirm new password"
+                    placeholderTextColor="#9CA3AF"
+                    value={resetConfirmPassword}
+                    onChangeText={setResetConfirmPassword}
+                    secureTextEntry
+                    onFocus={() => setFocusedField('resetConfirmPassword')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                </View>
+                <TouchableOpacity 
+                  style={{ 
+                    marginTop: 16, 
+                    borderRadius: 12, 
+                    paddingVertical: 14, 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    backgroundColor: '#1D4ED8' 
+                  }}
+                  onPress={handleResetPassword} 
+                  disabled={resetLoading}
+                  activeOpacity={0.8}
+                >
+                  {resetLoading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 }}>Reset Password</Text>
+                  )}
                 </TouchableOpacity>
               </>
             )}
-            {resetError ? <Text className="text-red-500 text-center mb-2">{resetError}</Text> : null}
-            {resetSuccess ? <Text className="text-green-600 text-center mb-2">{resetSuccess}</Text> : null}
-            <TouchableOpacity className="mt-2" onPress={() => {
-              setResetVisible(false);
-              setResetStep(1);
-              setResetEmail('');
-              setResetCode('');
-              setResetNewPassword('');
-              setResetConfirmPassword('');
-              setResetError('');
-              setResetSuccess('');
-            }}>
-              <Text className="text-center text-gray-500">Cancel</Text>
+
+            {/* Error/Success Messages */}
+            {resetError ? (
+              <View style={{ 
+                backgroundColor: '#FEF2F2', 
+                borderWidth: 1, 
+                borderColor: '#FECACA', 
+                borderRadius: 12, 
+                padding: 12, 
+                marginTop: 16, 
+                flexDirection: 'row', 
+                alignItems: 'center' 
+              }}>
+                <Ionicons name="alert-circle" size={18} color="#DC2626" style={{ marginRight: 8 }} />
+                <Text style={{ color: '#DC2626', fontSize: 14, flex: 1 }}>{resetError}</Text>
+              </View>
+            ) : null}
+            {resetSuccess ? (
+              <View style={{ 
+                backgroundColor: '#F0FDF4', 
+                borderWidth: 1, 
+                borderColor: '#BBF7D0', 
+                borderRadius: 12, 
+                padding: 12, 
+                marginTop: 16, 
+                flexDirection: 'row', 
+                alignItems: 'center' 
+              }}>
+                <Ionicons name="checkmark-circle" size={18} color="#16A34A" style={{ marginRight: 8 }} />
+                <Text style={{ color: '#16A34A', fontSize: 14, flex: 1 }}>{resetSuccess}</Text>
+              </View>
+            ) : null}
+
+            {/* Cancel Button */}
+            <TouchableOpacity 
+              style={{ marginTop: 16, paddingVertical: 12 }} 
+              onPress={closeResetModal}
+            >
+              <Text style={{ textAlign: 'center', color: '#6B7280', fontWeight: '500', fontSize: 16 }}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
-} 
+}

@@ -62,5 +62,6 @@ jobs:
             --set-env-vars "TWILIO_PHONE_NUMBER=${{ secrets.TWILIO_PHONE_NUMBER }}" \
             --set-env-vars "NODE_ENV=production" \
             --set-env-vars "API_BASE_URL=${{ secrets.API_BASE_URL }}" \
-            --set-env-vars "SENTRY_DSN=${{ secrets.SENTRY_DSN }}"
+            --set-env-vars "SENTRY_DSN=${{ secrets.SENTRY_DSN }}" \
+            --set-env-vars "LOCATION_ALERT_API_KEY=${{ secrets.LOCATION_ALERT_API_KEY }}"
 

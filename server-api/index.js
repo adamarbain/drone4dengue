@@ -33,6 +33,7 @@ app.use('/company-locations', require('./routes/companyLocationRoutes'));
 app.use('/geocode', require('./routes/geocode'));
 app.use('/api/predict', require('./routes/predictionRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/location-alerts', require('./routes/locationAlertRoutes'));
 
 // app.use('/images', require('./routes/images'));
 // app.use('/alerts', require('./routes/alerts'));
