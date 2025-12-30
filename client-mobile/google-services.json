@@ -12,7 +12,12 @@
           "package_name": "com.adamarbain.dengueeyemobileapp"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "93522668734-450k3d6bf46ibs47e5dnmkiavds24i13.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCb11uzyT6Ni29GJfxf-pCe4urVd5kxUuI"
@@ -20,7 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "93522668734-450k3d6bf46ibs47e5dnmkiavds24i13.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

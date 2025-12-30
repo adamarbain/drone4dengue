@@ -62,7 +62,7 @@ model User {
   id              String    @id @default(uuid())
   userId          String    @unique // for display e.g. U-001
   email           String    @unique
-  password        String
+  password        String?   // Nullable for OAuth users (Google Sign-In)
   name            String
   role            String // 'admin' or 'user'
   status          String // e.g. "Verified", "Pending"
@@ -76,13 +76,18 @@ model User {
   resetCodeExpiry DateTime? // for password reset
   otpCode         String? // for OTP verification
   otpExpiry       DateTime? // for OTP verification
+  // OAuth fields
+  authProvider    String    @default("email") // "email" or "google"
+  googleId        String?   @unique           // Firebase UID for Google users
+  profilePicture  String?                     // Google profile picture URL
   companyId       String
   company         Company   @relation(fields: [companyId], references: [id])
-  drones        Drone[]
-  reports       Report[]
-  alerts        Alert[]
-  notifications Notification[]
-  deviceTokens  DeviceToken[]
+  drones          Drone[]
+  reports         Report[]
+  alerts          Alert[]
+  notifications   Notification[]
+  deviceTokens    DeviceToken[]
+  locationAlerts  UserLocationAlert[]
 }
 
 model Drone {
@@ -188,11 +193,12 @@ model Report {
 }
 
 model Recommendation {
-  id        String   @id @default(uuid())
-  risk      String // 'high', 'medium', 'low'
-  title     String
-  details   String
-  createdAt DateTime @default(now())
+  id            String   @id @default(uuid())
+  risk          String // 'high', 'medium', 'low'
+  title         String
+  details       String
+  referenceLink String? // URL to source/reference for the recommendation
+  createdAt     DateTime @default(now())
 }
 
 model CompanyPrediction {
@@ -286,5 +292,22 @@ model DeviceToken {
 
   @@index([userId])
   @@index([pushToken])
+  @@index([isActive])
+}
+
+model UserLocationAlert {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String   // User-defined name for the alert location
+  latitude    Float
+  longitude   Float
+  boundingBox Json     // [minLat, maxLat, minLon, maxLon] from Nominatim
+  address     String?  // Display name from Nominatim reverse geocoding
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
   @@index([isActive])
 }

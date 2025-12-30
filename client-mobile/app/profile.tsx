@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, Image, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ActivityIndicator, ScrollView, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNav from './components/BottomNav';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -17,6 +17,7 @@ type User = {
   createdAt: string;
   updatedAt: string;
   status: string;
+  companyId?: string;
 };
 
 export default function ProfilePage() {
@@ -24,6 +25,8 @@ export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
 
   // Debug: Check token and expiration
   useEffect(() => {
@@ -52,6 +55,19 @@ export default function ProfilePage() {
     await AsyncStorage.removeItem('token_exp');
     router.replace('/(auth)/login');
   }, [router]);
+
+  const confirmLogout = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleConfirmLogout = () => {
+    setShowLogoutModal(false);
+    handleLogout();
+  };
+
+  const handleCancelLogout = () => {
+    setShowLogoutModal(false);
+  };
 
   // Fetch user on initial load and when screen is focused
   useFocusEffect(
@@ -159,7 +175,7 @@ export default function ProfilePage() {
             </View>
           </View>
           <TouchableOpacity
-            onPress={handleLogout}
+            onPress={confirmLogout}
             className="ml-2 flex-row items-center px-3 h-10 rounded-full bg-white"
             style={{ shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }}
           >
@@ -214,19 +230,28 @@ export default function ProfilePage() {
             <Ionicons name="chevron-forward" size={20} color="#ABABAB" />
           </TouchableOpacity>
 
-          {/* Organisation Details */}
-          <View className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4">
-            <View className="w-12 h-12 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-4">
-              <Ionicons name="shield-checkmark-outline" size={26} color="#1D4ED8" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-lg font-semibold text-[#181D27]">Organisation Details</Text>
-              <Text className="text-xs text-[#ABABAB]">View details about your organisation</Text>
-            </View>
-          </View>
+          {/* Organisation Details - Hidden for companyId = comp-999 */}
+          {user?.companyId !== 'comp-999' && (
+            <TouchableOpacity 
+              onPress={() => router.push('/organisation-details')}
+              className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4"
+            >
+              <View className="w-12 h-12 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-4">
+                <Ionicons name="shield-checkmark-outline" size={26} color="#1D4ED8" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-lg font-semibold text-[#181D27]">Organisation Details</Text>
+                <Text className="text-xs text-[#ABABAB]">View details about your organisation</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#ABABAB" />
+            </TouchableOpacity>
+          )}
 
           {/* About App */}
-          <View className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4">
+          <TouchableOpacity 
+            onPress={() => setShowAboutModal(true)}
+            className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4"
+          >
             <View className="w-12 h-12 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-4">
               <Ionicons name="information-circle-outline" size={26} color="#1D4ED8" />
             </View>
@@ -234,12 +259,76 @@ export default function ProfilePage() {
               <Text className="text-lg font-semibold text-[#181D27]">About App</Text>
               <Text className="text-xs text-[#ABABAB]">Learn more about DengueEye</Text>
             </View>
-          </View>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
       {/* Bottom Navigation */}
       <BottomNav />
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        visible={showLogoutModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCancelLogout}
+      >
+        <View className="flex-1 bg-black/50 items-center justify-center px-6">
+          <View className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl">
+            <View className="items-center mb-4">
+              <View className="w-16 h-16 rounded-full bg-red-100 items-center justify-center mb-3">
+                <Ionicons name="log-out-outline" size={32} color="#EF4444" />
+              </View>
+              <Text className="text-xl font-bold text-[#181D27] text-center">Log Out</Text>
+              <Text className="text-sm text-[#6B7280] text-center mt-2">
+                Are you sure you want to log out of your account?
+              </Text>
+            </View>
+            <View className="flex-row gap-3 mt-4">
+              <TouchableOpacity
+                onPress={handleCancelLogout}
+                className="flex-1 py-3 rounded-xl bg-gray-100"
+              >
+                <Text className="text-center font-semibold text-[#6B7280]">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleConfirmLogout}
+                className="flex-1 py-3 rounded-xl bg-red-500"
+              >
+                <Text className="text-center font-semibold text-white">Log Out</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* About App Coming Soon Modal */}
+      <Modal
+        visible={showAboutModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowAboutModal(false)}
+      >
+        <View className="flex-1 bg-black/50 items-center justify-center px-6">
+          <View className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl">
+            <View className="items-center mb-4">
+              <View className="w-16 h-16 rounded-full bg-[#1D4ED8]/10 items-center justify-center mb-3">
+                <Ionicons name="construct-outline" size={32} color="#1D4ED8" />
+              </View>
+              <Text className="text-xl font-bold text-[#181D27] text-center">Coming Soon</Text>
+              <Text className="text-sm text-[#6B7280] text-center mt-2">
+                This feature is currently under development. Stay tuned for updates!
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setShowAboutModal(false)}
+              className="py-3 rounded-xl bg-[#1D4ED8] mt-4"
+            >
+              <Text className="text-center font-semibold text-white">Got it</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

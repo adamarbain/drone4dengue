@@ -373,22 +373,163 @@ async function main() {
   // Insert recommendations for all risk levels
   await prisma.recommendation.deleteMany();
   const recommendations = [
-    // High risk
-    { risk: 'high', title: 'Conduct Immediate Fogging', details: 'Contact your local authority urgently to conduct immediate fogging in your area.' },
-    { risk: 'high', title: 'Clear stagnant water', details: 'Immediately around your home - Remove all stagnant water sources to prevent mosquito breeding.' },
-    { risk: 'high', title: 'Apply Mosquito repellents', details: '(e.g., DEET-based, citronella oil) - Use EPA-approved insect repellent on exposed skin and clothing.' },
-    { risk: 'high', title: 'Wear long sleeves and trousers', details: 'especially during morning and late evening - Wear protective clothing to reduce skin exposure.' },
-    { risk: 'high', title: 'Use Mosquito Nets', details: 'Sleep under mosquito nets, especially during the day when Aedes mosquitoes are active.' },
-    // Medium risk
-    { risk: 'medium', title: 'Trim vegetation', details: 'Around your residence - Keep vegetation trimmed to reduce mosquito resting areas.' },
-    { risk: 'medium', title: 'Inspections for stagnant water', details: 'Schedule inspections for stagnant water sources around your property.' },
-    { risk: 'medium', title: 'Participate a community cleanup', details: 'Participate in or organize a community cleanup to eliminate breeding sites.' },
-    { risk: 'medium', title: 'Ensure proper waste management', details: 'Ensure proper waste management at home and in your community.' },
-    // Low risk
-    { risk: 'low', title: 'Maintain cleanliness', details: 'Maintain cleanliness of home surroundings - Keep your area clean and free from trash.' },
-    { risk: 'low', title: 'Encourage family', details: 'Encourage family and community to stay vigilant about dengue prevention.' },
-    { risk: 'low', title: 'Stay Hydrated', details: 'Stay Hydrated by drinking 8L water per day - Maintain good health and hydration.' },
-    { risk: 'low', title: 'Check and clean flower pots', details: 'Check and clean flower pots, roof gutters regularly to prevent water accumulation.' },
+    {
+      risk: 'high',
+      title: 'Conduct Immediate Fogging/Space Spraying',
+      details: 'Contact your local health authority immediately. In high-risk clusters, thermal fogging or ultra-low volume (ULV) spraying is necessary to kill infected adult mosquitoes and break the transmission chain rapidly.',
+      referenceLink: 'https://www.who.int/news-room/fact-sheets/detail/dengue-and-severe-dengue'
+    },
+    {
+      risk: 'high',
+      title: 'Apply EPA-Registered Repellents',
+      details: 'Apply insect repellent containing DEET, Picaridin, or IR3535 on exposed skin. These ingredients are proven to provide long-lasting protection against biting Aedes mosquitoes.',
+      referenceLink: 'https://www.cdc.gov/mosquitoes/mosquito-bites/prevent-mosquito-bites.html'
+    },
+    {
+      risk: 'high',
+      title: 'Wear Permethrin-Treated or Long Clothing',
+      details: 'Wear long-sleeved shirts and long pants. For added protection, treat clothing with 0.5% permethrin, which repels and kills mosquitoes on contact. Do not apply permethrin directly to skin.',
+      referenceLink: 'https://www.cdc.gov/mosquitoes/mosquito-bites/prevent-mosquito-bites.html'
+    },
+    {
+      risk: 'high',
+      title: 'Eliminate Indoor Stagnant Water Immediately',
+      details: 'Aedes mosquitoes often breed indoors. Immediately empty and scrub vases, flower pot saucers, and tray water dispensers. Aedes eggs can stick to the walls of containers, so scrubbing is vital.',
+      referenceLink: 'https://www.nea.gov.sg/dengue-zika/prevention/mozzie-wipeout'
+    },
+    {
+      risk: 'high',
+      title: 'Monitor for Dengue Symptoms',
+      details: 'Be vigilant for high fever accompanied by severe headache, pain behind the eyes, muscle/joint pain, or rash. If symptoms appear in a high-risk zone, seek medical attention immediately to manage potential complications.',
+      referenceLink: 'https://www.cdc.gov/dengue/symptoms/index.html'
+    },
+    {
+      risk: 'high',
+      title: 'Isolate Infected Family Members',
+      details: 'If a family member has fever or confirmed Dengue, they must sleep under a mosquito net or in a screened room. This prevents mosquitoes from biting the sick person and spreading the virus to others in the house.',
+      referenceLink: 'https://www.cdc.gov/dengue/prevention/protect-yourself.html'
+    },
+    {
+      risk: 'high',
+      title: 'Use Household Aerosol Sprays',
+      details: 'Use a household insecticide aerosol spray in dark, cool areas where mosquitoes rest (e.g., under beds, behind curtains, and in closets) to immediately kill adult mosquitoes hiding indoors.',
+      referenceLink: 'https://www.nea.gov.sg/dengue-zika/prevention/household-insecticide'
+    },
+    {
+      risk: 'high',
+      title: 'Keep Windows and Doors Closed',
+      details: 'Keep windows and doors closed, or keep air conditioning on, especially during the two peak biting periods: early morning (after sunrise) and late afternoon (before sunset).',
+      referenceLink: 'https://www.epa.gov/mosquitocontrol/success-mosquito-control-integrated-pest-management'
+    },
+    {
+      risk: 'high',
+      title: 'Avoid Scented Soaps and Perfumes',
+      details: 'Avoid using heavily scented soaps, shampoos, or perfumes. Floral and fruity scents can attract mosquitoes. Opt for unscented hygiene products during high-risk outbreaks.',
+      referenceLink: 'https://extension.psu.edu/mosquitoes-biology-and-management'
+    },
+    {
+      risk: 'medium',
+      title: 'Scrub and Cover Water Storage',
+      details: 'Merely emptying water is insufficient. You must scrub the inner walls of containers to dislodge mosquito eggs, which can survive dry conditions for months, and keep all water storage tightly covered.',
+      referenceLink: 'https://www.cdc.gov/mosquitoes/mosquito-control/athome/index.html'
+    },
+
+    {
+      risk: 'medium',
+      title: 'Trim Dense Vegetation',
+      details: 'Adult Aedes mosquitoes rest in cool, shaded, and vegetated areas during the day. Keep bushes trimmed and grass short to reduce resting sites near your home.',
+      referenceLink: 'https://pubmed.ncbi.nlm.nih.gov/26084606/' // Study on vegetation and Aedes resting behavior
+    },
+    {
+      risk: 'medium',
+      title: 'Apply Larvicide (Abate) to Non-Potable Water',
+      details: 'For water that cannot be emptied (e.g., decorative ponds, pumps, or large tanks), add sand granular larvicide (Temephos/Abate) every 3 months to prevent larvae from developing into adults.',
+      referenceLink: 'https://www.who.int/publications/i/item/9789241502153'
+    },
+    {
+      risk: 'medium',
+      title: 'Organize Community "Search and Destroy"',
+      details: 'Dengue is a community issue. Organize or join a neighborhood cleanup to remove trash, old tires, and debris that collect rain water. Vector control is most effective when an entire cluster participates.',
+      referenceLink: 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5622616/' // Review on community engagement for vector control
+    },
+    {
+      risk: 'medium',
+      title: 'Manage Solid Waste Disposal',
+      details: 'Ensure all household trash, especially disposable containers like cups and bottles, is tied in plastic bags and disposed of in covered bins. Open trash is a primary breeding ground after rain.',
+      referenceLink: 'https://www.cdc.gov/dengue/prevention/index.html'
+    },
+    {
+      risk: 'medium',
+      title: 'Seal Septic Tanks and Plumbing Vents',
+      details: 'Repair cracks or gaps in septic tanks and cover plumbing vent pipes with wire mesh. These are massive, often hidden underground breeding sites for mosquitoes that can produce thousands of larvae.',
+      referenceLink: 'https://www.cdc.gov/mosquitoes/mosquito-control/athome/septictanks.html'
+    },
+    {
+      risk: 'medium',
+      title: 'Drill Holes in Tire Swings/Planters',
+      details: 'Old tires are the #1 breeding ground due to their shape and heat retention. If used for swings or planters, drill drainage holes in the bottom or fill them completely with soil so no water pockets remain.',
+      referenceLink: 'https://www.epa.gov/mosquitocontrol/mosquito-control-and-waste-tires'
+    },
+    {
+      risk: 'medium',
+      title: 'Introduce Biological Controls (Fish)',
+      details: 'For large water containers that cannot be emptied (like decorative lotus jars or ponds), introduce larvivorous fish such as Guppies or Wolbachia-carrying mosquitoes (if part of a local program) to eat larvae.',
+      referenceLink: 'https://www.who.int/news-room/fact-sheets/detail/dengue-and-severe-dengue'
+    },
+    {
+      risk: 'medium',
+      title: 'Flip and Store Buckets Under Shelter',
+      details: 'Store all buckets, pails, and watering cans upside down and under a roof. Even a small amount of rainwater collected in an upright bucket rim can support breeding.',
+      referenceLink: 'https://www.cdc.gov/zika/prevention/controlling-mosquitoes-at-home.html'
+    },
+    {
+      risk: 'low',
+      title: 'Weekly "Mozzie Wipeout" Routine',
+      details: 'Dedicate 10 minutes once a week to inspect your home. Check roof gutters, turn over pails, and replace water in vases. Breaking the 7-day breeding cycle of the mosquito is the most effective prevention.',
+      referenceLink: 'https://www.nea.gov.sg/dengue-zika/prevention/mozzie-wipeout'
+    },
+    {
+      risk: 'low',
+      title: 'Install Window and Door Screens',
+      details: 'Retrofit your home with structural barriers. Installing wire mesh screens on windows and doors prevents mosquitoes from entering while allowing ventilation, serving as a permanent passive protection measure.',
+      referenceLink: 'https://www.cdc.gov/mosquitoes/mosquito-control/athome/index.html'
+    },
+    {
+      risk: 'low',
+      title: 'Maintain Adequate Hydration',
+      details: 'Good hydration supports general immunity. While it does not prevent bites, staying well-hydrated (approx. 2-3 Liters/day for adults) is critical if infection occurs to prevent shock. Note: Avoid excessive over-hydration (8L is unsafe).',
+      referenceLink: 'https://www.cdc.gov/dengue/symptoms/index.html'
+    },
+    {
+      risk: 'low',
+      title: 'Educate Family on Vector Biology',
+      details: 'Educate family members that Aedes mosquitoes are day-biters (active early morning and late afternoon). Awareness of peak biting times helps family members know when to take extra precautions.',
+      referenceLink: 'https://www.who.int/news-room/fact-sheets/detail/dengue-and-severe-dengue'
+    },
+    {
+      risk: 'low',
+      title: 'Switch to Soil-Based Gardening',
+      details: 'Avoid growing plants in water (hydroponics) as they are common breeding sites. If you must use water, change it every 2 days and scrub the roots. Prefer soil-based potted plants.',
+      referenceLink: 'https://www.nea.gov.sg/dengue-zika/prevention/breeding-habitats'
+    },
+    {
+      risk: 'low',
+      title: 'Unclog Roof Gutters and Drains',
+      details: 'Leaves and debris can clog roof gutters, creating stagnant water pools high above the ground that are hard to see. Clean gutters once a month to ensure water flows freely.',
+      referenceLink: 'https://www.cdc.gov/mosquitoes/mosquito-control/athome/index.html'
+    },
+    {
+      risk: 'low',
+      title: 'Avoid Bromeliads and Water-Holding Plants',
+      details: 'Reconsider landscaping with plants like Bromeliads or Agave that naturally hold water in their leaf axils. If you keep them, flush the center with a hose weekly to wash out potential larvae.',
+      referenceLink: 'https://edis.ifas.ufl.edu/publication/IN1332' // University of Florida Research on Bromeliads
+    },
+    {
+      risk: 'low',
+      title: 'Grant Access to Health Inspectors',
+      details: 'Cooperate with local health officers during routine inspections. They can identify cryptic breeding sites (like behind fridge drip trays) that homeowners often miss.',
+      referenceLink: 'https://www.nea.gov.sg/dengue-zika/prevention/overview'
+    }
   ];
 
   // Create recommendations (global, not company-specific)

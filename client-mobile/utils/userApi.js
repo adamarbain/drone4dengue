@@ -292,6 +292,28 @@ export async function getCompanySettings(companyId) {
   return data;
 }
 
+// Get company details by ID (for organisation details page)
+export async function getCompanyDetails(companyId) {
+  const token = await AsyncStorage.getItem('token');
+  if (!token) throw new Error('No token found');
+
+  const res = await fetch(`${API_URL}/companies/${companyId}/getcompanybyId`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to fetch company details');
+  }
+  
+  const data = await res.json();
+  return data;
+}
+
 // Get latest one day dengue cases (activeCases !== 0, totalCases === null)
 export async function getLatestDengueCases() {
   try {
@@ -336,4 +358,90 @@ export async function getLatestDengueCases() {
     console.error('Error fetching latest dengue cases:', error);
     throw error;
   }
-} 
+}
+
+// Location Alert API functions
+export async function getUserLocationAlerts() {
+  const token = await AsyncStorage.getItem('token');
+  if (!token) throw new Error('No token found');
+
+  const res = await fetch(`${API_URL}/api/location-alerts`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to fetch location alerts');
+  }
+  
+  const data = await res.json();
+  return data.alerts;
+}
+
+export async function createLocationAlert(name, latitude, longitude) {
+  const token = await AsyncStorage.getItem('token');
+  if (!token) throw new Error('No token found');
+
+  const res = await fetch(`${API_URL}/api/location-alerts`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ name, latitude, longitude }),
+  });
+  
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to create location alert');
+  }
+  
+  const data = await res.json();
+  return data.alert;
+}
+
+export async function deleteLocationAlert(alertId) {
+  const token = await AsyncStorage.getItem('token');
+  if (!token) throw new Error('No token found');
+
+  const res = await fetch(`${API_URL}/api/location-alerts/${alertId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to delete location alert');
+  }
+  
+  return true;
+}
+
+export async function toggleLocationAlert(alertId, isActive) {
+  const token = await AsyncStorage.getItem('token');
+  if (!token) throw new Error('No token found');
+
+  const res = await fetch(`${API_URL}/api/location-alerts/${alertId}`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ isActive }),
+  });
+  
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to toggle location alert');
+  }
+  
+  const data = await res.json();
+  return data.alert;
+}

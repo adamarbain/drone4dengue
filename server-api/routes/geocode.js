@@ -3,10 +3,10 @@ const axios = require('axios');
 const router = express.Router();
 
 // Simple geocoding proxy to comply with Nominatim usage policy
-// GET /geocode/search?q=QUERY&limit=5
+// GET /geocode/search?q=QUERY&limit=5&countrycodes=my
 router.get('/search', async (req, res) => {
   try {
-    const { q = '', limit = 5 } = req.query;
+    const { q = '', limit = 5, countrycodes = 'my' } = req.query;
     if (!q || String(q).trim().length === 0) {
       return res.status(400).json({ error: 'Query parameter q is required' });
     }
@@ -16,6 +16,7 @@ router.get('/search', async (req, res) => {
         format: 'jsonv2',
         addressdetails: 1,
         limit,
+        countrycodes, // Restrict to Malaysia by default for faster results
       },
       headers: {
         // Identify this application per Nominatim policy

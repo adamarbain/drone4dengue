@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Image, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Image, ScrollView, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import BottomNav from './components/BottomNav';
@@ -20,6 +20,7 @@ export default function EditProfilePage() {
         type: 'success',
         message: '',
     });
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     useEffect(() => {
         fetchCurrentUser()
@@ -33,7 +34,7 @@ export default function EditProfilePage() {
             .finally(() => setLoading(false));
     }, []);
 
-    const handleSave = async () => {
+    const handleSaveConfirm = () => {
         // Validation
         if (!name.trim()) {
             setModal({ visible: true, type: 'error', message: 'Full name is required' });
@@ -43,7 +44,11 @@ export default function EditProfilePage() {
             setModal({ visible: true, type: 'error', message: 'Username is required' });
             return;
         }
+        setShowConfirmModal(true);
+    };
 
+    const handleSave = async () => {
+        setShowConfirmModal(false);
         setSaving(true);
         try {
             await updateUserProfile({ name, username, phone, address });
@@ -196,7 +201,7 @@ export default function EditProfilePage() {
                         </TouchableOpacity>
                         <TouchableOpacity
                             className="flex-1 bg-[#1D4ED8] rounded-xl py-4 items-center justify-center"
-                            onPress={handleSave}
+                            onPress={handleSaveConfirm}
                             disabled={saving}
                             activeOpacity={0.8}
                             style={{ opacity: saving ? 0.7 : 1 }}
@@ -221,6 +226,43 @@ export default function EditProfilePage() {
                     if (modal.type === 'success') router.back();
                 }}
             />
+
+            {/* Confirmation Modal */}
+            <Modal
+                visible={showConfirmModal}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setShowConfirmModal(false)}
+            >
+                <View className="flex-1 bg-black/50 items-center justify-center px-6">
+                    <View className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl">
+                        <View className="items-center mb-4">
+                            <View className="w-16 h-16 rounded-full bg-[#1D4ED8]/10 items-center justify-center mb-3">
+                                <Ionicons name="save-outline" size={32} color="#1D4ED8" />
+                            </View>
+                            <Text className="text-xl font-bold text-[#181D27] text-center">Save Changes</Text>
+                            <Text className="text-sm text-[#6B7280] text-center mt-2">
+                                Are you sure you want to update your profile information?
+                            </Text>
+                        </View>
+                        <View className="flex-row gap-3 mt-4">
+                            <TouchableOpacity
+                                onPress={() => setShowConfirmModal(false)}
+                                className="flex-1 py-3 rounded-xl bg-gray-100"
+                            >
+                                <Text className="text-center font-semibold text-[#6B7280]">Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={handleSave}
+                                className="flex-1 py-3 rounded-xl bg-[#1D4ED8]"
+                            >
+                                <Text className="text-center font-semibold text-white">Confirm</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
             <BottomNav />
         </SafeAreaView>
     );

@@ -1,0 +1,61 @@
+name: Daily Location-based Alert Notifications
+
+on:
+  schedule:
+    # Run daily at 12:00 PM Malaysia Time (UTC+8)
+    # 12:00 PM MYT = 4:00 AM UTC
+    - cron: '0 4 * * *'
+  workflow_dispatch: # Allow manual trigger for testing
+
+jobs:
+  send-location-alerts:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check and Send Location-based Notifications
+        run: |
+          echo "Starting location-based alert check at $(date)"
+          
+          # Call the API endpoint to check dengue cases and send notifications
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ secrets.API_BASE_URL }}/api/location-alerts/check-and-notify" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: ${{ secrets.LOCATION_ALERT_API_KEY }}")
+          
+          # Extract HTTP status code and response body
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "Response Status: $http_code"
+          echo "Response Body: $body"
+          
+          # Check if the request was successful
+          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+            echo "✅ Location alert check completed successfully"
+            
+            # Parse and display results
+            notifications_sent=$(echo "$body" | jq -r '.notificationsSent // 0')
+            alerts_checked=$(echo "$body" | jq -r '.alertsChecked // 0')
+            dengue_cases=$(echo "$body" | jq -r '.dengueCasesFound // 0')
+            
+            echo "📊 Summary:"
+            echo "   - Alerts checked: $alerts_checked"
+            echo "   - Dengue cases found: $dengue_cases"
+            echo "   - Notifications sent: $notifications_sent"
+          else
+            echo "❌ Location alert check failed with status code: $http_code"
+            exit 1
+          fi
+          
+          echo "Completed at $(date)"
+
+      - name: Log Completion
+        if: success()
+        run: |
+          echo "🎉 Daily location-based alert notification job completed successfully"
+          
+      - name: Log Failure
+        if: failure()
+        run: |
+          echo "⚠️ Daily location-based alert notification job failed"
+

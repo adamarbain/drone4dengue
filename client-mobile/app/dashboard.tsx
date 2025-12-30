@@ -7,7 +7,8 @@ import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import BottomNav from './components/BottomNav';
 import DengueRiskCard from '../components/DengueRiskCard';
-import { fetchCurrentUser, getCompanyLocations, getCompanyPredictions, getCompanySettings, getLatestDengueCases } from '../utils/userApi';
+import { fetchCurrentUser, getCompanyLocations, getCompanyPredictions, getCompanySettings, getLatestDengueCases, getUserLocationAlerts, createLocationAlert, deleteLocationAlert, toggleLocationAlert } from '../utils/userApi';
+import { Ionicons } from '@expo/vector-icons';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -73,6 +74,31 @@ export default function Dashboard() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showLocationButtonDengue, setShowLocationButtonDengue] = useState(false);
+  
+  // Location Alert states
+  interface LocationAlert {
+    id: string;
+    name: string;
+    latitude: number;
+    longitude: number;
+    boundingBox: number[];
+    address: string | null;
+    isActive: boolean;
+    createdAt: string;
+  }
+  const [locationAlerts, setLocationAlerts] = useState<LocationAlert[]>([]);
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [showCreateAlertModal, setShowCreateAlertModal] = useState(false);
+  const [showViewAlertsModal, setShowViewAlertsModal] = useState(false);
+  const [newAlertName, setNewAlertName] = useState('');
+  const [newAlertLocation, setNewAlertLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [newAlertLocationName, setNewAlertLocationName] = useState<string>('');
+  const [isCreatingAlert, setIsCreatingAlert] = useState(false);
+  const [loadingAlerts, setLoadingAlerts] = useState(false);
+  const alertMapRef = useRef<MapView>(null);
+  const [alertSearchQuery, setAlertSearchQuery] = useState('');
+  const [alertSearchResults, setAlertSearchResults] = useState<any[]>([]);
+  const [isAlertSearching, setIsAlertSearching] = useState(false);
   
   // Risk threshold settings
   const [riskThresholds, setRiskThresholds] = useState({ lowThreshold: 1.0, highThreshold: 3.0 });
@@ -470,8 +496,165 @@ export default function Dashboard() {
     }
   };
 
+  // Search location for alert modal
+  const searchAlertLocation = async (query: string) => {
+    if (!query || query.trim().length === 0) {
+      setAlertSearchResults([]);
+      return;
+    }
+
+    setIsAlertSearching(true);
+    try {
+      const response = await fetch(`${API_URL}/geocode/search?q=${encodeURIComponent(query)}&limit=5`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Search failed');
+      }
+
+      const data = await response.json();
+      setAlertSearchResults(data);
+    } catch (error) {
+      console.error('Error searching location:', error);
+      setAlertSearchResults([]);
+    } finally {
+      setIsAlertSearching(false);
+    }
+  };
+
+  const handleAlertSearchResultSelect = (result: any) => {
+    const lat = parseFloat(result.lat);
+    const lon = parseFloat(result.lon);
+    
+    // Set the selected location and name
+    setNewAlertLocation({ latitude: lat, longitude: lon });
+    setNewAlertLocationName(result.display_name || '');
+    
+    // Animate map to the selected location
+    if (alertMapRef.current) {
+      alertMapRef.current.animateToRegion({
+        latitude: lat,
+        longitude: lon,
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
+      }, 500);
+    }
+    
+    // Clear search
+    setAlertSearchQuery('');
+    setAlertSearchResults([]);
+  };
+
+  // Reverse geocode to get location name from coordinates
+  const reverseGeocodeAlertLocation = async (latitude: number, longitude: number) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
+        {
+          headers: {
+            'User-Agent': 'DengueEye-Mobile/1.0',
+            'Accept': 'application/json',
+          },
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Reverse geocoding failed');
+      }
+      
+      const data = await response.json();
+      return data.display_name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+    } catch (error) {
+      console.error('Error reverse geocoding:', error);
+      return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+    }
+  };
+
   const handleDengueCaseMarkerPress = (case_: DengueCase) => {
     setSelectedDengueCase(case_);
+  };
+
+  // Location Alert functions
+  const fetchLocationAlerts = async () => {
+    setLoadingAlerts(true);
+    try {
+      const alerts = await getUserLocationAlerts();
+      setLocationAlerts(alerts);
+    } catch (error: any) {
+      console.error('Error fetching location alerts:', error);
+    } finally {
+      setLoadingAlerts(false);
+    }
+  };
+
+  const handleCreateAlert = async () => {
+    if (!newAlertName.trim()) {
+      Alert.alert('Error', 'Please enter a name for the alert');
+      return;
+    }
+    if (!newAlertLocation) {
+      Alert.alert('Error', 'Please pin a location on the map');
+      return;
+    }
+
+    setIsCreatingAlert(true);
+    try {
+      await createLocationAlert(newAlertName.trim(), newAlertLocation.latitude, newAlertLocation.longitude);
+      Alert.alert('Success', 'Location alert created successfully');
+      setShowCreateAlertModal(false);
+      setNewAlertName('');
+      setNewAlertLocation(null);
+      setNewAlertLocationName('');
+      fetchLocationAlerts();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to create location alert');
+    } finally {
+      setIsCreatingAlert(false);
+    }
+  };
+
+  const handleDeleteAlert = async (alertId: string) => {
+    Alert.alert(
+      'Delete Alert',
+      'Are you sure you want to delete this location alert?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteLocationAlert(alertId);
+              setLocationAlerts(prev => prev.filter(a => a.id !== alertId));
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to delete alert');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleToggleAlert = async (alertId: string, currentStatus: boolean) => {
+    try {
+      const updated = await toggleLocationAlert(alertId, !currentStatus);
+      setLocationAlerts(prev => prev.map(a => a.id === alertId ? { ...a, isActive: updated.isActive } : a));
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to toggle alert');
+    }
+  };
+
+  const handleMapPressForAlert = async (event: any) => {
+    const { latitude, longitude } = event.nativeEvent.coordinate;
+    setNewAlertLocation({ latitude, longitude });
+    
+    // Get location name via reverse geocoding
+    const locationName = await reverseGeocodeAlertLocation(latitude, longitude);
+    setNewAlertLocationName(locationName);
   };
 
   const returnToCurrentLocationDengue = () => {
@@ -536,8 +719,7 @@ export default function Dashboard() {
           <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
             {/* Map */}
             <View
-              className="rounded-2xl overflow-hidden mb-2 w-full"
-              style={{ aspectRatio: 16 / 8 }}
+              className="rounded-2xl overflow-hidden mb-2 w-full h-80"
             >
               {locationLoading ? (
                 <View className="w-full h-full bg-gray-200 items-center justify-center">
@@ -559,6 +741,11 @@ export default function Dashboard() {
                     showsUserLocation={true}
                     showsMyLocationButton={false}
                     mapType="standard"
+                    zoomEnabled={true}
+                    zoomControlEnabled={true}
+                    scrollEnabled={true}
+                    pitchEnabled={true}
+                    rotateEnabled={true}
                   >
                     <Marker
                       coordinate={{
@@ -618,11 +805,11 @@ export default function Dashboard() {
 
         {/* Organisation Tab Content / Dengue Cases Tab Content */}
         {activeTab === 'organisation' && (
-          <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+          <View className="flex-1">
             {companyId === 'comp-999' ? (
-              <View>
+              <View className="flex-1">
                 {loadingDengueCases ? (
-                  <View className="items-center justify-center py-8">
+                  <View className="flex-1 items-center justify-center py-8">
                     <ActivityIndicator size="large" color="#1D4ED8" />
                     <Text className="text-gray-600 mt-4 text-sm">Loading dengue cases...</Text>
                   </View>
@@ -637,13 +824,13 @@ export default function Dashboard() {
                     </Text>
                   </View>
                 ) : (
-                  <>
-                    {/* Location Search */}
-                    <View className="mb-4 relative">
-                      <View className="flex-row items-center bg-white rounded-xl border border-gray-200 px-3 py-2">
+                  <View className="flex-1">
+                    {/* Location Search - Positioned absolutely on top of map */}
+                    <View className="absolute top-0 left-0 right-0 z-10 px-2 pt-2">
+                      <View className="flex-row items-center bg-white rounded-xl border border-gray-200 px-3 py-2 shadow-md">
                         <Feather name="search" size={20} color="#6B7280" />
                         <TextInput
-                          className="ml-2 py-2 text-md"
+                          className="flex-1 ml-2 py-2 text-md"
                           placeholder="Search location in Malaysia..."
                           placeholderTextColor="#374151"
                           value={searchQuery}
@@ -668,7 +855,7 @@ export default function Dashboard() {
                       
                       {/* Search Results Dropdown */}
                       {searchResults.length > 0 && (
-                        <View className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl border border-gray-200 shadow-lg z-10 max-h-48">
+                        <View className="mt-1 bg-white rounded-xl border border-gray-200 shadow-lg max-h-48">
                           <ScrollView>
                             {searchResults.map((result, index) => (
                               <TouchableOpacity
@@ -690,11 +877,8 @@ export default function Dashboard() {
                       )}
                     </View>
 
-                    {/* Dengue Cases Map */}
-                    <View
-                      className="rounded-2xl overflow-hidden mb-4 w-full"
-                      style={{ height: 600 }}
-                    >
+                    {/* Dengue Cases Map - Full height */}
+                    <View className="flex-1 rounded-2xl overflow-hidden">
                       <MapView
                         ref={orgMapRef}
                         style={{ width: '100%', height: '100%' }}
@@ -729,11 +913,31 @@ export default function Dashboard() {
                         ))}
                       </MapView>
                       
-                      {/* Return to Location Button */}
+                      {/* Floating Button - Create Location-based Alert (Bottom Left) */}
+                      <TouchableOpacity
+                        onPress={() => {
+                          fetchLocationAlerts();
+                          setShowAlertModal(true);
+                        }}
+                        className="absolute bottom-4 left-4 bg-[#1D4ED8] rounded-full px-4 py-3 flex-row items-center shadow-lg"
+                        style={{
+                          shadowColor: '#1D4ED8',
+                          shadowOffset: { width: 0, height: 4 },
+                          shadowOpacity: 0.3,
+                          shadowRadius: 8,
+                          elevation: 8,
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="notifications-outline" size={20} color="white" />
+                        <Text className="text-white font-bold text-sm ml-2">Location Alert</Text>
+                      </TouchableOpacity>
+                      
+                      {/* Return to Location Button (Bottom Right) */}
                       {showLocationButtonDengue && (
                         <TouchableOpacity
                           onPress={returnToCurrentLocationDengue}
-                          className="absolute bottom-2 right-2 bg-[#1D4ED8] rounded-full p-3 shadow-lg"
+                          className="absolute bottom-4 right-4 bg-[#1D4ED8] rounded-full p-3 shadow-lg"
                           style={{
                             shadowColor: '#1D4ED8',
                             shadowOffset: { width: 0, height: 4 },
@@ -745,24 +949,6 @@ export default function Dashboard() {
                           <Feather name="navigation" size={20} color="white" />
                         </TouchableOpacity>
                       )}
-                    </View>
-                    
-                    {/* Dengue Cases Summary */}
-                    <View className="mb-4">
-                      <Text className="text-lg font-bold text-black mb-3" style={{ fontFamily: 'SF Pro' }}>
-                        Latest Dengue Cases ({dengueCases.length})
-                      </Text>
-                      <Text className="text-sm text-gray-600 mb-3">
-                        Showing active cases from the last 24 hours
-                      </Text>
-                      <View className="bg-blue-50 rounded-xl p-3 border border-blue-200">
-                        <View className="flex-row items-start">
-                          <Feather name="info" size={16} color="#1D4ED8" style={{ marginTop: 2 }} />
-                          <Text className="text-xs text-blue-800 ml-2 flex-1">
-                            This map only covers locations in Malaysia
-                          </Text>
-                        </View>
-                      </View>
                     </View>
 
                     {/* Selected Dengue Case Details Modal */}
@@ -878,11 +1064,354 @@ export default function Dashboard() {
                         </View>
                       </View>
                     </Modal>
-                  </>
+
+                    {/* Alert Options Modal */}
+                    <Modal
+                      visible={showAlertModal}
+                      transparent={true}
+                      animationType="fade"
+                      onRequestClose={() => setShowAlertModal(false)}
+                    >
+                      <View className="flex-1 bg-black/50 items-center justify-center px-6">
+                        <View className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl">
+                          <View className="items-center mb-4">
+                            <View className="w-16 h-16 rounded-full bg-[#1D4ED8]/10 items-center justify-center mb-3">
+                              <Ionicons name="location-outline" size={32} color="#1D4ED8" />
+                            </View>
+                            <Text className="text-xl font-bold text-[#181D27] text-center">Location-based Alerts</Text>
+                            <Text className="text-sm text-[#6B7280] text-center mt-2">
+                              Get notified when dengue cases are detected near your saved locations
+                            </Text>
+                          </View>
+                          
+                          <TouchableOpacity
+                            onPress={() => {
+                              setShowAlertModal(false);
+                              setShowViewAlertsModal(true);
+                            }}
+                            className="flex-row items-center bg-gray-50 rounded-xl p-4 mb-3"
+                            activeOpacity={0.7}
+                          >
+                            <View className="w-10 h-10 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-3">
+                              <Ionicons name="list-outline" size={22} color="#1D4ED8" />
+                            </View>
+                            <View className="flex-1">
+                              <Text className="text-base font-semibold text-[#181D27]">View Existing Alerts</Text>
+                              <Text className="text-xs text-[#6B7280]">{locationAlerts.length} alert(s) saved</Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color="#ABABAB" />
+                          </TouchableOpacity>
+                          
+                          <TouchableOpacity
+                            onPress={async () => {
+                              setShowAlertModal(false);
+                              setNewAlertLocation(location);
+                              setShowCreateAlertModal(true);
+                              if (location) {
+                                const locationName = await reverseGeocodeAlertLocation(location.latitude, location.longitude);
+                                setNewAlertLocationName(locationName);
+                              }
+                            }}
+                            className="flex-row items-center bg-[#1D4ED8] rounded-xl p-4 mb-4"
+                            activeOpacity={0.7}
+                          >
+                            <View className="w-10 h-10 rounded-full bg-white/20 items-center justify-center mr-3">
+                              <Ionicons name="add" size={22} color="white" />
+                            </View>
+                            <View className="flex-1">
+                              <Text className="text-base font-semibold text-white">Create New Alert</Text>
+                              <Text className="text-xs text-white/70">Pin a location to monitor</Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color="white" />
+                          </TouchableOpacity>
+                          
+                          <TouchableOpacity
+                            onPress={() => setShowAlertModal(false)}
+                            className="py-3"
+                          >
+                            <Text className="text-center font-semibold text-[#6B7280]">Cancel</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </Modal>
+
+                    {/* View Existing Alerts Modal */}
+                    <Modal
+                      visible={showViewAlertsModal}
+                      transparent={true}
+                      animationType="slide"
+                      onRequestClose={() => setShowViewAlertsModal(false)}
+                    >
+                      <View className="flex-1 bg-black/50 justify-end">
+                        <View className="bg-white rounded-t-3xl p-6 max-h-[80%]">
+                          <View className="flex-row items-center justify-between mb-4">
+                            <Text className="text-2xl font-bold text-black">My Location Alerts</Text>
+                            <TouchableOpacity onPress={() => setShowViewAlertsModal(false)} className="p-2">
+                              <Feather name="x" size={24} color="#6B7280" />
+                            </TouchableOpacity>
+                          </View>
+                          
+                          {loadingAlerts ? (
+                            <View className="items-center justify-center py-8">
+                              <ActivityIndicator size="large" color="#1D4ED8" />
+                            </View>
+                          ) : locationAlerts.length === 0 ? (
+                            <View className="items-center justify-center py-8">
+                              <Ionicons name="notifications-off-outline" size={48} color="#9CA3AF" />
+                              <Text className="text-gray-500 mt-4 text-center">No location alerts yet</Text>
+                              <TouchableOpacity
+                                onPress={async () => {
+                                  setShowViewAlertsModal(false);
+                                  setNewAlertLocation(location);
+                                  setShowCreateAlertModal(true);
+                                  if (location) {
+                                    const locationName = await reverseGeocodeAlertLocation(location.latitude, location.longitude);
+                                    setNewAlertLocationName(locationName);
+                                  }
+                                }}
+                                className="mt-4 bg-[#1D4ED8] rounded-xl px-6 py-3"
+                              >
+                                <Text className="text-white font-semibold">Create Your First Alert</Text>
+                              </TouchableOpacity>
+                            </View>
+                          ) : (
+                            <ScrollView showsVerticalScrollIndicator={false}>
+                              {locationAlerts.map((alert) => (
+                                <View
+                                  key={alert.id}
+                                  className={`bg-gray-50 rounded-xl p-4 mb-3 border-l-4 ${alert.isActive ? 'border-[#1D4ED8]' : 'border-gray-300'}`}
+                                >
+                                  <View className="flex-row items-start justify-between">
+                                    <View className="flex-1 mr-3">
+                                      <Text className="text-base font-bold text-[#181D27]">{alert.name}</Text>
+                                      {alert.address && (
+                                        <Text className="text-xs text-[#6B7280] mt-1" numberOfLines={2}>{alert.address}</Text>
+                                      )}
+                                      <Text className="text-xs text-[#9CA3AF] mt-1">
+                                        Created {new Date(alert.createdAt).toLocaleDateString()}
+                                      </Text>
+                                    </View>
+                                    <View className="flex-row items-center">
+                                      <TouchableOpacity
+                                        onPress={() => handleToggleAlert(alert.id, alert.isActive)}
+                                        className={`px-3 py-1 rounded-full mr-2 ${alert.isActive ? 'bg-green-100' : 'bg-gray-200'}`}
+                                      >
+                                        <Text className={`text-xs font-semibold ${alert.isActive ? 'text-green-700' : 'text-gray-500'}`}>
+                                          {alert.isActive ? 'Active' : 'Paused'}
+                                        </Text>
+                                      </TouchableOpacity>
+                                      <TouchableOpacity
+                                        onPress={() => handleDeleteAlert(alert.id)}
+                                        className="p-2"
+                                      >
+                                        <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                                      </TouchableOpacity>
+                                    </View>
+                                  </View>
+                                </View>
+                              ))}
+                            </ScrollView>
+                          )}
+                          
+                          {locationAlerts.length > 0 && (
+                            <TouchableOpacity
+                              onPress={async () => {
+                                setShowViewAlertsModal(false);
+                                setNewAlertLocation(location);
+                                setShowCreateAlertModal(true);
+                                if (location) {
+                                  const locationName = await reverseGeocodeAlertLocation(location.latitude, location.longitude);
+                                  setNewAlertLocationName(locationName);
+                                }
+                              }}
+                              className="bg-[#1D4ED8] rounded-xl py-3 mt-4"
+                            >
+                              <Text className="text-white font-bold text-center">Create New Alert</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      </View>
+                    </Modal>
+
+                    {/* Create New Alert Modal */}
+                    <Modal
+                      visible={showCreateAlertModal}
+                      transparent={true}
+                      animationType="slide"
+                      onRequestClose={() => {
+                        setShowCreateAlertModal(false);
+                        setNewAlertName('');
+                        setNewAlertLocation(null);
+                        setNewAlertLocationName('');
+                        setAlertSearchQuery('');
+                        setAlertSearchResults([]);
+                      }}
+                    >
+                      <View className="flex-1 bg-black/50 justify-end">
+                        <View className="bg-white rounded-t-3xl p-6" style={{ height: '85%' }}>
+                          <View className="flex-row items-center justify-between mb-4">
+                            <Text className="text-2xl font-bold text-black">Create Location Alert</Text>
+                            <TouchableOpacity
+                              onPress={() => {
+                                setShowCreateAlertModal(false);
+                                setNewAlertName('');
+                                setNewAlertLocation(null);
+                                setNewAlertLocationName('');
+                                setAlertSearchQuery('');
+                                setAlertSearchResults([]);
+                              }}
+                              className="p-2"
+                            >
+                              <Feather name="x" size={24} color="#6B7280" />
+                            </TouchableOpacity>
+                          </View>
+                          
+                          {/* Alert Name Input */}
+                          <View className="mb-4">
+                            <Text className="text-sm font-semibold text-gray-700 mb-2">Alert Name</Text>
+                            <TextInput
+                              className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-200 text-base"
+                              placeholder="e.g., Home, Office, School"
+                              placeholderTextColor="#9CA3AF"
+                              value={newAlertName}
+                              onChangeText={setNewAlertName}
+                              style={{ color: '#181D27' }}
+                            />
+                          </View>
+                          
+                          {/* Map for pinning location */}
+                          <View className="mb-4">
+                            <Text className="text-sm font-semibold text-gray-700 mb-2">Pin Location</Text>
+                            <Text className="text-xs text-gray-500 mb-2">Search for a location or tap on the map to select</Text>
+                            
+                            {/* Search Bar */}
+                            <View className="mb-3">
+                              <View className="flex-row items-center bg-gray-50 rounded-xl px-4 py-2 border border-gray-200">
+                                <Feather name="search" size={18} color="#6B7280" />
+                                <TextInput
+                                  className="flex-1 ml-2 text-base"
+                                  placeholder="Search location..."
+                                  placeholderTextColor="#9CA3AF"
+                                  value={alertSearchQuery}
+                                  onChangeText={(text) => {
+                                    setAlertSearchQuery(text);
+                                    searchAlertLocation(text);
+                                  }}
+                                  onSubmitEditing={() => searchAlertLocation(alertSearchQuery)}
+                                  style={{ color: '#181D27' }}
+                                />
+                                {alertSearchQuery.length > 0 && (
+                                  <TouchableOpacity
+                                    onPress={() => {
+                                      setAlertSearchQuery('');
+                                      setAlertSearchResults([]);
+                                    }}
+                                    className="ml-2"
+                                  >
+                                    <Feather name="x" size={18} color="#6B7280" />
+                                  </TouchableOpacity>
+                                )}
+                                {isAlertSearching && (
+                                  <ActivityIndicator size="small" color="#1D4ED8" className="ml-2" />
+                                )}
+                              </View>
+                              
+                              {/* Search Results */}
+                              {alertSearchResults.length > 0 && (
+                                <View className="bg-white rounded-xl border border-gray-200 mt-2 max-h-40 overflow-hidden">
+                                  <ScrollView nestedScrollEnabled={true}>
+                                    {alertSearchResults.map((result, index) => (
+                                      <TouchableOpacity
+                                        key={index}
+                                        onPress={() => handleAlertSearchResultSelect(result)}
+                                        className="px-4 py-3 border-b border-gray-100"
+                                      >
+                                        <Text className="text-sm text-gray-800" numberOfLines={2}>
+                                          {result.display_name}
+                                        </Text>
+                                      </TouchableOpacity>
+                                    ))}
+                                  </ScrollView>
+                                </View>
+                              )}
+                            </View>
+                            
+                            <View className="rounded-xl overflow-hidden" style={{ height: 250 }}>
+                              <MapView
+                                ref={alertMapRef}
+                                style={{ width: '100%', height: '100%' }}
+                                initialRegion={location ? {
+                                  latitude: location.latitude,
+                                  longitude: location.longitude,
+                                  latitudeDelta: 0.05,
+                                  longitudeDelta: 0.05,
+                                } : {
+                                  latitude: 3.139,
+                                  longitude: 101.6869,
+                                  latitudeDelta: 0.1,
+                                  longitudeDelta: 0.1,
+                                }}
+                                onPress={handleMapPressForAlert}
+                                showsUserLocation={true}
+                                showsMyLocationButton={false}
+                                zoomEnabled={true}
+                                zoomControlEnabled={true}
+                                scrollEnabled={true}
+                              >
+                                {newAlertLocation && (
+                                  <Marker
+                                    coordinate={newAlertLocation}
+                                    title="Alert Location"
+                                    pinColor="#1D4ED8"
+                                  />
+                                )}
+                              </MapView>
+                            </View>
+                          </View>
+                          
+                          {/* Selected Location Info */}
+                          {newAlertLocation && (
+                            <View className="bg-blue-50 rounded-xl p-3 mb-4 border border-blue-100">
+                              <View className="flex-row items-start">
+                                <Ionicons name="location" size={18} color="#1D4ED8" style={{ marginTop: 2 }} />
+                                <Text className="text-sm text-blue-800 ml-2 flex-1" numberOfLines={2}>
+                                  {newAlertLocationName || `${newAlertLocation.latitude.toFixed(4)}, ${newAlertLocation.longitude.toFixed(4)}`}
+                                </Text>
+                              </View>
+                            </View>
+                          )}
+                          
+                          {/* Info Note */}
+                          <View className="bg-yellow-50 rounded-xl p-3 mb-4 border border-yellow-200">
+                            <View className="flex-row items-start">
+                              <Ionicons name="information-circle" size={18} color="#F59E0B" />
+                              <Text className="text-xs text-yellow-800 ml-2 flex-1">
+                                You will receive notifications when dengue cases are detected within approximately 500m of your pinned location.
+                              </Text>
+                            </View>
+                          </View>
+                          
+                          {/* Create Button */}
+                          <TouchableOpacity
+                            onPress={handleCreateAlert}
+                            disabled={isCreatingAlert || !newAlertName.trim() || !newAlertLocation}
+                            className={`rounded-xl py-4 ${(!newAlertName.trim() || !newAlertLocation || isCreatingAlert) ? 'bg-gray-300' : 'bg-[#1D4ED8]'}`}
+                            activeOpacity={0.8}
+                          >
+                            {isCreatingAlert ? (
+                              <ActivityIndicator size="small" color="white" />
+                            ) : (
+                              <Text className="text-white font-bold text-center text-base">Create Alert</Text>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </Modal>
+                  </View>
                 )}
               </View>
             ) : (
-              <View>
+              <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
                 {loadingOrganisation ? (
                   <View className="items-center justify-center py-8">
                     <ActivityIndicator size="large" color="#1D4ED8" />
@@ -1169,9 +1698,9 @@ export default function Dashboard() {
                 </View>
                   </>
                 )}
-              </View>
+              </ScrollView>
             )}
-          </ScrollView>
+          </View>
         )}
       </View>
       <BottomNav />
