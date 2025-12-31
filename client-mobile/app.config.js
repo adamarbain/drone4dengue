@@ -63,14 +63,12 @@ module.exports = {
           mode: "production",
         },
       ],
-      "@react-native-firebase/app",
-      "@react-native-firebase/auth",
-      "@react-native-google-signin/google-signin",
       [
         "expo-build-properties",
         {
           ios: {
             useFrameworks: "static",
+            buildReactNativeFromSource: true
           },
         },
       ],
