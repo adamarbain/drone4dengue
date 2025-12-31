@@ -45,3 +45,4 @@ package-lock.json
 
 # Firebase credentials (sensitive - do not commit)
 /ios
+/android

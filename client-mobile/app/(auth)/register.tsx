@@ -381,14 +381,14 @@ export default function RegisterScreen() {
                                 </TouchableOpacity>
 
                                 {/* Divider */}
-                                <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 24 }}>
+                                {/* <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 24 }}>
                                     <View style={{ flex: 1, height: 1, backgroundColor: '#E5E7EB' }} />
                                     <Text style={{ marginHorizontal: 16, color: '#9CA3AF', fontSize: 14 }}>or</Text>
                                     <View style={{ flex: 1, height: 1, backgroundColor: '#E5E7EB' }} />
-                                </View>
+                                </View> */}
 
                                 {/* Google Sign-In Button */}
-                                <TouchableOpacity
+                                {/* <TouchableOpacity
                                     onPress={handleGoogleSignIn}
                                     disabled={loading || googleLoading}
                                     activeOpacity={0.8}
@@ -416,12 +416,12 @@ export default function RegisterScreen() {
                                             </Text>
                                         </View>
                                     )}
-                                </TouchableOpacity>
+                                </TouchableOpacity> */}
 
                                 {/* Google Sign-In Note */}
-                                <Text style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', marginTop: 12 }}>
+                                {/* <Text style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', marginTop: 12 }}>
                                     By signing up with Google, you agree to our Terms & Conditions
-                                </Text>
+                                </Text> */}
                             </View>
 
                             {/* Sign In Link */}

@@ -397,14 +397,14 @@ export default function LoginScreen() {
                 </TouchableOpacity>
 
                 {/* Divider */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 24 }}>
+                {/* <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 24 }}>
                   <View style={{ flex: 1, height: 1, backgroundColor: '#E5E7EB' }} />
                   <Text style={{ marginHorizontal: 16, color: '#9CA3AF', fontSize: 14 }}>or</Text>
                   <View style={{ flex: 1, height: 1, backgroundColor: '#E5E7EB' }} />
-                </View>
+                </View> */}
 
                 {/* Google Sign-In Button */}
-                <TouchableOpacity
+                {/* <TouchableOpacity
                   onPress={handleGoogleSignIn}
                   disabled={loginLoading || googleLoading}
                   activeOpacity={0.8}
@@ -432,7 +432,7 @@ export default function LoginScreen() {
                       </Text>
                     </View>
                   )}
-                </TouchableOpacity>
+                </TouchableOpacity> */}
               </View>
 
               {/* Sign Up Link */}

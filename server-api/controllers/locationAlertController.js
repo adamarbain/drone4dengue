@@ -5,6 +5,7 @@ const {
   sendErrorResponse,
   sendValidationError,
   sendNotFoundError,
+  sendUnauthorizedError,
   sendForbiddenError,
   sendInternalError
 } = require('../utils/errorResponse');
@@ -13,7 +14,7 @@ const { createNotification } = require('../services/notificationService');
 // GET /api/location-alerts - Get all location alerts for current user
 exports.getUserLocationAlerts = async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.user?.userId;
     
     const alerts = await prisma.userLocationAlert.findMany({
       where: { userId },
@@ -30,7 +31,12 @@ exports.getUserLocationAlerts = async (req, res) => {
 // POST /api/location-alerts - Create a new location alert
 exports.createLocationAlert = async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.user?.userId;
+    
+    // Check if user is authenticated
+    if (!userId) {
+      return sendUnauthorizedError(res, 'User not authenticated');
+    }
     const { name, latitude, longitude } = req.body;
     
     // Validation
@@ -45,6 +51,16 @@ exports.createLocationAlert = async (req, res) => {
     }
     if (longitude < -180 || longitude > 180) {
       return sendValidationError(res, ['Invalid longitude value']);
+    }
+    
+    // Verify user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true }
+    });
+    
+    if (!user) {
+      return sendNotFoundError(res, 'User');
     }
     
     // Call Nominatim reverse geocoding to get bounding box
@@ -77,33 +93,85 @@ exports.createLocationAlert = async (req, res) => {
       }
     } catch (geoErr) {
       logger.warn('[CREATE LOCATION ALERT] Nominatim API failed, using default bounding box', { error: geoErr.message });
-      // Create a default bounding box (approximately 500m radius)
+    }
+    
+    // Ensure boundingBox is always set (required field in schema)
+    // Create a default bounding box if Nominatim didn't provide one (approximately 500m radius)
+    if (!boundingBox || !Array.isArray(boundingBox) || boundingBox.length !== 4) {
       const delta = 0.005; // ~500m
+      const lat = parseFloat(latitude);
+      const lon = parseFloat(longitude);
       boundingBox = [
-        latitude - delta,  // minLat
-        latitude + delta,  // maxLat
-        longitude - delta, // minLon
-        longitude + delta  // maxLon
+        lat - delta,  // minLat
+        lat + delta,  // maxLat
+        lon - delta, // minLon
+        lon + delta  // maxLon
       ];
     }
     
-    // Create the location alert
-    const alert = await prisma.userLocationAlert.create({
-      data: {
-        userId,
-        name: name.trim(),
-        latitude,
-        longitude,
-        boundingBox,
-        address,
-        isActive: true
-      }
+    // Validate boundingBox values are valid numbers
+    if (!boundingBox.every(val => typeof val === 'number' && !isNaN(val))) {
+      logger.error('[CREATE LOCATION ALERT] Invalid boundingBox values', { boundingBox });
+      return sendValidationError(res, ['Invalid bounding box values']);
+    }
+    
+    // Log the data we're about to create for debugging
+    logger.info('[CREATE LOCATION ALERT] Attempting to create alert', {
+      userId,
+      name: name.trim(),
+      latitude,
+      longitude,
+      boundingBox,
+      boundingBoxType: typeof boundingBox,
+      boundingBoxIsArray: Array.isArray(boundingBox),
+      address
     });
+    
+    // Ensure all values are properly formatted
+    const alertData = {
+      userId,
+      name: name.trim(),
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
+      boundingBox: boundingBox, // Prisma will handle JSON conversion
+      address: address || null,
+      isActive: true
+    };
+    
+    console.log('[CREATE LOCATION ALERT] Data to insert:', JSON.stringify(alertData, null, 2));
+    
+    // Create the location alert
+    let alert;
+    try {
+      alert = await prisma.userLocationAlert.create({
+        data: alertData
+      });
+    } catch (prismaErr) {
+      console.error('[CREATE LOCATION ALERT] Prisma error:', prismaErr);
+      console.error('[CREATE LOCATION ALERT] Prisma error code:', prismaErr.code);
+      console.error('[CREATE LOCATION ALERT] Prisma error meta:', prismaErr.meta);
+      throw prismaErr; // Re-throw to be caught by outer catch
+    }
     
     logger.info('[CREATE LOCATION ALERT] Alert created successfully', { alertId: alert.id, userId });
     res.status(201).json({ alert });
   } catch (err) {
-    logger.error('[CREATE LOCATION ALERT ERROR]', { error: err.message, stack: err.stack });
+    // Log detailed error information
+    const errorDetails = {
+      message: err.message,
+      stack: err.stack,
+      code: err.code,
+      meta: err.meta,
+      name: err.name,
+      userId: req.user?.userId || 'unknown',
+      body: req.body
+    };
+    
+    // Also log to console for immediate visibility
+    console.error('[CREATE LOCATION ALERT ERROR] Full error details:', JSON.stringify(errorDetails, null, 2));
+    console.error('[CREATE LOCATION ALERT ERROR] Error stack:', err.stack);
+    
+    logger.error('[CREATE LOCATION ALERT ERROR]', errorDetails);
     return sendInternalError(res, 'Failed to create location alert', err);
   }
 };
@@ -111,7 +179,11 @@ exports.createLocationAlert = async (req, res) => {
 // DELETE /api/location-alerts/:id - Delete a location alert
 exports.deleteLocationAlert = async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.user?.userId;
+    
+    if (!userId) {
+      return sendUnauthorizedError(res, 'User not authenticated');
+    }
     const { id } = req.params;
     
     // Check if alert exists and belongs to user
@@ -142,7 +214,11 @@ exports.deleteLocationAlert = async (req, res) => {
 // PATCH /api/location-alerts/:id - Toggle alert active status
 exports.toggleLocationAlert = async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.user?.userId;
+    
+    if (!userId) {
+      return sendUnauthorizedError(res, 'User not authenticated');
+    }
     const { id } = req.params;
     const { isActive } = req.body;
     
