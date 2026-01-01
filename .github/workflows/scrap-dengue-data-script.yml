@@ -46,8 +46,26 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          # Use PAT instead of GITHUB_TOKEN to trigger other workflows
+          # IMPORTANT: Create a Personal Access Token (PAT) with repo scope and add it as secret GH_PAT
+          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git
           git add -A
           git commit -m "Daily update: data processing and ML model training" || echo "No changes to commit"
           git pull --rebase origin ${{ github.ref_name }}
           git push origin ${{ github.ref_name }}
+      
+      - name: Trigger Deployment Workflow (backup method)
+        # This is a backup trigger in case the push event doesn't work
+        # The push with PAT should trigger deploy-server-ml.yml automatically
+        run: |
+          # Check if server-ml files were staged/changed
+          if git diff --cached --name-only | grep -q "^server-ml/" || git diff HEAD~1 HEAD --name-only 2>/dev/null | grep -q "^server-ml/"; then
+            echo "server-ml/ directory changed, triggering deployment via repository_dispatch..."
+            curl -X POST \
+              -H "Accept: application/vnd.github.v3+json" \
+              -H "Authorization: token ${{ secrets.GH_PAT }}" \
+              https://api.github.com/repos/${{ github.repository }}/dispatches \
+              -d '{"event_type":"deploy-server-ml"}' || echo "Failed to trigger deployment, but push should trigger it automatically"
+          else
+            echo "No changes detected in server-ml/ directory."
+          fi
