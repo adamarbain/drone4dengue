@@ -282,10 +282,16 @@ exports.checkAndNotify = async (req, res) => {
       return res.json({ message: 'No active location alerts', notificationsSent: 0 });
     }
     
-    // Get dengue cases from last 24 hours where status contains "Active" and activeCases is not null
-    const yesterday = new Date();
-    yesterday.setHours(yesterday.getHours() - 24);
+    // Get dengue cases from today and yesterday (based on date only, not datetime)
+    // Since the date field is stored as 00:00:00, we need to compare dates, not datetimes
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to midnight today
     
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1); // Yesterday at midnight
+    
+    // Query for records where date >= yesterday (at midnight)
+    // This will match records from yesterday (00:00:00) and today (00:00:00)
     const dengueCases = await prisma.dengueData.findMany({
       where: {
         date: { gte: yesterday },
