@@ -152,7 +152,7 @@ export default function NotificationPage() {
     // Handle different notification types
     if (type === 'dengue_case' || type === 'drone' || type === 'drone_image' || type === 'location') {
       return (
-        <View className="w-12 h-12 bg-[#1D4ED8] rounded-lg items-center justify-center">
+        <View className="w-12 h-12 bg-[#1C4D8D] rounded-lg items-center justify-center">
           <Feather name="bell" size={24} color="#FFFFFF" />
         </View>
       );
@@ -177,7 +177,7 @@ export default function NotificationPage() {
       case 'medium':
         return (
           <View className="w-12 h-12 bg-[#EAD196] rounded-lg items-center justify-center">
-            <Feather name="alert-triangle" size={24} color="#1D4ED8" />
+            <Feather name="alert-triangle" size={24} color="#1C4D8D" />
           </View>
         );
       case 'low':
@@ -211,10 +211,10 @@ export default function NotificationPage() {
         <View className="mb-4">
           <View className="flex-row items-start justify-between mb-2">
             <View className="flex-1 mr-3">
-              <Text className="text-4xl font-extrabold text-black" style={{ fontFamily: 'SF Pro' }}>
+              <Text className="text-4xl font-extrabold" style={{ fontFamily: 'SF Pro', color: '#0F2854' }}>
                 Notification
               </Text>
-              <Text className="text-sm text-gray-600 mt-1">
+              <Text className="text-sm mt-1" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
                 View and keep track of your dengue risk alerts and updates
               </Text>
             </View>
@@ -222,7 +222,7 @@ export default function NotificationPage() {
               <TouchableOpacity
                 onPress={handleMarkAllAsRead}
                 disabled={markingAllAsRead}
-                className="flex-row items-center bg-[#1D4ED8] px-3 py-2 rounded-lg"
+                className="flex-row items-center bg-[#1C4D8D] px-3 py-2 rounded-lg"
               >
                 {markingAllAsRead ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
@@ -241,15 +241,15 @@ export default function NotificationPage() {
         <View className="mb-4">
           {/* Read Status Filter */}
           <View className="mb-3">
-            <Text className="text-sm font-semibold text-gray-700 mb-2">Notification Status</Text>
+            <Text className="text-sm font-semibold mb-2" style={{ color: '#0F2854' }}>Notification Status</Text>
             {Platform.OS === 'ios' ? (
               <>
                 <TouchableOpacity
                   onPress={() => setShowStatusPicker(true)}
                   className="bg-white rounded-lg border border-gray-300 px-4 py-3 flex-row items-center justify-between"
                 >
-                  <Text className="text-base text-gray-800">{getStatusLabel(readStatusFilter)}</Text>
-                  <Feather name="chevron-down" size={20} color="#1D4ED8" />
+                  <Text className="text-base" style={{ color: '#0F2854' }}>{getStatusLabel(readStatusFilter)}</Text>
+                  <Feather name="chevron-down" size={20} color="#4988C4" />
                 </TouchableOpacity>
                 <Modal
                   visible={showStatusPicker}
@@ -266,9 +266,9 @@ export default function NotificationPage() {
                     <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
                       <View className="bg-white rounded-t-3xl" style={{ paddingTop: 16, paddingBottom: 32, paddingHorizontal: 16 }}>
                         <View className="flex-row justify-between items-center mb-4">
-                          <Text className="text-lg font-semibold text-gray-800">Select Notification Status</Text>
+                          <Text className="text-lg font-semibold" style={{ color: '#0F2854' }}>Select Notification Status</Text>
                           <TouchableOpacity onPress={() => setShowStatusPicker(false)}>
-                            <Text className="text-[#1D4ED8] text-base font-semibold">Done</Text>
+                            <Text className="text-base font-semibold" style={{ color: '#1C4D8D' }}>Done</Text>
                           </TouchableOpacity>
                         </View>
                         <View className="bg-gray-50 rounded-lg overflow-hidden">
@@ -316,15 +316,15 @@ export default function NotificationPage() {
 
           {/* Type Filter */}
           <View>
-            <Text className="text-sm font-semibold text-gray-700 mb-2">Notification Type</Text>
+            <Text className="text-sm font-semibold mb-2" style={{ color: '#0F2854' }}>Notification Type</Text>
             {Platform.OS === 'ios' ? (
               <>
                 <TouchableOpacity
                   onPress={() => setShowTypePicker(true)}
                   className="bg-white rounded-lg border border-gray-300 px-4 py-3 flex-row items-center justify-between"
                 >
-                  <Text className="text-base text-gray-800">{getTypeLabel(typeFilter)}</Text>
-                  <Feather name="chevron-down" size={20} color="#1D4ED8" />
+                  <Text className="text-base" style={{ color: '#0F2854' }}>{getTypeLabel(typeFilter)}</Text>
+                  <Feather name="chevron-down" size={20} color="#4988C4" />
                 </TouchableOpacity>
                 <Modal
                   visible={showTypePicker}
@@ -341,9 +341,9 @@ export default function NotificationPage() {
                     <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
                       <View className="bg-white rounded-t-3xl" style={{ paddingTop: 16, paddingBottom: 32, paddingHorizontal: 16 }}>
                         <View className="flex-row justify-between items-center mb-4">
-                          <Text className="text-lg font-semibold text-gray-800">Select Notification Type</Text>
+                          <Text className="text-lg font-semibold" style={{ color: '#0F2854' }}>Select Notification Type</Text>
                           <TouchableOpacity onPress={() => setShowTypePicker(false)}>
-                            <Text className="text-[#1D4ED8] text-base font-semibold">Done</Text>
+                            <Text className="text-base font-semibold" style={{ color: '#1C4D8D' }}>Done</Text>
                           </TouchableOpacity>
                         </View>
                         <View className="bg-gray-50 rounded-lg overflow-hidden">
@@ -402,8 +402,8 @@ export default function NotificationPage() {
       {/* Notifications List */}
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#1D4ED8" />
-          <Text className="text-gray-600 mt-4">Loading notifications...</Text>
+          <ActivityIndicator size="large" color="#1C4D8D" />
+          <Text className="mt-4" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>Loading notifications...</Text>
         </View>
       ) : notifications.length === 0 ? (
         <View className="flex-1 items-center justify-center">
@@ -424,7 +424,7 @@ export default function NotificationPage() {
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => handleNotificationPress(notification)}
-                className={`mx-4 rounded-2xl p-4 ${notification.isRead ? 'bg-gray-50' : 'bg-white'}`}
+                className={`mx-4 rounded-2xl p-4 ${notification.isRead ? 'bg-[#BDE8F5]' : 'bg-white'}`}
                 style={{
                   shadowColor: '#000',
                   shadowOffset: { width: 0, height: 1 },
@@ -432,7 +432,7 @@ export default function NotificationPage() {
                   shadowRadius: 2,
                   elevation: 2,
                   borderLeftWidth: notification.isRead ? 0 : 4,
-                  borderLeftColor: '#1D4ED8',
+                  borderLeftColor: '#4988C4',
                 }}
               >
                 <View className="flex-row items-start">
@@ -444,21 +444,21 @@ export default function NotificationPage() {
                   {/* Content */}
                   <View className="flex-1">
                     {/* Title */}
-                    <Text className={`text-base font-bold mb-2 ${notification.isRead ? 'text-gray-600' : 'text-black'}`} style={{ fontFamily: 'SF Pro' }}>
+                    <Text className="text-base font-bold mb-2" style={{ fontFamily: 'SF Pro', color: notification.isRead ? 'rgba(15, 40, 84, 0.65)' : '#0F2854' }}>
                       {notification.title}
                     </Text>
 
                     {/* Message */}
-                    <Text className="text-sm text-gray-700 mb-2">
+                    <Text className="text-sm mb-2" style={{ color: 'rgba(15, 40, 84, 0.8)' }}>
                       {notification.message}
                     </Text>
 
                     {/* Recommendations if available (for daily_prediction) */}
                     {notification.metadata?.recommendations && notification.metadata.recommendations.length > 0 && (
                       <View className="mt-2 mb-1">
-                        <Text className="text-xs text-gray-600 font-semibold mb-1">Recommendations:</Text>
+                        <Text className="text-xs font-semibold mb-1" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>Recommendations:</Text>
                         {notification.metadata.recommendations.slice(0, 2).map((rec: any, idx: number) => (
-                          <Text key={idx} className="text-xs text-gray-600 ml-2">
+                          <Text key={idx} className="text-xs ml-2" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
                             • {rec.title}
                           </Text>
                         ))}
@@ -468,8 +468,8 @@ export default function NotificationPage() {
                     {/* Location if available */}
                     {notification.location && notification.type !== 'daily_prediction' && (
                       <View className="flex-row items-center mb-1">
-                        <Feather name="map-pin" size={14} color="#1D4ED8" />
-                        <Text className="text-sm text-gray-700 ml-2">{notification.location}</Text>
+                        <Feather name="map-pin" size={14} color="#4988C4" />
+                        <Text className="text-sm ml-2" style={{ color: 'rgba(15, 40, 84, 0.8)' }}>{notification.location}</Text>
                       </View>
                     )}
 
@@ -482,11 +482,11 @@ export default function NotificationPage() {
 
                   {/* Time */}
                   <View className="ml-2">
-                    <Text className="text-xs text-gray-500">
+                    <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.5)' }}>
                       {formatTime(new Date(notification.createdAt))}
                     </Text>
                     {!notification.isRead && (
-                      <View className="w-2 h-2 bg-[#1D4ED8] rounded-full mt-1 ml-auto" />
+                      <View className="w-2 h-2 bg-[#4988C4] rounded-full mt-1 ml-auto" />
                     )}
                   </View>
                 </View>

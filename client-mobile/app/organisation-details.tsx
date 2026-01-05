@@ -104,36 +104,36 @@ export default function OrganisationDetailsPage() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-[#F8F8F8] items-center justify-center">
-        <ActivityIndicator size="large" color="#1D4ED8" />
-        <Text className="mt-4 text-[#6B7280]">Loading organisation details...</Text>
+      <SafeAreaView className="flex-1 bg-white items-center justify-center">
+        <ActivityIndicator size="large" color="#1C4D8D" />
+        <Text className="mt-4" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>Loading organisation details...</Text>
       </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView className="flex-1 bg-[#F8F8F8]">
+      <SafeAreaView className="flex-1 bg-white">
         <View className="px-6 pt-4 pb-2 flex-row items-center">
           <TouchableOpacity
             onPress={() => router.back()}
-            className="w-10 h-10 rounded-full bg-white items-center justify-center shadow"
+            className="w-10 h-10 rounded-full bg-[#BDE8F5] items-center justify-center shadow"
           >
-            <Ionicons name="arrow-back" size={22} color="#1D4ED8" />
+            <Ionicons name="arrow-back" size={22} color="#4988C4" />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-[#181D27] ml-4">Organisation Details</Text>
+          <Text className="text-2xl font-bold ml-4" style={{ color: '#0F2854' }}>Organisation Details</Text>
         </View>
         <View className="flex-1 items-center justify-center px-6">
           <View className="w-20 h-20 rounded-full bg-red-100 items-center justify-center mb-4">
             <Ionicons name="alert-circle-outline" size={40} color="#EF4444" />
           </View>
-          <Text className="text-lg font-semibold text-[#181D27] text-center mb-2">
+          <Text className="text-lg font-semibold text-center mb-2" style={{ color: '#0F2854' }}>
             Unable to Load Details
           </Text>
-          <Text className="text-sm text-[#6B7280] text-center mb-6">{error}</Text>
+          <Text className="text-sm text-center mb-6" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>{error}</Text>
           <TouchableOpacity
             onPress={() => router.back()}
-            className="px-6 py-3 rounded-xl bg-[#1D4ED8]"
+            className="px-6 py-3 rounded-xl bg-[#1C4D8D]"
           >
             <Text className="text-white font-semibold">Go Back</Text>
           </TouchableOpacity>
@@ -143,7 +143,7 @@ export default function OrganisationDetailsPage() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8F8F8]">
+    <SafeAreaView className="flex-1 bg-white">
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 100 }}
@@ -152,17 +152,17 @@ export default function OrganisationDetailsPage() {
         {/* Header */}
           <View className="px-6 pt-6 pb-4 ml-4">
             <View className="flex-row items-center mb-2">
-              <Text className="text-3xl font-extrabold text-[#181D27]" style={{ fontFamily: 'SF Pro' }}>
+              <Text className="text-3xl font-extrabold" style={{ fontFamily: 'SF Pro', color: '#0F2854' }}>
                 Organisation Details
               </Text>
             </View>
-            <Text className="text-sm text-gray-500">
+            <Text className="text-sm" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
               View details about your organisation
             </Text>
           </View>
 
         {/* Company Card */}
-        <View className="mx-6 bg-[#1D4ED8] rounded-2xl shadow-lg p-5 mb-6">
+        <View className="mx-6 bg-[#1C4D8D] rounded-2xl shadow-lg p-5 mb-6">
           <View className="flex-row items-center mb-3">
             <View className="w-14 h-14 rounded-full bg-white/20 items-center justify-center mr-4">
               <Ionicons name="business" size={28} color="white" />
@@ -184,26 +184,26 @@ export default function OrganisationDetailsPage() {
         {/* Details Section */}
         <View className="mx-6">
           {/* Basic Information */}
-          <Text className="text-lg font-bold text-[#181D27] mb-3">Basic Information</Text>
-          <View className="bg-white rounded-2xl shadow p-4 mb-6">
-            <View className="flex-row items-center py-3 border-b border-gray-100">
-              <View className="w-10 h-10 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-3">
-                <Ionicons name="calendar-outline" size={20} color="#1D4ED8" />
+          <Text className="text-lg font-bold mb-3" style={{ color: '#0F2854' }}>Basic Information</Text>
+          <View className="bg-[#BDE8F5] rounded-2xl shadow p-4 mb-6 border" style={{ borderColor: '#4988C4' }}>
+            <View className="flex-row items-center py-3 border-b" style={{ borderColor: '#4988C4' }}>
+              <View className="w-10 h-10 rounded-full bg-white items-center justify-center mr-3">
+                <Ionicons name="calendar-outline" size={20} color="#4988C4" />
               </View>
               <View className="flex-1">
-                <Text className="text-xs text-[#ABABAB]">Created On</Text>
-                <Text className="text-sm font-medium text-[#181D27]">
+                <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.6)' }}>Created On</Text>
+                <Text className="text-sm font-medium" style={{ color: '#0F2854' }}>
                   {company?.createdAt ? formatDate(company.createdAt) : 'N/A'}
                 </Text>
               </View>
             </View>
             <View className="flex-row items-center py-3">
-              <View className="w-10 h-10 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-3">
-                <Ionicons name="refresh-outline" size={20} color="#1D4ED8" />
+              <View className="w-10 h-10 rounded-full bg-white items-center justify-center mr-3">
+                <Ionicons name="refresh-outline" size={20} color="#4988C4" />
               </View>
               <View className="flex-1">
-                <Text className="text-xs text-[#ABABAB]">Last Updated</Text>
-                <Text className="text-sm font-medium text-[#181D27]">
+                <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.6)' }}>Last Updated</Text>
+                <Text className="text-sm font-medium" style={{ color: '#0F2854' }}>
                   {company?.updatedAt ? formatDate(company.updatedAt) : 'N/A'}
                 </Text>
               </View>
@@ -211,15 +211,15 @@ export default function OrganisationDetailsPage() {
           </View>
 
           {/* Notification Settings */}
-          <Text className="text-lg font-bold text-[#181D27] mb-3">Notification Settings</Text>
-          <View className="bg-white rounded-2xl shadow p-4 mb-6">
-            <View className="flex-row items-center py-3 border-b border-gray-100">
-              <View className="w-10 h-10 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-3">
-                <Ionicons name="mail-outline" size={20} color="#1D4ED8" />
+          <Text className="text-lg font-bold mb-3" style={{ color: '#0F2854' }}>Notification Settings</Text>
+          <View className="bg-[#BDE8F5] rounded-2xl shadow p-4 mb-6 border" style={{ borderColor: '#4988C4' }}>
+            <View className="flex-row items-center py-3 border-b" style={{ borderColor: '#4988C4' }}>
+              <View className="w-10 h-10 rounded-full bg-white items-center justify-center mr-3">
+                <Ionicons name="mail-outline" size={20} color="#4988C4" />
               </View>
               <View className="flex-1">
-                <Text className="text-xs text-[#ABABAB]">Email Notifications</Text>
-                <Text className="text-sm font-medium text-[#181D27]">
+                <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.6)' }}>Email Notifications</Text>
+                <Text className="text-sm font-medium" style={{ color: '#0F2854' }}>
                   {company?.emailNotifications ? 'Enabled' : 'Disabled'}
                 </Text>
               </View>
@@ -231,13 +231,13 @@ export default function OrganisationDetailsPage() {
                 />
               </View>
             </View>
-            <View className="flex-row items-center py-3 border-b border-gray-100">
-              <View className="w-10 h-10 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-3">
-                <Ionicons name="chatbubble-outline" size={20} color="#1D4ED8" />
+            <View className="flex-row items-center py-3 border-b" style={{ borderColor: '#4988C4' }}>
+              <View className="w-10 h-10 rounded-full bg-white items-center justify-center mr-3">
+                <Ionicons name="chatbubble-outline" size={20} color="#4988C4" />
               </View>
               <View className="flex-1">
-                <Text className="text-xs text-[#ABABAB]">SMS Notifications</Text>
-                <Text className="text-sm font-medium text-[#181D27]">
+                <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.6)' }}>SMS Notifications</Text>
+                <Text className="text-sm font-medium" style={{ color: '#0F2854' }}>
                   {company?.smsNotifications ? 'Enabled' : 'Disabled'}
                 </Text>
               </View>
@@ -250,12 +250,12 @@ export default function OrganisationDetailsPage() {
               </View>
             </View>
             <View className="flex-row items-center py-3">
-              <View className="w-10 h-10 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-3">
-                <Ionicons name="time-outline" size={20} color="#1D4ED8" />
+              <View className="w-10 h-10 rounded-full bg-white items-center justify-center mr-3">
+                <Ionicons name="time-outline" size={20} color="#4988C4" />
               </View>
               <View className="flex-1">
-                <Text className="text-xs text-[#ABABAB]">Alert Frequency</Text>
-                <Text className="text-sm font-medium text-[#181D27]">
+                <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.6)' }}>Alert Frequency</Text>
+                <Text className="text-sm font-medium" style={{ color: '#0F2854' }}>
                   {company?.alertFrequency ? getAlertFrequencyLabel(company.alertFrequency) : 'N/A'}
                 </Text>
               </View>
@@ -263,15 +263,15 @@ export default function OrganisationDetailsPage() {
           </View>
 
           {/* System Configuration */}
-          <Text className="text-lg font-bold text-[#181D27] mb-3">System Configuration</Text>
-          <View className="bg-white rounded-2xl shadow p-4 mb-6">
-            <View className="flex-row items-center py-3 border-b border-gray-100">
-              <View className="w-10 h-10 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-3">
-                <Ionicons name="warning-outline" size={20} color="#1D4ED8" />
+          <Text className="text-lg font-bold mb-3" style={{ color: '#0F2854' }}>System Configuration</Text>
+          <View className="bg-[#BDE8F5] rounded-2xl shadow p-4 mb-6 border" style={{ borderColor: '#4988C4' }}>
+            <View className="flex-row items-center py-3 border-b" style={{ borderColor: '#4988C4' }}>
+              <View className="w-10 h-10 rounded-full bg-white items-center justify-center mr-3">
+                <Ionicons name="warning-outline" size={20} color="#4988C4" />
               </View>
               <View className="flex-1">
-                <Text className="text-xs text-[#ABABAB]">Alert Threshold</Text>
-                <Text className="text-sm font-medium text-[#181D27]">
+                <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.6)' }}>Alert Threshold</Text>
+                <Text className="text-sm font-medium" style={{ color: '#0F2854' }}>
                   {company?.alertThreshold ? getAlertThresholdLabel(company.alertThreshold) : 'N/A'}
                 </Text>
               </View>
@@ -288,12 +288,12 @@ export default function OrganisationDetailsPage() {
               </View>
             </View>
             <View className="flex-row items-center py-3">
-              <View className="w-10 h-10 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-3">
-                <Ionicons name="sync-outline" size={20} color="#1D4ED8" />
+              <View className="w-10 h-10 rounded-full bg-white items-center justify-center mr-3">
+                <Ionicons name="sync-outline" size={20} color="#4988C4" />
               </View>
               <View className="flex-1">
-                <Text className="text-xs text-[#ABABAB]">Sync Mode</Text>
-                <Text className="text-sm font-medium text-[#181D27] capitalize">
+                <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.6)' }}>Sync Mode</Text>
+                <Text className="text-sm font-medium capitalize" style={{ color: '#0F2854' }}>
                   {company?.syncMode || 'N/A'}
                 </Text>
               </View>
@@ -301,9 +301,9 @@ export default function OrganisationDetailsPage() {
           </View>
 
           {/* Contact Admin Note */}
-          <View className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+          <View className="bg-[#BDE8F5] rounded-2xl p-4 border" style={{ borderColor: '#4988C4' }}>
             <View className="flex-row items-start">
-              <Ionicons name="information-circle" size={22} color="#1D4ED8" />
+              <Ionicons name="information-circle" size={22} color="#4988C4" />
               <View className="flex-1 ml-3">
                 <Text className="text-sm font-medium text-[#1D4ED8]">Need to update settings?</Text>
                 <Text className="text-xs text-[#6B7280] mt-1">

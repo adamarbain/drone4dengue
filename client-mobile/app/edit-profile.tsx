@@ -62,14 +62,14 @@ export default function EditProfilePage() {
 
     if (loading) {
         return (
-            <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center">
-                <ActivityIndicator size="large" color="#1D4ED8" />
+            <SafeAreaView className="flex-1 bg-white items-center justify-center">
+                <ActivityIndicator size="large" color="#1C4D8D" />
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView className="flex-1 bg-gray-50">
+        <SafeAreaView className="flex-1 bg-white">
             <ScrollView 
                 className="flex-1" 
                 contentContainerStyle={{ paddingBottom: 100 }}
@@ -78,11 +78,11 @@ export default function EditProfilePage() {
                 {/* Header */}
                 <View className="px-6 pt-6 pb-4 ml-4">
                     <View className="flex-row items-center mb-2">
-                        <Text className="text-3xl font-extrabold text-[#181D27]" style={{ fontFamily: 'SF Pro' }}>
+                        <Text className="text-3xl font-extrabold" style={{ fontFamily: 'SF Pro', color: '#0F2854' }}>
                             Edit Profile
                         </Text>
                     </View>
-                    <Text className="text-sm text-gray-500">
+                    <Text className="text-sm" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
                         Update your personal information
                     </Text>
                 </View>
@@ -118,7 +118,7 @@ export default function EditProfilePage() {
                                 value={name}
                                 onChangeText={setName}
                                 autoCapitalize="words"
-                                style={{ color: '#181D27' }}
+                                style={{ color: '#0F2854' }}
                             />
                         </View>
                     </View>
@@ -179,10 +179,10 @@ export default function EditProfilePage() {
                     </View>
 
                     {/* Info Note */}
-                    <View className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-100">
+                    <View className="rounded-xl p-4 mb-6 border" style={{ borderColor: '#4988C4' }}>
                         <View className="flex-row items-start">
-                            <Ionicons name="information-circle-outline" size={20} color="#1D4ED8" style={{ marginTop: 1 }} />
-                            <Text className="ml-2 text-xs text-blue-700 flex-1">
+                            <Ionicons name="information-circle-outline" size={20} color="#4988C4" style={{ marginTop: 1 }} />
+                            <Text className="ml-2 text-xs flex-1" style={{ color: 'rgba(15, 40, 84, 0.8)' }}>
                                 To change your password, please use the dedicated option in your profile settings.
                             </Text>
                         </View>
@@ -199,11 +199,11 @@ export default function EditProfilePage() {
                             <Text className="text-base font-semibold text-gray-700">Cancel</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            className="flex-1 bg-[#1D4ED8] rounded-xl py-4 items-center justify-center"
+                            className="flex-1 rounded-xl py-4 items-center justify-center"
                             onPress={handleSaveConfirm}
                             disabled={saving}
                             activeOpacity={0.8}
-                            style={{ opacity: saving ? 0.7 : 1 }}
+                            style={{ opacity: saving ? 0.7 : 1, backgroundColor: '#1C4D8D' }}
                         >
                             {saving ? (
                                 <ActivityIndicator size="small" color="white" />
@@ -237,10 +237,10 @@ export default function EditProfilePage() {
                                     color={modal.type === 'success' ? '#10B981' : '#EF4444'} 
                                 />
                             </View>
-                            <Text className="text-xl font-bold text-[#181D27] text-center mb-2">
+                            <Text className="text-xl font-bold text-center mb-2" style={{ color: '#0F2854' }}>
                                 {modal.type === 'success' ? 'Success' : 'Error'}
                             </Text>
-                            <Text className="text-sm text-[#6B7280] text-center">
+                            <Text className="text-sm text-center" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
                                 {modal.message}
                             </Text>
                         </View>
@@ -269,11 +269,11 @@ export default function EditProfilePage() {
                 <View className="flex-1 bg-black/50 items-center justify-center px-6">
                     <View className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl">
                         <View className="items-center mb-4">
-                            <View className="w-16 h-16 rounded-full bg-[#1D4ED8]/10 items-center justify-center mb-3">
-                                <Ionicons name="save-outline" size={32} color="#1D4ED8" />
+                            <View className="w-16 h-16 rounded-full items-center justify-center mb-3" style={{ backgroundColor: '#BDE8F5' }}>
+                                <Ionicons name="save-outline" size={32} color="#4988C4" />
                             </View>
-                            <Text className="text-xl font-bold text-[#181D27] text-center">Save Changes</Text>
-                            <Text className="text-sm text-[#6B7280] text-center mt-2">
+                            <Text className="text-xl font-bold text-center" style={{ color: '#0F2854' }}>Save Changes</Text>
+                            <Text className="text-sm text-center mt-2" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
                                 Are you sure you want to update your profile information?
                             </Text>
                         </View>
@@ -282,11 +282,12 @@ export default function EditProfilePage() {
                                 onPress={() => setShowConfirmModal(false)}
                                 className="flex-1 py-3 rounded-xl bg-gray-100"
                             >
-                                <Text className="text-center font-semibold text-[#6B7280]">Cancel</Text>
+                                <Text className="text-center font-semibold" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>Cancel</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={handleSave}
-                                className="flex-1 py-3 rounded-xl bg-[#1D4ED8]"
+                                className="flex-1 py-3 rounded-xl"
+                                style={{ backgroundColor: '#1C4D8D' }}
                             >
                                 <Text className="text-center font-semibold text-white">Confirm</Text>
                             </TouchableOpacity>

@@ -127,7 +127,7 @@ export default function RegisterScreen() {
     };
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+        <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
             <StatusBar style="dark" />
             
             <SafeAreaView style={{ flex: 1 }}>
@@ -136,27 +136,22 @@ export default function RegisterScreen() {
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                     keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
                 >
-                    <ScrollView 
-                        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }} 
-                        keyboardShouldPersistTaps="handled" 
-                        showsVerticalScrollIndicator={false}
-                    >
-                        <View style={{ paddingHorizontal: 24 }}>
+                    <View style={{ flex: 1, paddingHorizontal: 24, paddingBottom: 24 }}>
                             {/* Header with Logo */}
                             <View style={{ alignItems: 'center', marginTop: 24, marginBottom: 32 }}>
                                 <View style={{ 
                                     width: 80, 
                                     height: 80, 
                                     borderRadius: 16, 
-                                    backgroundColor: '#FFFFFF',
+                                    backgroundColor: '#BDE8F5',
                                     alignItems: 'center', 
                                     justifyContent: 'center', 
                                     marginBottom: 16,
-                                    shadowColor: '#000',
+                                    shadowColor: '#4988C4',
                                     shadowOffset: { width: 0, height: 4 },
-                                    shadowOpacity: 0.1,
-                                    shadowRadius: 12,
-                                    elevation: 8,
+                                    shadowOpacity: 0.12,
+                                    shadowRadius: 10,
+                                    elevation: 6,
                                 }}>
                                     <Image 
                                         source={require('../../assets/dengueeye_logo.png')} 
@@ -164,10 +159,10 @@ export default function RegisterScreen() {
                                         resizeMode="contain"
                                     />
                                 </View>
-                                <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#111827', letterSpacing: -0.5 }}>
+                                <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#0F2854', letterSpacing: -0.5 }}>
                                     Create Account
                                 </Text>
-                                <Text style={{ fontSize: 16, color: '#6B7280', marginTop: 8 }}>
+                                <Text style={{ fontSize: 16, color: 'rgba(15, 40, 84, 0.75)', marginTop: 8 }}>
                                     Join DengueEye to stay protected
                                 </Text>
                             </View>
@@ -185,7 +180,7 @@ export default function RegisterScreen() {
                             }}>
                                 {/* Email Input */}
                                 <View style={{ marginBottom: 20 }}>
-                                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8, marginLeft: 4 }}>
+                                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#0F2854', marginBottom: 8, marginLeft: 4 }}>
                                         Email Address
                                     </Text>
                                     <View style={[{ 
@@ -198,13 +193,13 @@ export default function RegisterScreen() {
                                         <Ionicons 
                                             name="mail-outline" 
                                             size={20} 
-                                            color={focusedField === 'email' ? '#1D4ED8' : '#9CA3AF'} 
+                                            color={focusedField === 'email' ? '#4988C4' : 'rgba(15, 40, 84, 0.8)'} 
                                             style={{ marginRight: 12 }} 
                                         />
                                         <TextInput
-                                            style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: '#111827' }}
+                                            style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: '#0F2854' }}
                                             placeholder="Enter your email"
-                                            placeholderTextColor="#9CA3AF"
+                                            placeholderTextColor="rgba(15, 40, 84, 0.55)"
                                             value={email}
                                             onChangeText={setEmail}
                                             keyboardType="email-address"
@@ -217,7 +212,7 @@ export default function RegisterScreen() {
 
                                 {/* Password Input */}
                                 <View style={{ marginBottom: 20 }}>
-                                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8, marginLeft: 4 }}>
+                                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#0F2854', marginBottom: 8, marginLeft: 4 }}>
                                         Password
                                     </Text>
                                     <View style={[{ 
@@ -230,13 +225,13 @@ export default function RegisterScreen() {
                                         <Ionicons 
                                             name="lock-closed-outline" 
                                             size={20} 
-                                            color={focusedField === 'password' ? '#1D4ED8' : '#9CA3AF'} 
+                                            color={focusedField === 'password' ? '#4988C4' : 'rgba(15, 40, 84, 0.8)'} 
                                             style={{ marginRight: 12 }} 
                                         />
                                         <TextInput
-                                            style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: '#111827' }}
+                                            style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: '#0F2854' }}
                                             placeholder="Create a password"
-                                            placeholderTextColor="#9CA3AF"
+                                            placeholderTextColor="rgba(15, 40, 84, 0.55)"
                                             value={password}
                                             onChangeText={setPassword}
                                             secureTextEntry={!showPassword}
@@ -247,18 +242,18 @@ export default function RegisterScreen() {
                                             <Feather 
                                                 name={showPassword ? 'eye' : 'eye-off'} 
                                                 size={20} 
-                                                color={focusedField === 'password' ? '#1D4ED8' : '#9CA3AF'} 
+                                                color={focusedField === 'password' ? '#4988C4' : 'rgba(15, 40, 84, 0.8)'} 
                                             />
                                         </Pressable>
                                     </View>
-                                    <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 6, marginLeft: 4 }}>
+                                    <Text style={{ fontSize: 12, color: 'rgba(15, 40, 84, 0.7)', marginTop: 6, marginLeft: 4 }}>
                                         Minimum 6 characters
                                     </Text>
                                 </View>
 
                                 {/* Confirm Password Input */}
                                 <View style={{ marginBottom: 24 }}>
-                                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8, marginLeft: 4 }}>
+                                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#0F2854', marginBottom: 8, marginLeft: 4 }}>
                                         Confirm Password
                                     </Text>
                                     <View style={[{ 
@@ -271,13 +266,13 @@ export default function RegisterScreen() {
                                         <Ionicons 
                                             name="shield-checkmark-outline" 
                                             size={20} 
-                                            color={focusedField === 'confirmPassword' ? '#1D4ED8' : '#9CA3AF'} 
+                                            color={focusedField === 'confirmPassword' ? '#4988C4' : 'rgba(15, 40, 84, 0.8)'} 
                                             style={{ marginRight: 12 }} 
                                         />
                                         <TextInput
-                                            style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: '#111827' }}
+                                            style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: '#0F2854' }}
                                             placeholder="Confirm your password"
-                                            placeholderTextColor="#9CA3AF"
+                                            placeholderTextColor="rgba(15, 40, 84, 0.55)"
                                             value={confirmPassword}
                                             onChangeText={setConfirmPassword}
                                             secureTextEntry={!showConfirmPassword}
@@ -288,7 +283,7 @@ export default function RegisterScreen() {
                                             <Feather 
                                                 name={showConfirmPassword ? 'eye' : 'eye-off'} 
                                                 size={20} 
-                                                color={focusedField === 'confirmPassword' ? '#1D4ED8' : '#9CA3AF'} 
+                                                color={focusedField === 'confirmPassword' ? '#4988C4' : 'rgba(15, 40, 84, 0.8)'} 
                                             />
                                         </Pressable>
                                     </View>
@@ -304,8 +299,8 @@ export default function RegisterScreen() {
                                         height: 24, 
                                         borderRadius: 8, 
                                         borderWidth: 2,
-                                        borderColor: agree ? '#1D4ED8' : '#D1D5DB',
-                                        backgroundColor: agree ? '#1D4ED8' : '#FFFFFF',
+                                        borderColor: '#4988C4',
+                                        backgroundColor: agree ? '#1C4D8D' : '#FFFFFF',
                                         alignItems: 'center', 
                                         justifyContent: 'center', 
                                         marginRight: 12,
@@ -314,17 +309,17 @@ export default function RegisterScreen() {
                                         {agree && <Feather name="check" size={14} color="#fff" />}
                                     </View>
                                     <View style={{ flex: 1 }}>
-                                        <Text style={{ fontSize: 14, color: '#4B5563', lineHeight: 20 }}>
+                                        <Text style={{ fontSize: 14, color: '#0F2854', lineHeight: 20 }}>
                                             I agree to DengueEye's{' '}
                                             <Text 
-                                                style={{ color: '#1D4ED8', fontWeight: '600' }}
+                                                style={{ color: '#1C4D8D', fontWeight: '600' }}
                                                 onPress={() => router.push('/(auth)/terms')}
                                             >
                                                 Terms & Conditions
                                             </Text>
                                             {' '}and{' '}
                                             <Text 
-                                                style={{ color: '#1D4ED8', fontWeight: '600' }}
+                                                style={{ color: '#1C4D8D', fontWeight: '600' }}
                                                 onPress={() => router.push('/(auth)/terms')}
                                             >
                                                 Privacy Policy
@@ -360,11 +355,11 @@ export default function RegisterScreen() {
                                         paddingVertical: 16, 
                                         alignItems: 'center', 
                                         justifyContent: 'center',
-                                        backgroundColor: (!agree || loading || googleLoading) ? '#D1D5DB' : '#1D4ED8',
-                                        shadowColor: '#1D4ED8',
+                                        backgroundColor: (!agree || loading || googleLoading) ? '#9DBFD9' : '#1C4D8D',
+                                        shadowColor: '#1C4D8D',
                                         shadowOffset: { width: 0, height: 4 },
-                                        shadowOpacity: (!agree || loading || googleLoading) ? 0 : 0.3,
-                                        shadowRadius: 8,
+                                        shadowOpacity: (!agree || loading || googleLoading) ? 0 : 0.28,
+                                        shadowRadius: 10,
                                         elevation: 3,
                                     }}
                                 >
@@ -426,15 +421,14 @@ export default function RegisterScreen() {
 
                             {/* Sign In Link */}
                             <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 32 }}>
-                                <Text style={{ color: '#6B7280', fontSize: 16 }}>Already have an account? </Text>
+                                <Text style={{ color: 'rgba(15, 40, 84, 0.75)', fontSize: 16 }}>Already have an account? </Text>
                                 <Link href="./login" asChild>
                                     <TouchableOpacity>
-                                        <Text style={{ color: '#1D4ED8', fontWeight: 'bold', fontSize: 16 }}>Sign In</Text>
+                                        <Text style={{ color: '#1C4D8D', fontWeight: 'bold', fontSize: 16 }}>Sign In</Text>
                                     </TouchableOpacity>
                                 </Link>
                             </View>
                         </View>
-                    </ScrollView>
                 </KeyboardAvoidingView>
             </SafeAreaView>
         </View>

@@ -218,7 +218,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+    <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <StatusBar style="dark" />
       
       <SafeAreaView style={{ flex: 1 }}>
@@ -227,11 +227,11 @@ export default function LoginScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
-          <ScrollView 
+          {/* <ScrollView 
             contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }} 
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-          >
+          > */}
             <View style={{ paddingHorizontal: 24 }}>
               {/* Header with Logo */}
               <View style={{ alignItems: 'center', marginTop: 40, marginBottom: 40 }}>
@@ -239,7 +239,7 @@ export default function LoginScreen() {
                   width: 96, 
                   height: 96, 
                   borderRadius: 24, 
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: '#BDE8F5',
                   alignItems: 'center', 
                   justifyContent: 'center', 
                   marginBottom: 20,
@@ -255,10 +255,10 @@ export default function LoginScreen() {
                     resizeMode="contain"
                   />
                 </View>
-                <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#111827', letterSpacing: -0.5 }}>
+                <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#0F2854', letterSpacing: -0.5 }}>
                   Welcome Back
                 </Text>
-                <Text style={{ fontSize: 16, color: '#6B7280', marginTop: 8, textAlign: 'center' }}>
+                <Text style={{ fontSize: 16, color: '#0F2854', marginTop: 8, textAlign: 'center', opacity: 0.7 }}>
                   Sign in to continue protecting your community
                 </Text>
               </View>
@@ -346,7 +346,7 @@ export default function LoginScreen() {
 
                 {/* Forgot Password */}
                 <TouchableOpacity style={{ alignSelf: 'flex-end', marginBottom: 24 }} onPress={() => setResetVisible(true)}>
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#1D4ED8' }}>Forgot Password?</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#4988C4' }}>Forgot Password?</Text>
                 </TouchableOpacity>
 
                 {/* Error Message */}
@@ -376,8 +376,8 @@ export default function LoginScreen() {
                     paddingVertical: 16, 
                     alignItems: 'center', 
                     justifyContent: 'center',
-                    backgroundColor: (loginLoading || googleLoading) ? '#D1D5DB' : '#1D4ED8',
-                    shadowColor: '#1D4ED8',
+                    backgroundColor: (loginLoading || googleLoading) ? '#D1D5DB' : '#1C4D8D',
+                    shadowColor: '#1C4D8D',
                     shadowOffset: { width: 0, height: 4 },
                     shadowOpacity: (loginLoading || googleLoading) ? 0 : 0.3,
                     shadowRadius: 8,
@@ -437,15 +437,15 @@ export default function LoginScreen() {
 
               {/* Sign Up Link */}
               <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 32 }}>
-                <Text style={{ color: '#6B7280', fontSize: 16 }}>Don't have an account? </Text>
+                <Text style={{ color: '#0F2854', fontSize: 16, opacity: 0.7 }}>Don't have an account? </Text>
                 <Link href="./register" asChild>
                   <TouchableOpacity>
-                    <Text style={{ color: '#1D4ED8', fontWeight: 'bold', fontSize: 16 }}>Sign Up</Text>
+                    <Text style={{ color: '#4988C4', fontWeight: 'bold', fontSize: 16 }}>Sign Up</Text>
                   </TouchableOpacity>
                 </Link>
               </View>
             </View>
-          </ScrollView>
+          {/* </ScrollView> */}
         </KeyboardAvoidingView>
       </SafeAreaView>
 
@@ -453,7 +453,7 @@ export default function LoginScreen() {
       <Modal visible={resetVisible} animationType="fade" transparent>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }}>
           <View style={{ 
-            backgroundColor: '#FFFFFF', 
+            backgroundColor: '#BDE8F5', 
             borderRadius: 24, 
             padding: 24, 
             width: '100%', 
@@ -470,7 +470,7 @@ export default function LoginScreen() {
                 width: 64, 
                 height: 64, 
                 borderRadius: 32, 
-                backgroundColor: '#EFF6FF', 
+                backgroundColor: '#FFFFFF', 
                 alignItems: 'center', 
                 justifyContent: 'center', 
                 marginBottom: 16 
@@ -478,13 +478,13 @@ export default function LoginScreen() {
                 <Ionicons 
                   name={resetStep === 1 ? 'mail-outline' : resetStep === 2 ? 'key-outline' : 'lock-closed-outline'} 
                   size={28} 
-                  color="#1D4ED8" 
+                  color="#4988C4" 
                 />
               </View>
-              <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#111827' }}>
+              <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#0F2854' }}>
                 {resetStep === 1 ? 'Reset Password' : resetStep === 2 ? 'Enter Code' : 'New Password'}
               </Text>
-              <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>
+              <Text style={{ fontSize: 14, color: '#0F2854', textAlign: 'center', marginTop: 8, opacity: 0.7 }}>
                 {resetStep === 1 
                   ? 'Enter your email to receive a reset code' 
                   : resetStep === 2 
@@ -503,18 +503,18 @@ export default function LoginScreen() {
                     borderRadius: 16, 
                     alignItems: 'center', 
                     justifyContent: 'center',
-                    backgroundColor: resetStep >= step ? '#1D4ED8' : '#E5E7EB',
+                    backgroundColor: resetStep >= step ? '#4988C4' : '#FFFFFF',
                   }}>
                     {resetStep > step ? (
                       <Feather name="check" size={16} color="#fff" />
                     ) : (
-                      <Text style={{ fontSize: 14, fontWeight: 'bold', color: resetStep >= step ? '#FFFFFF' : '#6B7280' }}>
+                      <Text style={{ fontSize: 14, fontWeight: 'bold', color: resetStep >= step ? '#FFFFFF' : '#0F2854' }}>
                         {step}
                       </Text>
                     )}
                   </View>
                   {step < 3 && (
-                    <View style={{ width: 32, height: 4, backgroundColor: resetStep > step ? '#1D4ED8' : '#E5E7EB' }} />
+                    <View style={{ width: 32, height: 4, backgroundColor: resetStep > step ? '#4988C4' : '#FFFFFF' }} />
                   )}
                 </View>
               ))}
@@ -530,9 +530,9 @@ export default function LoginScreen() {
                   borderWidth: 2,
                 }, getInputStyle('resetEmail')]}>
                   <TextInput
-                    style={{ fontSize: 16, color: '#111827' }}
+                    style={{ fontSize: 16, color: '#0F2854' }}
                     placeholder="Enter your email address"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor="#1C4D8D"
                     value={resetEmail}
                     onChangeText={setResetEmail}
                     keyboardType="email-address"
@@ -548,7 +548,7 @@ export default function LoginScreen() {
                     paddingVertical: 14, 
                     alignItems: 'center', 
                     justifyContent: 'center', 
-                    backgroundColor: '#1D4ED8' 
+                    backgroundColor: '#1C4D8D' 
                   }}
                   onPress={handleResetRequest} 
                   disabled={resetLoading}
@@ -573,9 +573,9 @@ export default function LoginScreen() {
                   borderWidth: 2,
                 }, getInputStyle('resetCode')]}>
                   <TextInput
-                    style={{ fontSize: 16, color: '#111827', textAlign: 'center', letterSpacing: 4 }}
+                    style={{ fontSize: 16, color: '#0F2854', textAlign: 'center', letterSpacing: 4 }}
                     placeholder="Enter 6-digit code"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor="#1C4D8D"
                     value={resetCode}
                     onChangeText={setResetCode}
                     keyboardType="number-pad"
@@ -591,7 +591,7 @@ export default function LoginScreen() {
                     paddingVertical: 14, 
                     alignItems: 'center', 
                     justifyContent: 'center', 
-                    backgroundColor: '#1D4ED8' 
+                    backgroundColor: '#1C4D8D' 
                   }}
                   onPress={handleResetVerify} 
                   disabled={resetLoading}
@@ -617,9 +617,9 @@ export default function LoginScreen() {
                   marginBottom: 12,
                 }, getInputStyle('resetNewPassword')]}>
                   <TextInput
-                    style={{ fontSize: 16, color: '#111827' }}
+                    style={{ fontSize: 16, color: '#0F2854' }}
                     placeholder="New password"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor="#1C4D8D"
                     value={resetNewPassword}
                     onChangeText={setResetNewPassword}
                     secureTextEntry
@@ -634,9 +634,9 @@ export default function LoginScreen() {
                   borderWidth: 2,
                 }, getInputStyle('resetConfirmPassword')]}>
                   <TextInput
-                    style={{ fontSize: 16, color: '#111827' }}
+                    style={{ fontSize: 16, color: '#0F2854' }}
                     placeholder="Confirm new password"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor="#1C4D8D"
                     value={resetConfirmPassword}
                     onChangeText={setResetConfirmPassword}
                     secureTextEntry
@@ -651,7 +651,7 @@ export default function LoginScreen() {
                     paddingVertical: 14, 
                     alignItems: 'center', 
                     justifyContent: 'center', 
-                    backgroundColor: '#1D4ED8' 
+                    backgroundColor: '#1C4D8D' 
                   }}
                   onPress={handleResetPassword} 
                   disabled={resetLoading}
@@ -703,7 +703,7 @@ export default function LoginScreen() {
               style={{ marginTop: 16, paddingVertical: 12 }} 
               onPress={closeResetModal}
             >
-              <Text style={{ textAlign: 'center', color: '#6B7280', fontWeight: '500', fontSize: 16 }}>Cancel</Text>
+              <Text style={{ textAlign: 'center', color: '#0F2854', fontWeight: '500', fontSize: 16, opacity: 0.7 }}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>

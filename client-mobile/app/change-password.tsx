@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import BottomNav from './components/BottomNav';
+import { StatusBar } from 'expo-status-bar';
 
 export default function ChangePasswordPage() {
     const router = useRouter();
@@ -112,7 +113,8 @@ export default function ChangePasswordPage() {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-gray-50">
+        <SafeAreaView className="flex-1 bg-white">
+            <StatusBar style="dark" />
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -127,19 +129,19 @@ export default function ChangePasswordPage() {
                     {/* Header */}
                     <View className="px-6 pt-6 pb-4 ml-4">
                         <View className="flex-row items-center mb-2">
-                            <Text className="text-3xl font-extrabold text-[#181D27]" style={{ fontFamily: 'SF Pro' }}>
+                            <Text className="text-3xl font-extrabold" style={{ fontFamily: 'SF Pro', color: '#0F2854' }}>
                                 Change Password
                             </Text>
                         </View>
-                        <Text className="text-sm text-gray-500">
+                        <Text className="text-sm" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
                             Update your account password
                         </Text>
                     </View>
 
                     {/* Security Icon */}
                     <View className="items-center mb-6">
-                        <View className="w-20 h-20 rounded-full bg-[#1D4ED8]/10 items-center justify-center">
-                            <Ionicons name="lock-closed" size={40} color="#1D4ED8" />
+                        <View className="w-20 h-20 rounded-full items-center justify-center" style={{ backgroundColor: '#BDE8F5' }}>
+                            <Ionicons name="lock-closed" size={40} color="#4988C4" />
                         </View>
                     </View>
 
@@ -149,7 +151,7 @@ export default function ChangePasswordPage() {
                     >
                         {/* Current Password */}
                         <View className="mb-5">
-                            <Text className="text-sm font-semibold text-gray-700 mb-2">
+                            <Text className="text-sm font-semibold mb-2" style={{ color: '#0F2854' }}>
                                 Current Password <Text className="text-red-500">*</Text>
                             </Text>
                             <View className="flex-row items-center bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
@@ -176,7 +178,7 @@ export default function ChangePasswordPage() {
 
                         {/* New Password */}
                         <View className="mb-5">
-                            <Text className="text-sm font-semibold text-gray-700 mb-2">
+                            <Text className="text-sm font-semibold mb-2" style={{ color: '#0F2854' }}>
                                 New Password <Text className="text-red-500">*</Text>
                             </Text>
                             <View className="flex-row items-center bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
@@ -199,14 +201,14 @@ export default function ChangePasswordPage() {
                                     />
                                 </TouchableOpacity>
                             </View>
-                            <Text className="text-xs text-gray-500 mt-1 ml-1">
+                            <Text className="text-xs mt-1 ml-1" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
                                 Must be at least 6 characters
                             </Text>
                         </View>
 
                         {/* Confirm New Password */}
                         <View className="mb-6">
-                            <Text className="text-sm font-semibold text-gray-700 mb-2">
+                            <Text className="text-sm font-semibold mb-2" style={{ color: '#0F2854' }}>
                                 Confirm New Password <Text className="text-red-500">*</Text>
                             </Text>
                             <View className="flex-row items-center bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
@@ -260,11 +262,11 @@ export default function ChangePasswordPage() {
                                 <Text className="text-base font-semibold text-gray-700">Cancel</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                className="flex-1 bg-[#1D4ED8] rounded-xl py-4 items-center justify-center"
+                                className="flex-1 rounded-xl py-4 items-center justify-center"
                                 onPress={handleChangePasswordConfirm}
                                 disabled={saving}
                                 activeOpacity={0.8}
-                                style={{ opacity: saving ? 0.7 : 1 }}
+                                style={{ opacity: saving ? 0.7 : 1, backgroundColor: '#1C4D8D' }}
                             >
                                 {saving ? (
                                     <ActivityIndicator size="small" color="white" />
@@ -277,12 +279,12 @@ export default function ChangePasswordPage() {
 
                     {/* Security Tips */}
                     <View className="mx-6">
-                        <View className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                        <View className="rounded-xl p-4 border" style={{ borderColor: '#4988C4' }}>
                             <View className="flex-row items-start">
-                                <Ionicons name="shield-checkmark-outline" size={20} color="#1D4ED8" style={{ marginTop: 1 }} />
+                                <Ionicons name="shield-checkmark-outline" size={20} color="#4988C4" style={{ marginTop: 1 }} />
                                 <View className="ml-3 flex-1">
-                                    <Text className="text-sm text-blue-800 font-semibold mb-1">Security Tips</Text>
-                                    <Text className="text-xs text-blue-700 leading-4">
+                                    <Text className="text-sm font-semibold mb-1" style={{ color: '#0F2854' }}>Security Tips</Text>
+                                    <Text className="text-xs leading-4" style={{ color: 'rgba(15, 40, 84, 0.8)' }}>
                                         • Use a mix of letters, numbers, and symbols{'\n'}
                                         • Avoid using personal information{'\n'}
                                         • Don't reuse passwords from other accounts{'\n'}
@@ -320,7 +322,7 @@ export default function ChangePasswordPage() {
                             <Text className="text-xl font-bold text-[#181D27] text-center mb-2">
                                 {modal.type === 'success' ? 'Success' : 'Error'}
                             </Text>
-                            <Text className="text-sm text-[#6B7280] text-center">
+                            <Text className="text-sm text-center" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
                                 {modal.message}
                             </Text>
                         </View>
@@ -349,11 +351,11 @@ export default function ChangePasswordPage() {
                 <View className="flex-1 bg-black/50 items-center justify-center px-6">
                     <View className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl">
                         <View className="items-center mb-4">
-                            <View className="w-16 h-16 rounded-full bg-[#1D4ED8]/10 items-center justify-center mb-3">
-                                <Ionicons name="key-outline" size={32} color="#1D4ED8" />
+                            <View className="w-16 h-16 rounded-full items-center justify-center mb-3" style={{ backgroundColor: '#BDE8F5' }}>
+                                <Ionicons name="key-outline" size={32} color="#4988C4" />
                             </View>
-                            <Text className="text-xl font-bold text-[#181D27] text-center">Change Password</Text>
-                            <Text className="text-sm text-[#6B7280] text-center mt-2">
+                            <Text className="text-xl font-bold text-center" style={{ color: '#0F2854' }}>Change Password</Text>
+                            <Text className="text-sm text-center mt-2" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
                                 Are you sure you want to change your password? You will need to use the new password for future logins.
                             </Text>
                         </View>
@@ -362,11 +364,11 @@ export default function ChangePasswordPage() {
                                 onPress={() => setShowConfirmModal(false)}
                                 className="flex-1 py-3 rounded-xl bg-gray-100"
                             >
-                                <Text className="text-center font-semibold text-[#6B7280]">Cancel</Text>
+                                <Text className="text-center font-semibold" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>Cancel</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={handleChangePassword}
-                                className="flex-1 py-3 rounded-xl bg-[#1D4ED8]"
+                                className="flex-1 py-3 rounded-xl" style={{ backgroundColor: '#1C4D8D' }}
                             >
                                 <Text className="text-center font-semibold text-white">Confirm</Text>
                             </TouchableOpacity>
