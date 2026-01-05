@@ -128,14 +128,14 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-[#F8F8F8] items-center justify-center">
-        <ActivityIndicator size="large" color="#1D4ED8" />
+      <SafeAreaView className="flex-1 bg-white items-center justify-center">
+        <ActivityIndicator size="large" color="#1C4D8D" />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8F8F8]">
+    <SafeAreaView className="flex-1 bg-white">
       <ScrollView 
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 100 }}
@@ -143,17 +143,17 @@ export default function ProfilePage() {
       >
         {/* Header */}
         <View className="px-6 pt-10 pb-2">
-          <Text className="text-4xl font-extrabold text-[#181D27] mb-1" style={{ fontFamily: 'SF Pro' }}>
+          <Text className="text-4xl font-extrabold mb-1" style={{ fontFamily: 'SF Pro', color: '#0F2854' }}>
             Profile
           </Text>
-          <Text className="text-sm text-gray-600 mb-4">
+          <Text className="text-sm mb-4" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
             Manage your account settings and personal information
           </Text>
-          <Text className="text-base text-[#1D4ED8] font-semibold mb-2">Welcome back, {user?.username || ''}!</Text>
+          <Text className="text-base font-semibold mb-2" style={{ color: '#0F2854' }}>Welcome back, {user?.username || ''}!</Text>
         </View>
 
         {/* User Card */}
-        <View className="mx-6 bg-[#1D4ED8] rounded-2xl shadow-lg flex-row items-center p-4 mb-6">
+        <View className="mx-6 bg-[#1C4D8D] rounded-2xl shadow-lg flex-row items-center p-4 mb-6">
           <View className="w-16 h-16 rounded-full overflow-hidden border-4 border-white mr-4">
             <Image source={require('../assets/profile-user-image.png')} className="w-full h-full" resizeMode="cover" />
           </View>
@@ -179,8 +179,8 @@ export default function ProfilePage() {
             className="ml-2 flex-row items-center px-3 h-10 rounded-full bg-white"
             style={{ shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }}
           >
-            <Ionicons name="log-out-outline" size={22} color="#1D4ED8" />
-            <Text className="ml-2 text-[#1D4ED8] font-bold text-sm">Log Out</Text>
+            <Ionicons name="log-out-outline" size={22} color="#1C4D8D" />
+            <Text className="ml-2 font-bold text-sm" style={{ color: '#1C4D8D' }}>Log Out</Text>
           </TouchableOpacity>
         </View>
 
@@ -191,14 +191,15 @@ export default function ProfilePage() {
           {user?.status !== 'Verified' && (
             <TouchableOpacity
               onPress={() => router.push('/verify-otp')}
-              className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4 border-2 border-yellow-400"
+              className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4 border-2"
+              style={{ borderColor: '#F59E0B' }}
             >
               <View className="w-12 h-12 rounded-full bg-yellow-100 items-center justify-center mr-4">
                 <Ionicons name="mail-outline" size={26} color="#F59E0B" />
               </View>
               <View className="flex-1">
-                <Text className="text-lg font-semibold text-[#181D27]">Verify Account</Text>
-                <Text className="text-xs text-[#ABABAB]">Verify your email address via OTP</Text>
+                <Text className="text-lg font-semibold" style={{ color: '#0F2854' }}>Verify Account</Text>
+                <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.6)' }}>Verify your email address via OTP</Text>
               </View>
               <View className="bg-yellow-100 px-2 py-1 rounded-full">
                 <Text className="text-xs text-yellow-700 font-semibold">Required</Text>
@@ -207,57 +208,57 @@ export default function ProfilePage() {
           )}
 
           {/* My Account */}
-          <TouchableOpacity onPress={() => router.push('/edit-profile')} className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4">
-            <View className="w-12 h-12 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-4">
-              <Ionicons name="person-outline" size={26} color="#1D4ED8" />
+          <TouchableOpacity onPress={() => router.push('/edit-profile')} className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4 border" style={{ borderColor: '#4988C4' }}>
+            <View className="w-12 h-12 rounded-full bg-white items-center justify-center mr-4">
+              <Ionicons name="person-outline" size={26} color="#4988C4" />
             </View>
             <View className="flex-1">
-              <Text className="text-lg font-semibold text-[#181D27]">My Account</Text>
-              <Text className="text-xs text-[#ABABAB]">Update name, username, and address</Text>
+              <Text className="text-lg font-semibold" style={{ color: '#0F2854' }}>My Account</Text>
+              <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.6)' }}>Update name, username, and address</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#ABABAB" />
+            <Ionicons name="chevron-forward" size={20} color="#4988C4" />
           </TouchableOpacity>
 
           {/* Change Password */}
-          <TouchableOpacity onPress={() => router.push('/change-password')} className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4">
-            <View className="w-12 h-12 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-4">
-              <Ionicons name="lock-closed-outline" size={26} color="#1D4ED8" />
+          <TouchableOpacity onPress={() => router.push('/change-password')} className="flex-row items-center bg-white] rounded-2xl shadow p-5 mb-4 border" style={{ borderColor: '#4988C4' }}>
+            <View className="w-12 h-12 rounded-full bg-white items-center justify-center mr-4">
+              <Ionicons name="lock-closed-outline" size={26} color="#4988C4" />
             </View>
             <View className="flex-1">
-              <Text className="text-lg font-semibold text-[#181D27]">Change Password</Text>
-              <Text className="text-xs text-[#ABABAB]">Update your account password</Text>
+              <Text className="text-lg font-semibold" style={{ color: '#0F2854' }}>Change Password</Text>
+              <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.6)' }}>Update your account password</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#ABABAB" />
+            <Ionicons name="chevron-forward" size={20} color="#4988C4" />
           </TouchableOpacity>
 
           {/* Organisation Details - Hidden for companyId = comp-999 */}
           {user?.companyId !== 'comp-999' && (
             <TouchableOpacity 
               onPress={() => router.push('/organisation-details')}
-              className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4"
+              className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4 border" style={{ borderColor: '#4988C4' }}
             >
-              <View className="w-12 h-12 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-4">
-                <Ionicons name="shield-checkmark-outline" size={26} color="#1D4ED8" />
+              <View className="w-12 h-12 rounded-full bg-white items-center justify-center mr-4">
+                <Ionicons name="shield-checkmark-outline" size={26} color="#4988C4" />
               </View>
               <View className="flex-1">
-                <Text className="text-lg font-semibold text-[#181D27]">Organisation Details</Text>
-                <Text className="text-xs text-[#ABABAB]">View details about your organisation</Text>
+                <Text className="text-lg font-semibold" style={{ color: '#0F2854' }}>Organisation Details</Text>
+                <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.6)' }}>View details about your organisation</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#ABABAB" />
+              <Ionicons name="chevron-forward" size={20} color="#4988C4" />
             </TouchableOpacity>
           )}
 
           {/* About App */}
           <TouchableOpacity 
             onPress={() => setShowAboutModal(true)}
-            className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4"
+            className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4 border" style={{ borderColor: '#4988C4' }}
           >
-            <View className="w-12 h-12 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-4">
-              <Ionicons name="information-circle-outline" size={26} color="#1D4ED8" />
+            <View className="w-12 h-12 rounded-full bg-white items-center justify-center mr-4">
+              <Ionicons name="information-circle-outline" size={26} color="#4988C4" />
             </View>
             <View className="flex-1">
-              <Text className="text-lg font-semibold text-[#181D27]">About App</Text>
-              <Text className="text-xs text-[#ABABAB]">Learn more about DengueEye</Text>
+              <Text className="text-lg font-semibold" style={{ color: '#0F2854' }}>About App</Text>
+              <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.6)' }}>Learn more about DengueEye</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -279,8 +280,8 @@ export default function ProfilePage() {
               <View className="w-16 h-16 rounded-full bg-red-100 items-center justify-center mb-3">
                 <Ionicons name="log-out-outline" size={32} color="#EF4444" />
               </View>
-              <Text className="text-xl font-bold text-[#181D27] text-center">Log Out</Text>
-              <Text className="text-sm text-[#6B7280] text-center mt-2">
+              <Text className="text-xl font-bold text-center" style={{ color: '#0F2854' }}>Log Out</Text>
+              <Text className="text-sm text-center mt-2" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
                 Are you sure you want to log out of your account?
               </Text>
             </View>
@@ -289,7 +290,7 @@ export default function ProfilePage() {
                 onPress={handleCancelLogout}
                 className="flex-1 py-3 rounded-xl bg-gray-100"
               >
-                <Text className="text-center font-semibold text-[#6B7280]">Cancel</Text>
+                <Text className="text-center font-semibold" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleConfirmLogout}
@@ -312,17 +313,17 @@ export default function ProfilePage() {
         <View className="flex-1 bg-black/50 items-center justify-center px-6">
           <View className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl">
             <View className="items-center mb-4">
-              <View className="w-16 h-16 rounded-full bg-[#1D4ED8]/10 items-center justify-center mb-3">
-                <Ionicons name="construct-outline" size={32} color="#1D4ED8" />
+              <View className="w-16 h-16 rounded-full bg-[#BDE8F5] items-center justify-center mb-3">
+                <Ionicons name="construct-outline" size={32} color="#4988C4" />
               </View>
-              <Text className="text-xl font-bold text-[#181D27] text-center">Coming Soon</Text>
-              <Text className="text-sm text-[#6B7280] text-center mt-2">
+              <Text className="text-xl font-bold text-center" style={{ color: '#0F2854' }}>Coming Soon</Text>
+              <Text className="text-sm text-center mt-2" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
                 This feature is currently under development. Stay tuned for updates!
               </Text>
             </View>
             <TouchableOpacity
               onPress={() => setShowAboutModal(false)}
-              className="py-3 rounded-xl bg-[#1D4ED8] mt-4"
+              className="py-3 rounded-xl bg-[#1C4D8D] mt-4"
             >
               <Text className="text-center font-semibold text-white">Got it</Text>
             </TouchableOpacity>

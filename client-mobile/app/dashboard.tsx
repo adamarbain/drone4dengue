@@ -686,29 +686,29 @@ export default function Dashboard() {
       <View className="flex-1 px-4 pt-2 pb-20">
         {/* Title */}
         <View className="mb-4">
-          <Text className="text-4xl font-extrabold text-black" style={{ fontFamily: 'SF Pro' }}>
+          <Text className="text-4xl font-extrabold" style={{ fontFamily: 'SF Pro', color: '#0F2854' }}>
             Dashboard
           </Text>
-          <Text className="text-sm text-gray-600 mt-1">
+          <Text className="text-sm mt-1" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
             Monitor dengue risk predictions and case data in your area
           </Text>
         </View>
         {/* Tabs: Only show when user has a companyId; show Current and Organisation only */}
         {hasCompany ? (
-          <View className="flex-row mb-6 rounded-lg overflow-hidden border border-gray-200">
+          <View className="flex-row mb-6 rounded-lg overflow-hidden border" style={{ borderColor: '#4988C4' }}>
             <TouchableOpacity 
-              className={`flex-1 py-3 ${activeTab === 'current' ? 'bg-[#1D4ED8]' : 'bg-[#ead196]'}`}
+              className={`flex-1 py-3 ${activeTab === 'current' ? 'bg-[#1C4D8D]' : 'bg-[#BDE8F5]'}`}
               onPress={() => setActiveTab('current')}
             >
-              <Text className={`text-center font-bold text-base ${activeTab === 'current' ? 'text-white' : 'text-white'}`}>
+              <Text className={`text-center font-bold text-base ${activeTab === 'current' ? 'text-white' : ''}`} style={activeTab === 'current' ? undefined : { color: '#0F2854' }}>
                 Current
               </Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              className={`flex-1 py-3 ${activeTab === 'organisation' ? 'bg-[#1D4ED8]' : 'bg-[#ead196]'}`}
+              className={`flex-1 py-3 ${activeTab === 'organisation' ? 'bg-[#1C4D8D]' : 'bg-[#BDE8F5]'}`}
               onPress={() => setActiveTab('organisation')}
             >
-              <Text className={`text-center font-bold text-base ${activeTab === 'organisation' ? 'text-white' : 'text-white'}`}>
+              <Text className={`text-center font-bold text-base ${activeTab === 'organisation' ? 'text-white' : ''}`} style={activeTab === 'organisation' ? undefined : { color: '#0F2854' }}>
                 {companyId === 'comp-999' ? 'Dengue Cases' : 'Organisation'}
               </Text>
             </TouchableOpacity>
@@ -723,8 +723,8 @@ export default function Dashboard() {
             >
               {locationLoading ? (
                 <View className="w-full h-full bg-gray-200 items-center justify-center">
-                  <ActivityIndicator size="large" color="#1D4ED8" />
-                  <Text className="text-gray-600 mt-2 text-sm">Loading map...</Text>
+                  <ActivityIndicator size="large" color="#1C4D8D" />
+                  <Text className="mt-2 text-sm" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>Loading map...</Text>
                 </View>
               ) : location ? (
                 <>
@@ -753,7 +753,7 @@ export default function Dashboard() {
                         longitude: location.longitude,
                       }}
                       title="Your Location"
-                      pinColor="#1D4ED8"
+                      pinColor="#4988C4"
                     />
                   </MapView>
                   
@@ -761,9 +761,9 @@ export default function Dashboard() {
                   {showLocationButton && (
                     <TouchableOpacity
                       onPress={returnToCurrentLocation}
-                      className="absolute bottom-2 right-2 bg-[#1D4ED8] rounded-full p-3 shadow-lg"
+                      className="absolute bottom-2 right-2 bg-[#1C4D8D] rounded-full p-3 shadow-lg"
                       style={{
-                        shadowColor: '#1D4ED8',
+                        shadowColor: '#1C4D8D',
                         shadowOffset: { width: 0, height: 4 },
                         shadowOpacity: 0.3,
                         shadowRadius: 8,
@@ -810,8 +810,8 @@ export default function Dashboard() {
               <View className="flex-1">
                 {loadingDengueCases ? (
                   <View className="flex-1 items-center justify-center py-8">
-                    <ActivityIndicator size="large" color="#1D4ED8" />
-                    <Text className="text-gray-600 mt-4 text-sm">Loading dengue cases...</Text>
+                    <ActivityIndicator size="large" color="#1C4D8D" />
+                    <Text className="mt-4 text-sm" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>Loading dengue cases...</Text>
                   </View>
                 ) : dengueCases.length === 0 ? (
                   <View className="bg-yellow-50 rounded-2xl p-6 items-center justify-center border border-yellow-200">
@@ -827,12 +827,13 @@ export default function Dashboard() {
                   <View className="flex-1">
                     {/* Location Search - Positioned absolutely on top of map */}
                     <View className="absolute top-0 left-0 right-0 z-10 px-2 pt-2">
-                      <View className="flex-row items-center bg-white rounded-xl border border-gray-200 px-3 py-2 shadow-md">
-                        <Feather name="search" size={20} color="#6B7280" />
+                      <View className="flex-row items-center bg-[#BDE8F5] rounded-xl border px-3 py-2 shadow-md" style={{ borderColor: '#4988C4' }}>
+                        <Feather name="search" size={20} color="#4988C4" />
                         <TextInput
                           className="flex-1 ml-2 py-2 text-md"
                           placeholder="Search location in Malaysia..."
-                          placeholderTextColor="#374151"
+                          placeholderTextColor="rgba(15, 40, 84, 0.55)"
+                          style={{ color: '#0F2854' }}
                           value={searchQuery}
                           onChangeText={(text) => {
                             setSearchQuery(text);
@@ -848,7 +849,7 @@ export default function Dashboard() {
                             }}
                             className="ml-2"
                           >
-                            <Feather name="x" size={20} color="#6B7280" />
+                            <Feather name="x" size={20} color="#4988C4" />
                           </TouchableOpacity>
                         )}
                       </View>
@@ -919,9 +920,9 @@ export default function Dashboard() {
                           fetchLocationAlerts();
                           setShowAlertModal(true);
                         }}
-                        className="absolute bottom-4 left-4 bg-[#1D4ED8] rounded-full px-4 py-3 flex-row items-center shadow-lg"
+                        className="absolute bottom-4 left-4 bg-[#1C4D8D] rounded-full px-4 py-3 flex-row items-center shadow-lg"
                         style={{
-                          shadowColor: '#1D4ED8',
+                          shadowColor: '#1C4D8D',
                           shadowOffset: { width: 0, height: 4 },
                           shadowOpacity: 0.3,
                           shadowRadius: 8,
@@ -937,9 +938,9 @@ export default function Dashboard() {
                       {showLocationButtonDengue && (
                         <TouchableOpacity
                           onPress={returnToCurrentLocationDengue}
-                          className="absolute bottom-4 right-4 bg-[#1D4ED8] rounded-full p-3 shadow-lg"
+                          className="absolute bottom-4 right-4 bg-[#1C4D8D] rounded-full p-3 shadow-lg"
                           style={{
-                            shadowColor: '#1D4ED8',
+                            shadowColor: '#1C4D8D',
                             shadowOffset: { width: 0, height: 4 },
                             shadowOpacity: 0.3,
                             shadowRadius: 8,
@@ -1054,7 +1055,7 @@ export default function Dashboard() {
                                     setSelectedDengueCase(null);
                                   }
                                 }}
-                                className="bg-[#1D4ED8] rounded-xl py-3 px-4 items-center mt-4"
+                                className="bg-[#1C4D8D] rounded-xl py-3 px-4 items-center mt-4"
                                 activeOpacity={0.8}
                               >
                                 <Text className="text-white font-bold text-base">View on Map</Text>
@@ -1075,11 +1076,11 @@ export default function Dashboard() {
                       <View className="flex-1 bg-black/50 items-center justify-center px-6">
                         <View className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl">
                           <View className="items-center mb-4">
-                            <View className="w-16 h-16 rounded-full bg-[#1D4ED8]/10 items-center justify-center mb-3">
-                              <Ionicons name="location-outline" size={32} color="#1D4ED8" />
+                            <View className="w-16 h-16 rounded-full bg-[#4988C4]/10 items-center justify-center mb-3">
+                              <Ionicons name="location-outline" size={32} color="#4988C4" />
                             </View>
-                            <Text className="text-xl font-bold text-[#181D27] text-center">Location-based Alerts</Text>
-                            <Text className="text-sm text-[#6B7280] text-center mt-2">
+                            <Text className="text-xl font-bold text-center" style={{ color: '#0F2854' }}>Location-based Alerts</Text>
+                            <Text className="text-sm text-center mt-2" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
                               Get notified when dengue cases are detected near your saved locations
                             </Text>
                           </View>
@@ -1089,15 +1090,15 @@ export default function Dashboard() {
                               setShowAlertModal(false);
                               setShowViewAlertsModal(true);
                             }}
-                            className="flex-row items-center bg-gray-50 rounded-xl p-4 mb-3"
+                            className="flex-row items-center bg-[#BDE8F5] rounded-xl p-4 mb-3"
                             activeOpacity={0.7}
                           >
-                            <View className="w-10 h-10 rounded-full bg-[#1D4ED8]/10 items-center justify-center mr-3">
-                              <Ionicons name="list-outline" size={22} color="#1D4ED8" />
+                            <View className="w-10 h-10 rounded-full bg-[#4988C4]/10 items-center justify-center mr-3">
+                              <Ionicons name="list-outline" size={22} color="#4988C4" />
                             </View>
                             <View className="flex-1">
-                              <Text className="text-base font-semibold text-[#181D27]">View Existing Alerts</Text>
-                              <Text className="text-xs text-[#6B7280]">{locationAlerts.length} alert(s) saved</Text>
+                              <Text className="text-base font-semibold" style={{ color: '#0F2854' }}>View Existing Alerts</Text>
+                              <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>{locationAlerts.length} alert(s) saved</Text>
                             </View>
                             <Ionicons name="chevron-forward" size={20} color="#ABABAB" />
                           </TouchableOpacity>
@@ -1112,7 +1113,7 @@ export default function Dashboard() {
                                 setNewAlertLocationName(locationName);
                               }
                             }}
-                            className="flex-row items-center bg-[#1D4ED8] rounded-xl p-4 mb-4"
+                            className="flex-row items-center bg-[#1C4D8D] rounded-xl p-4 mb-4"
                             activeOpacity={0.7}
                           >
                             <View className="w-10 h-10 rounded-full bg-white/20 items-center justify-center mr-3">
@@ -1129,7 +1130,7 @@ export default function Dashboard() {
                             onPress={() => setShowAlertModal(false)}
                             className="py-3"
                           >
-                            <Text className="text-center font-semibold text-[#6B7280]">Cancel</Text>
+                            <Text className="text-center font-semibold" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>Cancel</Text>
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -1145,7 +1146,7 @@ export default function Dashboard() {
                       <View className="flex-1 bg-black/50 justify-end">
                         <View className="bg-white rounded-t-3xl p-6 max-h-[80%]">
                           <View className="flex-row items-center justify-between mb-4">
-                            <Text className="text-2xl font-bold text-black">My Location Alerts</Text>
+                            <Text className="text-2xl font-bold" style={{ color: '#0F2854' }}>My Location Alerts</Text>
                             <TouchableOpacity onPress={() => setShowViewAlertsModal(false)} className="p-2">
                               <Feather name="x" size={24} color="#6B7280" />
                             </TouchableOpacity>
@@ -1153,7 +1154,7 @@ export default function Dashboard() {
                           
                           {loadingAlerts ? (
                             <View className="items-center justify-center py-8">
-                              <ActivityIndicator size="large" color="#1D4ED8" />
+                              <ActivityIndicator size="large" color="#1C4D8D" />
                             </View>
                           ) : locationAlerts.length === 0 ? (
                             <View className="items-center justify-center py-8">
@@ -1169,7 +1170,7 @@ export default function Dashboard() {
                                     setNewAlertLocationName(locationName);
                                   }
                                 }}
-                                className="mt-4 bg-[#1D4ED8] rounded-xl px-6 py-3"
+                                className="mt-4 bg-[#1C4D8D] rounded-xl px-6 py-3"
                               >
                                 <Text className="text-white font-semibold">Create Your First Alert</Text>
                               </TouchableOpacity>
@@ -1179,13 +1180,13 @@ export default function Dashboard() {
                               {locationAlerts.map((alert) => (
                                 <View
                                   key={alert.id}
-                                  className={`bg-gray-50 rounded-xl p-4 mb-3 border-l-4 ${alert.isActive ? 'border-[#1D4ED8]' : 'border-gray-300'}`}
+                                  className={`bg-[#BDE8F5] rounded-xl p-4 mb-3 border-l-4 ${alert.isActive ? 'border-[#4988C4]' : 'border-gray-300'}`}
                                 >
                                   <View className="flex-row items-start justify-between">
                                     <View className="flex-1 mr-3">
-                                      <Text className="text-base font-bold text-[#181D27]">{alert.name}</Text>
+                                      <Text className="text-base font-bold" style={{ color: '#0F2854' }}>{alert.name}</Text>
                                       {alert.address && (
-                                        <Text className="text-xs text-[#6B7280] mt-1" numberOfLines={2}>{alert.address}</Text>
+                                        <Text className="text-xs mt-1" style={{ color: 'rgba(15, 40, 84, 0.75)' }} numberOfLines={2}>{alert.address}</Text>
                                       )}
                                       <Text className="text-xs text-[#9CA3AF] mt-1">
                                         Created {new Date(alert.createdAt).toLocaleDateString()}
@@ -1224,7 +1225,7 @@ export default function Dashboard() {
                                   setNewAlertLocationName(locationName);
                                 }
                               }}
-                              className="bg-[#1D4ED8] rounded-xl py-3 mt-4"
+                              className="bg-[#1C4D8D] rounded-xl py-3 mt-4"
                             >
                               <Text className="text-white font-bold text-center">Create New Alert</Text>
                             </TouchableOpacity>
@@ -1291,14 +1292,14 @@ export default function Dashboard() {
                                 <TextInput
                                   className="flex-1 ml-2 text-base"
                                   placeholder="Search location..."
-                                  placeholderTextColor="#9CA3AF"
+                                  placeholderTextColor="rgba(15, 40, 84, 0.55)"
                                   value={alertSearchQuery}
                                   onChangeText={(text) => {
                                     setAlertSearchQuery(text);
                                     searchAlertLocation(text);
                                   }}
                                   onSubmitEditing={() => searchAlertLocation(alertSearchQuery)}
-                                  style={{ color: '#181D27' }}
+                                  style={{ color: '#0F2854' }}
                                 />
                                 {alertSearchQuery.length > 0 && (
                                   <TouchableOpacity
@@ -1308,11 +1309,11 @@ export default function Dashboard() {
                                     }}
                                     className="ml-2"
                                   >
-                                    <Feather name="x" size={18} color="#6B7280" />
+                                    <Feather name="x" size={18} color="#4988C4" />
                                   </TouchableOpacity>
                                 )}
                                 {isAlertSearching && (
-                                  <ActivityIndicator size="small" color="#1D4ED8" className="ml-2" />
+                                  <ActivityIndicator size="small" color="#1C4D8D" className="ml-2" />
                                 )}
                               </View>
                               
@@ -1362,7 +1363,7 @@ export default function Dashboard() {
                                   <Marker
                                     coordinate={newAlertLocation}
                                     title="Alert Location"
-                                    pinColor="#1D4ED8"
+                                    pinColor="#4988C4"
                                   />
                                 )}
                               </MapView>
@@ -1371,10 +1372,10 @@ export default function Dashboard() {
                           
                           {/* Selected Location Info */}
                           {newAlertLocation && (
-                            <View className="bg-blue-50 rounded-xl p-3 mb-4 border border-blue-100">
+                            <View className="bg-[#BDE8F5] rounded-xl p-3 mb-4" style={{ borderColor: '#4988C4', borderWidth: 1 }}>
                               <View className="flex-row items-start">
-                                <Ionicons name="location" size={18} color="#1D4ED8" style={{ marginTop: 2 }} />
-                                <Text className="text-sm text-blue-800 ml-2 flex-1" numberOfLines={2}>
+                                <Ionicons name="location" size={18} color="#4988C4" style={{ marginTop: 2 }} />
+                                <Text className="text-sm ml-2 flex-1" style={{ color: '#0F2854' }} numberOfLines={2}>
                                   {newAlertLocationName || `${newAlertLocation.latitude.toFixed(4)}, ${newAlertLocation.longitude.toFixed(4)}`}
                                 </Text>
                               </View>
@@ -1395,7 +1396,7 @@ export default function Dashboard() {
                           <TouchableOpacity
                             onPress={handleCreateAlert}
                             disabled={isCreatingAlert || !newAlertName.trim() || !newAlertLocation}
-                            className={`rounded-xl py-4 ${(!newAlertName.trim() || !newAlertLocation || isCreatingAlert) ? 'bg-gray-300' : 'bg-[#1D4ED8]'}`}
+                            className={`rounded-xl py-4 ${(!newAlertName.trim() || !newAlertLocation || isCreatingAlert) ? 'bg-gray-300' : 'bg-[#1C4D8D]'}`}
                             activeOpacity={0.8}
                           >
                             {isCreatingAlert ? (
@@ -1414,8 +1415,8 @@ export default function Dashboard() {
               <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
                 {loadingOrganisation ? (
                   <View className="items-center justify-center py-8">
-                    <ActivityIndicator size="large" color="#1D4ED8" />
-                    <Text className="text-gray-600 mt-4 text-sm">Loading organisation data...</Text>
+                    <ActivityIndicator size="large" color="#1C4D8D" />
+                    <Text className="mt-4 text-sm" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>Loading organisation data...</Text>
                   </View>
                 ) : companyLocations.length === 0 ? (
                   <View className="bg-yellow-50 rounded-2xl p-6 items-center justify-center border border-yellow-200">
@@ -1594,16 +1595,16 @@ export default function Dashboard() {
                           className="flex-row items-center px-4 py-2 bg-gray-100 rounded-lg mr-2"
                           activeOpacity={0.7}
                         >
-                          <Feather name="chevron-left" size={18} color="#1D4ED8" />
-                          <Text className="text-sm font-semibold text-[#1D4ED8] ml-1">Previous</Text>
+                          <Feather name="chevron-left" size={18} color="#4988C4" />
+                          <Text className="text-sm font-semibold ml-1" style={{ color: '#1C4D8D' }}>Previous</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           onPress={() => handleNavigateLocation('next')}
                           className="flex-row items-center px-4 py-2 bg-gray-100 rounded-lg"
                           activeOpacity={0.7}
                         >
-                          <Text className="text-sm font-semibold text-[#1D4ED8] mr-1">Next</Text>
-                          <Feather name="chevron-right" size={18} color="#1D4ED8" />
+                          <Text className="text-sm font-semibold mr-1" style={{ color: '#1C4D8D' }}>Next</Text>
+                          <Feather name="chevron-right" size={18} color="#4988C4" />
                         </TouchableOpacity>
                       </View>
                     )}
@@ -1634,7 +1635,7 @@ export default function Dashboard() {
 
                 {/* Location List */}
                 <View className="mb-4">
-                  <Text className="text-lg font-bold text-black mb-3" style={{ fontFamily: 'SF Pro' }}>
+                  <Text className="text-lg font-bold mb-3" style={{ fontFamily: 'SF Pro', color: '#0F2854' }}>
                     Company Locations
                   </Text>
                   {companyLocations.map((loc) => {
@@ -1651,7 +1652,7 @@ export default function Dashboard() {
                         key={loc.id}
                         onPress={() => handleLocationMarkerPress(loc)}
                         className={`bg-white rounded-2xl p-4 mb-3 border-l-4 ${
-                          selectedLocation?.id === loc.id ? 'border-[#1D4ED8]' : 'border-gray-200'
+                          selectedLocation?.id === loc.id ? 'border-[#4988C4]' : 'border-gray-200'
                         }`}
                         style={{
                           shadowColor: '#000',
@@ -1664,13 +1665,13 @@ export default function Dashboard() {
                         <View className="flex-row items-start justify-between">
                           <View className="flex-1">
                             <View className="flex-row items-center mb-2">
-                              <Feather name="map-pin" size={16} color="#1D4ED8" />
-                              <Text className="text-base font-bold text-black ml-2" style={{ fontFamily: 'SF Pro' }}>
+                              <Feather name="map-pin" size={16} color="#4988C4" />
+                              <Text className="text-base font-bold ml-2" style={{ fontFamily: 'SF Pro', color: '#0F2854' }}>
                                 {loc.name}
                               </Text>
                             </View>
                             {loc.address && (
-                              <Text className="text-sm text-gray-600 mb-2">{loc.address}</Text>
+                              <Text className="text-sm mb-2" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>{loc.address}</Text>
                             )}
                             {prediction?.createdAt && (
                               <Text className="text-xs text-gray-500">

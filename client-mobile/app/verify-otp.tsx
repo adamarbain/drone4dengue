@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { fetchCurrentUser } from '../utils/userApi';
+import BottomNav from './components/BottomNav';
 
 export default function VerifyOtpPage() {
   const [otpValue, setOtpValue] = useState('');
@@ -253,11 +254,11 @@ export default function VerifyOtpPage() {
           borderRadius: 12,
           alignItems: 'center',
           justifyContent: 'center',
-          borderColor: isFilled ? '#1D4ED8' : (isCurrentBox && isFocused) ? '#1D4ED8' : '#D1D5DB',
-          backgroundColor: isFilled ? '#F0F7FF' : '#FFFFFF',
+          borderColor: isFilled ? '#4988C4' : (isCurrentBox && isFocused) ? '#4988C4' : '#C7D9EA',
+          backgroundColor: isFilled ? '#BDE8F5' : '#FFFFFF',
         }}
       >
-        <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#181D27' }}>
+        <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#0F2854' }}>
           {digit}
         </Text>
         {/* Cursor indicator for current box */}
@@ -267,7 +268,7 @@ export default function VerifyOtpPage() {
               position: 'absolute',
               width: 2,
               height: 24,
-              backgroundColor: '#1D4ED8',
+              backgroundColor: '#4988C4',
             }}
           />
         )}
@@ -298,12 +299,12 @@ export default function VerifyOtpPage() {
           </TouchableOpacity> */}
 
           {/* Title */}
-          <Text className="text-5xl font-extrabold text-black mt-10 mb-4" style={{ fontFamily: 'SF Pro' }}>
+          <Text className="text-5xl font-extrabold mt-10 mb-4" style={{ fontFamily: 'SF Pro', color: '#0F2854' }}>
             Verify Account
           </Text>
           
           {/* Subtitle */}
-          <Text className="text-lg text-gray-600 mb-8">
+          <Text className="text-lg mb-8" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
             We'll send a verification code to your email address
           </Text>
 
@@ -325,7 +326,7 @@ export default function VerifyOtpPage() {
           {/* Send OTP Button */}
           <TouchableOpacity
             className={`rounded-xl py-4 mb-8 shadow-lg ${
-              !email ? 'bg-gray-300' : 'bg-[#1D4ED8] shadow-blue-200'
+              !email ? 'bg-gray-300' : 'bg-[#1C4D8D]'
             }`}
             onPress={sendOtp}
             disabled={sending || !email}
@@ -347,7 +348,7 @@ export default function VerifyOtpPage() {
           {/* OTP Input Section */}
           {otpSent && (
             <View className="mb-6">
-              <Text className="text-lg text-gray-500 mb-3">Enter Verification Code</Text>
+              <Text className="text-lg mb-3" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>Enter Verification Code</Text>
               
               {/* Hidden TextInput - handles all keyboard input */}
               <TextInput
@@ -373,9 +374,9 @@ export default function VerifyOtpPage() {
               {/* Timer */}
               {timer > 0 && (
                 <View className="flex-row items-center justify-center mb-4">
-                  <Feather name="clock" size={16} color="#6B7280" />
-                  <Text className="ml-2 text-sm text-gray-600">
-                    Code expires in <Text className="font-bold text-[#1D4ED8]">{formatTime(timer)}</Text>
+                  <Feather name="clock" size={16} color="#4988C4" />
+                  <Text className="ml-2 text-sm" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
+                    Code expires in <Text className="font-bold" style={{ color: '#0F2854' }}>{formatTime(timer)}</Text>
                   </Text>
                 </View>
               )}
@@ -385,7 +386,7 @@ export default function VerifyOtpPage() {
                 className={`rounded-xl py-4 shadow-lg ${
                   verifying || otpValue.length !== 6
                     ? 'bg-gray-300'
-                    : 'bg-[#181D27] shadow-gray-300'
+                    : 'bg-[#1C4D8D]'
                 }`}
                 onPress={verifyOtp}
                 disabled={verifying || otpValue.length !== 6}
@@ -436,18 +437,18 @@ export default function VerifyOtpPage() {
           {/* Resend OTP Button */}
           {otpSent && (timer === 0 || messageType === 'error') && (
             <View className="mt-4">
-              <Text className="text-center text-gray-600 mb-3 text-sm">
+              <Text className="text-center mb-3 text-sm" style={{ color: 'rgba(15, 40, 84, 0.65)' }}>
                 Didn't receive the code?
               </Text>
               <TouchableOpacity
-                className="bg-gray-100 rounded-xl py-3 border border-gray-200"
+                className="rounded-xl py-3 border" style={{ backgroundColor: '#BDE8F5', borderColor: '#4988C4' }}
                 onPress={sendOtp}
                 disabled={sending}
                 activeOpacity={0.7}
               >
                 <View className="flex-row items-center justify-center">
-                  <Feather name="refresh-cw" size={18} color="#6B7280" style={{ marginRight: 8 }} />
-                  <Text className="text-gray-700 text-center font-semibold text-base">
+                  <Feather name="refresh-cw" size={18} color="#4988C4" style={{ marginRight: 8 }} />
+                  <Text className="text-center font-semibold text-base" style={{ color: '#0F2854' }}>
                     {sending ? 'Sending...' : 'Resend Verification Code'}
                   </Text>
                 </View>
@@ -459,12 +460,12 @@ export default function VerifyOtpPage() {
           <View className="mt-8 mb-4">
             <View className="bg-blue-50 rounded-xl p-4 border border-blue-200">
               <View className="flex-row items-start">
-                <Feather name="info" size={18} color="#1D4ED8" style={{ marginTop: 2 }} />
+                <Feather name="info" size={18} color="#4988C4" style={{ marginTop: 2 }} />
                 <View className="ml-3 flex-1">
-                  <Text className="text-sm text-blue-800 font-semibold mb-1">
+                  <Text className="text-sm font-semibold mb-1" style={{ color: '#0F2854' }}>
                     Verification Tips
                   </Text>
-                  <Text className="text-xs text-blue-700 leading-4">
+                  <Text className="text-xs leading-4" style={{ color: 'rgba(15, 40, 84, 0.8)' }}>
                     • Check your spam/junk folder if you don't see the email{'\n'}
                     • The code expires in 10 minutes{'\n'}
                     • Just type or paste your 6-digit code{'\n'}
@@ -476,6 +477,8 @@ export default function VerifyOtpPage() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <BottomNav />
     </SafeAreaView>
   );
 }
