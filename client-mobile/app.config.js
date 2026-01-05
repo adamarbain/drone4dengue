@@ -2,7 +2,7 @@ module.exports = {
   expo: {
     name: "DengueEye",
     slug: "dengueeye-mobile-app",
-    version: "1.0.2",
+    version: "1.0.3",
     orientation: "portrait",
     icon: "./assets/dengueeye_logo.png",
     scheme: "dengueeye",
