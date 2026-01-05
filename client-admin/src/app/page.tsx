@@ -34,11 +34,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 relative overflow-hidden flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-primary-dark via-secondary-blue to-accent-blue relative overflow-hidden flex items-center justify-center">
       {/* Decorative elements */}
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-yellow-100 rounded-full transform translate-y-1/2 -translate-x-1/4 opacity-80"></div>
-      <div className="absolute top-1/4 right-0 w-80 h-80 bg-blue-600 rounded-full transform translate-x-1/3 -translate-y-1/4 opacity-60"></div>
-      <div className="absolute top-0 right-1/4 w-64 h-64 bg-yellow-200 rounded-full transform -translate-y-1/2 opacity-80"></div>
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-light-bg rounded-full transform translate-y-1/2 -translate-x-1/4 opacity-80"></div>
+      <div className="absolute top-1/4 right-0 w-80 h-80 bg-accent-blue rounded-full transform translate-x-1/3 -translate-y-1/4 opacity-60"></div>
+      <div className="absolute top-0 right-1/4 w-64 h-64 bg-light-bg rounded-full transform -translate-y-1/2 opacity-80"></div>
 
       {/* Animated mosquito silhouettes */}
       <motion.div
@@ -97,7 +97,7 @@ export default function LoginPage() {
           <h1 className="text-white text-3xl font-bold">
             Drone4Dengue
             <br />
-            <span className="text-yellow-300">Admin</span>
+            <span className="text-light-bg">Admin</span>
           </h1>
         </motion.div>
 
@@ -145,7 +145,7 @@ export default function LoginPage() {
                     Email Address
                   </Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-light-bg w-5 h-5" />
                     <Input
                       id="email"
                       type="email"
@@ -153,7 +153,7 @@ export default function LoginPage() {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="pl-12 pr-4 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="pl-12 pr-4 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-accent-blue focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                   </div>
                 </div>
@@ -171,7 +171,7 @@ export default function LoginPage() {
                     </Link>
                   </div>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-light-bg w-5 h-5" />
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
@@ -179,7 +179,7 @@ export default function LoginPage() {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-12 pr-12 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="pl-12 pr-12 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white focus:border-accent-blue focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                     <Button
                       type="button"
@@ -197,7 +197,7 @@ export default function LoginPage() {
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3 bg-gradient-to-r from-white to-white text-blue-900 font-semibold rounded-lg hover:from-gray-100 hover:to-gray-200 transition-all shadow-lg disabled:opacity-70"
+                    className="w-full py-3 bg-gradient-to-r from-white to-white text-primary-dark font-semibold rounded-lg hover:from-gray-100 hover:to-gray-200 transition-all shadow-lg disabled:opacity-70"
                   >
                     {isLoading ? "LOGGING IN..." : "LOGIN"}
                   </Button>

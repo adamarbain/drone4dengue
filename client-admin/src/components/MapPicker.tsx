@@ -107,7 +107,7 @@ export default function MapPicker({ value, onChange, height = 320 }: MapPickerPr
   }
 
   return (
-    <div style={{ height }} className="relative w-full overflow-hidden rounded-lg border border-[#E2C275]">
+    <div style={{ height }} className="relative w-full overflow-hidden rounded-lg border border-accent-blue">
       {/* Search overlay */}
       <div className="absolute z-[1000] right-3 top-3 flex flex-col gap-2">
         <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
@@ -115,7 +115,7 @@ export default function MapPicker({ value, onChange, height = 320 }: MapPickerPr
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search place or address..."
-            className="w-[300px] rounded-md border border-[#E2C275] bg-white px-3 py-2 text-sm shadow"
+            className="w-[300px] rounded-md border border-accent-blue bg-white px-3 py-2 text-sm shadow"
           />
           <button
             type="submit"
@@ -126,11 +126,11 @@ export default function MapPicker({ value, onChange, height = 320 }: MapPickerPr
           </button>
         </form>
         {searchOpen && searchResults.length > 0 && (
-          <div className="w-[300px] max-h-56 overflow-auto rounded-md border border-[#E2C275] bg-white shadow">
+          <div className="w-[300px] max-h-56 overflow-auto rounded-md border border-accent-blue bg-white shadow">
             {searchResults.map((r, idx) => (
               <button
                 key={`${r.lat}-${r.lon}-${idx}`}
-                className="block w-full px-3 py-2 text-left text-sm hover:bg-[#F3EAD8]"
+                className="block w-full px-3 py-2 text-left text-sm hover:bg-light-bg/50"
                 onClick={() => handleSelectResult(r)}
               >
                 {r.display_name}

@@ -83,11 +83,11 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-primary-dark via-secondary-blue to-accent-blue relative overflow-hidden">
       {/* Decorative curved shapes */}
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-yellow-100 rounded-full transform translate-y-1/2 -translate-x-1/4"></div>
-      <div className="absolute top-1/4 right-0 w-80 h-80 bg-blue-600 rounded-full transform translate-x-1/3 -translate-y-1/4 opacity-60"></div>
-      <div className="absolute top-0 right-1/4 w-64 h-64 bg-yellow-200 rounded-full transform -translate-y-1/2 opacity-80"></div>
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-light-bg rounded-full transform translate-y-1/2 -translate-x-1/4"></div>
+      <div className="absolute top-1/4 right-0 w-80 h-80 bg-accent-blue rounded-full transform translate-x-1/3 -translate-y-1/4 opacity-60"></div>
+      <div className="absolute top-0 right-1/4 w-64 h-64 bg-light-bg rounded-full transform -translate-y-1/2 opacity-80"></div>
 
       {/* Main content */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4">
@@ -103,7 +103,7 @@ export default function ForgotPasswordPage() {
         {/* Back button */}
         <div className="absolute top-8 right-8">
           <Link href="/">
-            <Button variant="ghost" className="text-white hover:text-blue-200 hover:bg-transparent">
+            <Button variant="ghost" className="text-white hover:text-light-bg hover:bg-transparent">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Login
             </Button>
@@ -111,7 +111,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         {/* Forgot password form container */}
-        <Card className="w-full max-w-md bg-white/10 backdrop-blur-sm border-blue-300">
+        <Card className="w-full max-w-md bg-white/10 backdrop-blur-sm border-white/20">
           <CardHeader className="text-center">
             <CardTitle className="text-white text-xl">Reset Password</CardTitle>
           </CardHeader>
@@ -124,7 +124,7 @@ export default function ForgotPasswordPage() {
                 <div className="space-y-2">
                   <Label htmlFor="email" className="sr-only">Email Address</Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-light-bg w-5 h-5" />
                     <Input
                       id="email"
                       type="email"
@@ -132,12 +132,12 @@ export default function ForgotPasswordPage() {
                       required
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 bg-transparent border-2 border-blue-300 rounded-md text-white placeholder-blue-300 focus:border-blue-200 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="w-full pl-12 pr-4 py-3 bg-transparent border-2 border-white/20 rounded-md text-white placeholder-white/50 focus:border-accent-blue focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                   </div>
                 </div>
                 {error && <div className="text-center text-red-200 text-sm font-semibold">{error}</div>}
-                <Button type="submit" disabled={isLoading} className="w-full py-3 bg-white text-blue-800 font-semibold rounded-md hover:bg-gray-100 transition-colors disabled:opacity-50">
+                <Button type="submit" disabled={isLoading} className="w-full py-3 bg-white text-primary-dark font-semibold rounded-md hover:bg-gray-100 transition-colors disabled:opacity-50">
                   {isLoading ? "SENDING..." : "SEND CODE"}
                 </Button>
               </form>
@@ -150,7 +150,7 @@ export default function ForgotPasswordPage() {
                 <div className="space-y-2">
                   <Label htmlFor="code" className="sr-only">Reset Code</Label>
                   <div className="relative">
-                    <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
+                    <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-light-bg w-5 h-5" />
                     <Input
                       id="code"
                       type="text"
@@ -158,12 +158,12 @@ export default function ForgotPasswordPage() {
                       required
                       value={code}
                       onChange={e => setCode(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 bg-transparent border-2 border-blue-300 rounded-md text-white placeholder-blue-300 focus:border-blue-200 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="w-full pl-12 pr-4 py-3 bg-transparent border-2 border-white/20 rounded-md text-white placeholder-white/50 focus:border-accent-blue focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                   </div>
                 </div>
                 {error && <div className="text-center text-red-200 text-sm font-semibold">{error}</div>}
-                <Button type="submit" disabled={isLoading} className="w-full py-3 bg-white text-blue-800 font-semibold rounded-md hover:bg-gray-100 transition-colors disabled:opacity-50">
+                <Button type="submit" disabled={isLoading} className="w-full py-3 bg-white text-primary-dark font-semibold rounded-md hover:bg-gray-100 transition-colors disabled:opacity-50">
                   {isLoading ? "VERIFYING..." : "VERIFY CODE"}
                 </Button>
               </form>
@@ -176,7 +176,7 @@ export default function ForgotPasswordPage() {
                 <div className="space-y-2">
                   <Label htmlFor="newPassword" className="sr-only">New Password</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-light-bg w-5 h-5" />
                     <Input
                       id="newPassword"
                       type={showNewPassword ? "text" : "password"}
@@ -184,7 +184,7 @@ export default function ForgotPasswordPage() {
                       required
                       value={newPassword}
                       onChange={e => setNewPassword(e.target.value)}
-                      className="w-full pl-12 pr-12 py-3 bg-transparent border-2 border-blue-300 rounded-md text-white placeholder-blue-300 focus:border-blue-200 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="w-full pl-12 pr-12 py-3 bg-transparent border-2 border-white/20 rounded-md text-white placeholder-white/50 focus:border-accent-blue focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                     <Button
                       type="button"
@@ -200,7 +200,7 @@ export default function ForgotPasswordPage() {
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword" className="sr-only">Confirm Password</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-light-bg w-5 h-5" />
                     <Input
                       id="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
@@ -208,7 +208,7 @@ export default function ForgotPasswordPage() {
                       required
                       value={confirmPassword}
                       onChange={e => setConfirmPassword(e.target.value)}
-                      className="w-full pl-12 pr-12 py-3 bg-transparent border-2 border-blue-300 rounded-md text-white placeholder-blue-300 focus:border-blue-200 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="w-full pl-12 pr-12 py-3 bg-transparent border-2 border-white/20 rounded-md text-white placeholder-white/50 focus:border-accent-blue focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                     <Button
                       type="button"
@@ -222,7 +222,7 @@ export default function ForgotPasswordPage() {
                   </div>
                 </div>
                 {error && <div className="text-center text-red-200 text-sm font-semibold">{error}</div>}
-                <Button type="submit" disabled={isLoading} className="w-full py-3 bg-white text-blue-800 font-semibold rounded-md hover:bg-gray-100 transition-colors disabled:opacity-50">
+                <Button type="submit" disabled={isLoading} className="w-full py-3 bg-white text-primary-dark font-semibold rounded-md hover:bg-gray-100 transition-colors disabled:opacity-50">
                   {isLoading ? "RESETTING..." : "RESET PASSWORD"}
                 </Button>
               </form>
@@ -236,7 +236,7 @@ export default function ForgotPasswordPage() {
               </Alert>
             )}
             <div className="text-center">
-              <Link href="/" className="text-white hover:text-blue-200 transition-colors text-sm">
+              <Link href="/" className="text-white hover:text-light-bg transition-colors text-sm">
                 Remember your password? Sign in
               </Link>
             </div>

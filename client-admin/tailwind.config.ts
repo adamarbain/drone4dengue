@@ -10,6 +10,12 @@ export default {
   theme: {
   	extend: {
   		colors: {
+  			// Custom monochromatic blue palette
+  			'primary-dark': '#0F2854',    // Primary Dark / Text / Navbar
+  			'secondary-blue': '#1C4D8D',  // Secondary / Active States
+  			'accent-blue': '#4988C4',     // Accents / Buttons / Links
+  			'light-bg': '#BDE8F5',        // Backgrounds / Light Containers
+  			// Shadcn UI colors with new palette
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {

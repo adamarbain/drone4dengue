@@ -521,7 +521,7 @@ export default function WeatherDataPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FFF7E3] flex flex-row border-[8px] border-[#E2C275] overflow-hidden">
+    <div className="min-h-screen bg-[#FFF7E3] flex flex-row  overflow-hidden">
       <AdminSidebar current="Weather Data" />
       <div className="flex-1 flex flex-col">
         <AdminHeader />
@@ -533,7 +533,7 @@ export default function WeatherDataPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <motion.h1
-                    className="text-3xl font-bold text-gray-900 flex items-center gap-3"
+                    className="text-3xl font-bold text-primary-dark flex items-center gap-3"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.6, ease: "easeOut" }}
@@ -541,7 +541,7 @@ export default function WeatherDataPage() {
                     Weather Data Management
                   </motion.h1>
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-[#1D4ED8]"></div>
+                    <div className="w-2 h-2 rounded-full bg-accent-blue"></div>
                     <div className="text-lg text-gray-600">
                       Manage weather datasets for dengue prediction analysis within your company
                     </div>
@@ -554,7 +554,7 @@ export default function WeatherDataPage() {
                   transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
                 >
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Button onClick={exportData} variant="outline" className="flex items-center gap-2">
+                    <Button onClick={exportData} variant="outline" className="flex items-center gap-2 bg-white">
                       <Download className="h-4 w-4" />
                       Export Data
                     </Button>
@@ -563,7 +563,7 @@ export default function WeatherDataPage() {
                     <Button
                       onClick={loadWeatherData}
                       variant="outline"
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 bg-white"
                       disabled={loading}
                     >
                       <motion.div
@@ -778,7 +778,7 @@ export default function WeatherDataPage() {
             <motion.div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8" variants={itemVariants}>
               {/* CSV Upload */}
               <motion.div variants={cardVariants} whileHover="hover">
-                <Card>
+                <Card className="bg-white">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <motion.div
@@ -830,7 +830,7 @@ export default function WeatherDataPage() {
 
               {/* Manual Entry */}
               <motion.div variants={cardVariants} whileHover="hover">
-                <Card>
+                <Card className="bg-white">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <motion.div
@@ -1197,7 +1197,7 @@ export default function WeatherDataPage() {
 
             {/* Weather Data Table */}
             <motion.div variants={itemVariants}>
-              <Card>
+              <Card className="bg-white">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <motion.div
@@ -1241,7 +1241,7 @@ export default function WeatherDataPage() {
                       >
                         <Cloud className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                       </motion.div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      <h3 className="text-lg font-medium text-primary-dark mb-2">
                         {companyLocations.length === 0 ? "No Company Locations" : "No Weather Data"}
                       </h3>
                       <p className="text-gray-600 mb-4">
@@ -1264,14 +1264,14 @@ export default function WeatherDataPage() {
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-gray-200">
-                            <th className="text-left py-3 px-4 font-medium text-gray-900">Date</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-900">Temperature</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-900">Humidity</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-900">Rainfall</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-900">Location</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-900">Company Location</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-900">Last Updated</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-900">Actions</th>
+                            <th className="text-left py-3 px-4 font-medium text-primary-dark">Date</th>
+                            <th className="text-left py-3 px-4 font-medium text-primary-dark">Temperature</th>
+                            <th className="text-left py-3 px-4 font-medium text-primary-dark">Humidity</th>
+                            <th className="text-left py-3 px-4 font-medium text-primary-dark">Rainfall</th>
+                            <th className="text-left py-3 px-4 font-medium text-primary-dark">Location</th>
+                            <th className="text-left py-3 px-4 font-medium text-primary-dark">Company Location</th>
+                            <th className="text-left py-3 px-4 font-medium text-primary-dark">Last Updated</th>
+                            <th className="text-left py-3 px-4 font-medium text-primary-dark">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1309,8 +1309,8 @@ export default function WeatherDataPage() {
                                   <span className="font-medium">{record.rainfall}mm</span>
                                 </div>
                               </td>
-                              <td className="py-3 px-4 text-gray-900">{record.location}</td>
-                              <td className="py-3 px-4 text-gray-900">
+                              <td className="py-3 px-4 text-primary-dark">{record.location}</td>
+                              <td className="py-3 px-4 text-primary-dark">
                                 {record.companyLocation ? (
                                   <div>
                                     <div className="font-medium">{record.companyLocation.name}</div>

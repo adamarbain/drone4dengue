@@ -345,7 +345,7 @@ export default function PredictionAlertPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FFF7E3] flex flex-row  border-[8px] border-[#E2C275] overflow-hidden">
+    <div className="min-h-screen bg-[#FFF7E3] flex flex-row   overflow-hidden">
       <AdminSidebar current="Prediction & Alert" />
       <main className="flex-1 flex flex-col">
         <AdminHeader />
@@ -353,9 +353,9 @@ export default function PredictionAlertPage() {
         {/* Content */}
         <motion.section className="px-10 py-6" variants={container} initial="hidden" animate="show">
           <motion.div variants={item} className="mb-8">
-            <h1 className="text-3xl font-bold text-black mb-1">Prediction & Alert</h1>
+            <h1 className="text-3xl font-bold text-primary-dark mb-1">Prediction & Alert</h1>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#1D4ED8]"></div>
+              <div className="w-2 h-2 rounded-full bg-accent-blue"></div>
               <div className="text-lg text-gray-600">Dengue Prediction & Alert System for your company</div>
             </div>
           </motion.div>
@@ -365,16 +365,16 @@ export default function PredictionAlertPage() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-xl">Dengue Predictions</h2>
               <div className="flex gap-3">
-                <button className="bg-[#E5E7EB] text-black px-6 py-2 rounded-lg font-bold text-base hover:bg-[#F3EAD8] flex items-center gap-2" onClick={handleExport} disabled={loading}>
+                <button className="bg-gray-200 text-primary-dark px-6 py-2 rounded-lg font-bold text-base hover:bg-gray-300 flex items-center gap-2" onClick={handleExport} disabled={loading}>
                   <FiDownload /> {loading ? "Exporting..." : "Export"}
                 </button>
-                <button className="bg-[#E5E7EB] text-black px-6 py-2 rounded-lg font-bold text-base hover:bg-[#F3EAD8] flex items-center gap-2" disabled>
+                <button className="bg-gray-200 text-primary-dark px-6 py-2 rounded-lg font-bold text-base hover:bg-gray-300 flex items-center gap-2" disabled>
                   <FiFilter /> Filter
                 </button>
-                {/* <button className="bg-[#E5E7EB] text-black px-6 py-2 rounded-lg font-bold text-base hover:bg-[#F3EAD8] flex items-center gap-2" onClick={() => setShowEnhancedPrediction(true)}>
+                {/* <button className="bg-gray-200 text-primary-dark px-6 py-2 rounded-lg font-bold text-base hover:bg-gray-300 flex items-center gap-2" onClick={() => setShowEnhancedPrediction(true)}>
                   <FiTarget /> Enhanced Prediction
                 </button> */}
-                <button className="bg-[#1D4ED8] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#1E3A8A] flex items-center gap-2" onClick={handleUpdatePrediction} disabled={refreshing}>
+                <button className="bg-accent-blue text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-secondary-blue flex items-center gap-2" onClick={handleUpdatePrediction} disabled={refreshing}>
                   <FiRefreshCw className={refreshing ? 'animate-spin' : ''} /> {refreshing ? "Refreshing..." : "Refresh Predictions"}
                 </button>
               </div>
@@ -394,25 +394,25 @@ export default function PredictionAlertPage() {
             <motion.div variants={item} className="my-6">
               <div className="flex gap-4 items-end">
                 {/* <div className="flex flex-col gap-2">
-                  <label className="font-semibold text-black text-sm">State</label>
-                  <select className="rounded-lg border border-gray-400 px-4 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-[#E2C275]" value={selectedState} onChange={e => setSelectedState(e.target.value)}>
+                  <label className="font-semibold text-primary-dark text-sm">State</label>
+                  <select className="rounded-lg border border-gray-400 px-4 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-accent-blue" value={selectedState} onChange={e => setSelectedState(e.target.value)}>
                     {allStates.map(state => <option key={state}>{state}</option>)}
                   </select>
                 </div> */}
                 {/* <div className="flex flex-col gap-2">
-                  <label className="font-semibold text-black text-sm">City</label>
-                  <select className="rounded-lg border border-gray-400 px-4 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-[#E2C275]" value={selectedCity} onChange={e => setSelectedCity(e.target.value)}>
+                  <label className="font-semibold text-primary-dark text-sm">City</label>
+                  <select className="rounded-lg border border-gray-400 px-4 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-accent-blue" value={selectedCity} onChange={e => setSelectedCity(e.target.value)}>
                     {allCities.map(city => <option key={city}>{city}</option>)}
                   </select>
                 </div> */}
                 <div className="flex flex-col gap-2">
-                  <label className="font-semibold text-black text-sm">Risk Level</label>
-                  <select className="rounded-lg border border-gray-400 px-4 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-[#E2C275]" value={selectedRisk} onChange={e => setSelectedRisk(e.target.value)}>
+                  <label className="font-semibold text-primary-dark text-sm">Risk Level</label>
+                  <select className="rounded-lg border border-gray-400 px-4 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-accent-blue" value={selectedRisk} onChange={e => setSelectedRisk(e.target.value)}>
                     {allRiskLevels.map(risk => <option key={risk}>{risk}</option>)}
                   </select>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="font-semibold text-black text-sm">Date Range</label>
+                  <label className="font-semibold text-primary-dark text-sm">Date Range</label>
                   <DateRangePicker
                     dateRange={dateRange}
                     onDateRangeChange={setDateRange}
@@ -430,7 +430,7 @@ export default function PredictionAlertPage() {
             <div className="overflow-x-auto rounded-xl">
               <table className="min-w-full bg-white rounded-xl">
                 <thead>
-                  <tr className="text-left text-black font-semibold text-base bg-[#F3EAD8]">
+                  <tr className="text-left text-primary-dark font-semibold text-base bg-light-bg">
                     <th className="py-3 px-6">Company Location</th>
                     <th className="py-3 px-6">Coordinates</th>
                     <th className="py-3 px-6">Risk Level</th>
@@ -451,8 +451,8 @@ export default function PredictionAlertPage() {
                     </tr>
                   ) : (
                     filteredPredictions.map((prediction, idx) => (
-                      <tr key={prediction.id} className={idx % 2 === 0 ? "bg-[#F9F6F2]" : "bg-white"}>
-                        <td className="py-3 px-6 font-medium text-black">
+                      <tr key={prediction.id} className={idx % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                        <td className="py-3 px-6 font-medium text-primary-dark">
                           <div className="flex items-center gap-2">
                             <FiMapPin className="text-gray-400" />
                             <div>
@@ -471,7 +471,7 @@ export default function PredictionAlertPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="py-3 px-6 font-medium text-black">
+                        <td className="py-3 px-6 font-medium text-primary-dark">
                           <div className="flex items-center gap-2">
                             <FiMapPin className="text-gray-400" />
                             <div>
@@ -539,13 +539,13 @@ export default function PredictionAlertPage() {
                             </div>
                           )}
                         </td>
-                        <td className="py-3 px-6 text-black">{new Date(prediction.createdAt).toLocaleDateString()}</td>
+                        <td className="py-3 px-6 text-primary-dark">{new Date(prediction.createdAt).toLocaleDateString()}</td>
                         <td className="py-3 px-6">
                           <div className="flex gap-2">
-                            <button className="text-[#1D4ED8] hover:bg-[#EFF6FF] p-2 rounded-lg" onClick={() => setShowDetails(prediction)}>
+                            <button className="text-accent-blue hover:bg-light-bg/50 p-2 rounded-lg" onClick={() => setShowDetails(prediction)}>
                               <FiEye />
                             </button>
-                            <button className="text-[#1D4ED8] hover:bg-[#EFF6FF] p-2 rounded-lg" onClick={handleExport} disabled={loading}>
+                            <button className="text-accent-blue hover:bg-light-bg/50 p-2 rounded-lg" onClick={handleExport} disabled={loading}>
                               <FiDownload />
                             </button>
                           </div>
@@ -563,7 +563,7 @@ export default function PredictionAlertPage() {
           {showDetails && (
             <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
               <div className="bg-white rounded-xl p-8 shadow-lg w-full max-w-md relative">
-                <button className="absolute top-2 right-2 text-gray-400 hover:text-black" onClick={() => setShowDetails(null)}>&times;</button>
+                <button className="absolute top-2 right-2 text-gray-400 hover:text-primary-dark" onClick={() => setShowDetails(null)}>&times;</button>
                 <h2 className="text-xl font-bold mb-4">Prediction Details</h2>
                 <div className="space-y-3">
                   {showDetails.companyLocation ? (
@@ -659,7 +659,7 @@ export default function PredictionAlertPage() {
                   <div><span className="font-semibold">Prediction Date:</span> {new Date(showDetails.createdAt).toLocaleString()}</div>
                 </div>
                 <div className="mt-6">
-                  <button className="bg-[#1D4ED8] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#1E3A8A]" onClick={() => setShowDetails(null)}>Close</button>
+                  <button className="bg-accent-blue text-white px-4 py-2 rounded-lg font-bold hover:bg-secondary-blue" onClick={() => setShowDetails(null)}>Close</button>
                 </div>
               </div>
             </div>
@@ -669,7 +669,7 @@ export default function PredictionAlertPage() {
           {showEnhancedPrediction && (
             <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
               <div className="bg-white rounded-xl p-8 shadow-lg w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
-                <button className="absolute top-2 right-2 text-gray-400 hover:text-black text-2xl" onClick={() => setShowEnhancedPrediction(false)}>&times;</button>
+                <button className="absolute top-2 right-2 text-gray-400 hover:text-primary-dark text-2xl" onClick={() => setShowEnhancedPrediction(false)}>&times;</button>
                 <h2 className="text-2xl font-bold mb-6">Enhanced Prediction</h2>
                 
                 <div className="space-y-6">
@@ -681,7 +681,7 @@ export default function PredictionAlertPage() {
                         type="number"
                         step="0.000001"
                         placeholder="3.1390"
-                        className="w-full rounded-lg border border-gray-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#E2C275]"
+                        className="w-full rounded-lg border border-gray-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-accent-blue"
                         id="enhanced-lat"
                       />
                     </div>
@@ -691,7 +691,7 @@ export default function PredictionAlertPage() {
                         type="number"
                         step="0.000001"
                         placeholder="101.6869"
-                        className="w-full rounded-lg border border-gray-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#E2C275]"
+                        className="w-full rounded-lg border border-gray-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-accent-blue"
                         id="enhanced-lon"
                       />
                     </div>
@@ -708,7 +708,7 @@ export default function PredictionAlertPage() {
                           value="combined"
                           checked={enhancedPredictionMode === 'combined'}
                           onChange={(e) => setEnhancedPredictionMode(e.target.value as 'combined' | 'model1')}
-                          className="accent-[#1D4ED8]"
+                          className="accent-accent-blue"
                         />
                         <span>Combined Models (Historical + Weather)</span>
                       </label>
@@ -719,7 +719,7 @@ export default function PredictionAlertPage() {
                           value="model1"
                           checked={enhancedPredictionMode === 'model1'}
                           onChange={(e) => setEnhancedPredictionMode(e.target.value as 'combined' | 'model1')}
-                          className="accent-[#1D4ED8]"
+                          className="accent-accent-blue"
                         />
                         <span>Model 1 Only (Historical)</span>
                       </label>
@@ -733,7 +733,7 @@ export default function PredictionAlertPage() {
                       type="date"
                       value={targetDate}
                       onChange={(e) => setTargetDate(e.target.value)}
-                      className="w-full rounded-lg border border-gray-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#E2C275]"
+                      className="w-full rounded-lg border border-gray-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-accent-blue"
                     />
                   </div>
 
@@ -750,7 +750,7 @@ export default function PredictionAlertPage() {
                           }
                         }}
                         disabled={loadingHistoricalData}
-                        className="text-sm bg-[#E2C275] text-black px-3 py-1 rounded hover:bg-[#D4B85A] disabled:opacity-50"
+                        className="text-sm bg-accent-blue text-white px-3 py-1 rounded hover:bg-secondary-blue disabled:opacity-50"
                       >
                         {loadingHistoricalData ? 'Loading...' : 'Load Historical Data'}
                       </button>
@@ -791,7 +791,7 @@ export default function PredictionAlertPage() {
                         }
                       }}
                       disabled={loading}
-                      className="flex-1 bg-[#1D4ED8] text-white px-6 py-3 rounded-lg font-bold hover:bg-[#1E3A8A] disabled:opacity-50"
+                      className="flex-1 bg-accent-blue text-white px-6 py-3 rounded-lg font-bold hover:bg-secondary-blue disabled:opacity-50"
                     >
                       {loading ? 'Predicting...' : 'Make Enhanced Prediction'}
                     </button>
@@ -813,12 +813,12 @@ export default function PredictionAlertPage() {
             {/* Set Alert Rules */}
             <div className="bg-white rounded-xl p-6 shadow">
               <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                <FiAlertTriangle className="text-[#1D4ED8]" />
+                <FiAlertTriangle className="text-accent-blue" />
                 Set Alert Rules
               </h3>
 
               <div className="space-y-4">
-                <div className="text-sm font-semibold text-black mb-2">Risk Level Thresholds</div>
+                <div className="text-sm font-semibold text-primary-dark mb-2">Risk Level Thresholds</div>
 
                 <div className="flex items-center justify-between">
                   <span className="text-sm">High Risk</span>
@@ -845,26 +845,26 @@ export default function PredictionAlertPage() {
                 </div>
 
                 <div className="mt-6">
-                  <div className="text-sm font-semibold text-black mb-2">Notification Recipients</div>
-                  <select className="w-full rounded-lg border border-gray-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]" value={alertRecipient} onChange={e => setAlertRecipient(e.target.value)}>
+                  <div className="text-sm font-semibold text-primary-dark mb-2">Notification Recipients</div>
+                  <select className="w-full rounded-lg border border-gray-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-accent-blue" value={alertRecipient} onChange={e => setAlertRecipient(e.target.value)}>
                     <option value="">-- Select Recipients --</option>
                     <option>All Health Officials</option>
                   </select>
                 </div>
 
                 <div className="mt-4">
-                  <div className="text-sm font-semibold text-black mb-2">Notification Channels</div>
+                  <div className="text-sm font-semibold text-primary-dark mb-2">Notification Channels</div>
                   <div className="space-y-2">
                     <label className="flex items-center gap-2">
-                      <input type="checkbox" className="accent-[#1D4ED8]" defaultChecked />
+                      <input type="checkbox" className="accent-accent-blue" defaultChecked />
                       <span className="text-sm">Email</span>
                     </label>
                     <label className="flex items-center gap-2">
-                      <input type="checkbox" className="accent-[#1D4ED8]" defaultChecked />
+                      <input type="checkbox" className="accent-accent-blue" defaultChecked />
                       <span className="text-sm">SMS</span>
                     </label>
                     <label className="flex items-center gap-2">
-                      <input type="checkbox" className="accent-[#1D4ED8]" />
+                      <input type="checkbox" className="accent-accent-blue" />
                       <span className="text-sm">Push Notification</span>
                     </label>
                   </div>
@@ -872,7 +872,7 @@ export default function PredictionAlertPage() {
 
                 {alertSaveError && <div className="text-red-600 bg-red-100 border border-red-200 rounded-lg px-4 py-2 font-semibold">{alertSaveError}</div>}
                 {alertSaveSuccess && <div className="text-green-700 bg-green-100 border border-green-200 rounded-lg px-4 py-2 font-semibold">{alertSaveSuccess}</div>}
-                <button className="w-full bg-[#1D4ED8] text-white py-2 rounded-lg font-bold hover:bg-[#1E3A8A] mt-4 disabled:opacity-60" onClick={handleSaveAlertRules} disabled={savingAlert || !alertRecipient}>
+                <button className="w-full bg-accent-blue text-white py-2 rounded-lg font-bold hover:bg-secondary-blue mt-4 disabled:opacity-60" onClick={handleSaveAlertRules} disabled={savingAlert || !alertRecipient}>
                   {savingAlert ? "Saving..." : "Save Alert Rules"}
                 </button>
               </div>
@@ -884,40 +884,40 @@ export default function PredictionAlertPage() {
               <div className="bg-white rounded-xl p-6 shadow">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-bold text-lg flex items-center gap-2">
-                    <FiClock className="text-[#1D4ED8]" />
+                    <FiClock className="text-accent-blue" />
                     Scheduled Notifications
                   </h3>
-                  <button className="bg-[#1D4ED8] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#1E3A8A]">
+                  <button className="bg-accent-blue text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-secondary-blue">
                     + Create New Alert Schedule
                   </button>
                 </div>
 
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-[#F9F6F2] rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
                       <div className="font-medium text-sm">Daily High Risk Report</div>
                       <div className="text-xs text-gray-500">Every day at 8:00 AM</div>
                     </div>
                     <div className="flex gap-2">
-                      <button className="text-[#1D4ED8] hover:bg-white p-1 rounded">
+                      <button className="text-accent-blue hover:bg-white p-1 rounded">
                         <FiEye className="w-4 h-4" />
                       </button>
-                      <button className="text-[#1D4ED8] hover:bg-white p-1 rounded">
+                      <button className="text-accent-blue hover:bg-white p-1 rounded">
                         <FiAlertTriangle className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between p-3 bg-[#F9F6F2] rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
                       <div className="font-medium text-sm">Weekly Summary</div>
                       <div className="text-xs text-gray-500">Every Mon at 9:00 AM</div>
                     </div>
                     <div className="flex gap-2">
-                      <button className="text-[#1D4ED8] hover:bg-white p-1 rounded">
+                      <button className="text-accent-blue hover:bg-white p-1 rounded">
                         <FiEye className="w-4 h-4" />
                       </button>
-                      <button className="text-[#1D4ED8] hover:bg-white p-1 rounded">
+                      <button className="text-accent-blue hover:bg-white p-1 rounded">
                         <FiAlertTriangle className="w-4 h-4" />
                       </button>
                     </div>
@@ -928,13 +928,13 @@ export default function PredictionAlertPage() {
               {/* Alert History */}
               <div className="bg-white rounded-xl p-6 shadow">
                 <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                  <FiCheckCircle className="text-[#1D4ED8]" />
+                  <FiCheckCircle className="text-accent-blue" />
                   Alert History
                 </h3>
 
                 <div className="space-y-3">
                   {alertHistory.map((alert, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-[#F9F6F2] rounded-lg">
+                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-3">
                         {alert.icon}
                         <div>
@@ -945,10 +945,10 @@ export default function PredictionAlertPage() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <button className="text-[#1D4ED8] hover:bg-white p-1 rounded">
+                        <button className="text-accent-blue hover:bg-white p-1 rounded">
                           <FiEye className="w-4 h-4" />
                         </button>
-                        <button className="text-[#1D4ED8] hover:bg-white p-1 rounded">
+                        <button className="text-accent-blue hover:bg-white p-1 rounded">
                           <FiDownload className="w-4 h-4" />
                         </button>
                       </div>
@@ -956,7 +956,7 @@ export default function PredictionAlertPage() {
                   ))}
                 </div>
 
-                <button className="w-full text-[#1D4ED8] font-semibold text-sm mt-4 hover:bg-[#EFF6FF] py-2 rounded-lg">
+                <button className="w-full text-accent-blue font-semibold text-sm mt-4 hover:bg-light-bg py-2 rounded-lg">
                   View All Alert History
                 </button>
               </div>
@@ -965,10 +965,10 @@ export default function PredictionAlertPage() {
 
           {/* Bottom Actions */}
           {/* <motion.div variants={item} className="flex justify-end gap-4">
-            <button className="bg-[#E5E7EB] text-black px-8 py-2 rounded-lg font-bold text-base hover:bg-[#F3EAD8]">
+            <button className="bg-gray-200 text-primary-dark px-8 py-2 rounded-lg font-bold text-base hover:bg-light-bg">
               Reset to Defaults
             </button>
-            <button className="bg-[#1D4ED8] text-white px-8 py-2 rounded-lg font-bold text-base hover:bg-[#1E3A8A]">
+            <button className="bg-accent-blue text-white px-8 py-2 rounded-lg font-bold text-base hover:bg-secondary-blue">
               Save All Settings
             </button>
           </motion.div> */}

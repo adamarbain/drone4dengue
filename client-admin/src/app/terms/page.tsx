@@ -8,12 +8,12 @@ import { Card, CardContent } from "@/components/ui/card"
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-700 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-primary-dark via-secondary-blue to-accent-blue relative overflow-hidden">
       {/* Decorative elements */}
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-yellow-100 rounded-full transform translate-y-1/2 -translate-x-1/4 opacity-80"></div>
-      <div className="absolute top-1/4 right-0 w-80 h-80 bg-red-600 rounded-full transform translate-x-1/3 -translate-y-1/4 opacity-60"></div>
-      <div className="absolute top-0 right-1/4 w-64 h-64 bg-yellow-200 rounded-full transform -translate-y-1/2 opacity-80"></div>
-      <div className="absolute bottom-1/4 left-1/3 w-48 h-48 bg-red-500 rounded-full transform translate-y-1/4 opacity-40"></div>
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-light-bg rounded-full transform translate-y-1/2 -translate-x-1/4 opacity-80"></div>
+      <div className="absolute top-1/4 right-0 w-80 h-80 bg-accent-blue rounded-full transform translate-x-1/3 -translate-y-1/4 opacity-60"></div>
+      <div className="absolute top-0 right-1/4 w-64 h-64 bg-light-bg rounded-full transform -translate-y-1/2 opacity-80"></div>
+      <div className="absolute bottom-1/4 left-1/3 w-48 h-48 bg-secondary-blue rounded-full transform translate-y-1/4 opacity-40"></div>
 
       {/* Main content */}
       <div className="relative z-10 min-h-screen px-4 py-8">

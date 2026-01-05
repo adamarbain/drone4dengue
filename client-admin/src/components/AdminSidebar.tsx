@@ -18,12 +18,12 @@ const links = [
 
 export default function AdminSidebar({ current }: { current: string }) {
   return (
-    <aside className="w-72 bg-white flex flex-col py-8 px-4 gap-2 border-r border-[#E2C275] shadow-lg">
+    <aside className="w-72 bg-white flex flex-col py-8 px-4 gap-2 border-r border-accent-blue/30 shadow-lg">
       <div className="flex items-center gap-3 mb-10 px-4">
-        <div className="relative w-10 h-10 bg-[#1D4ED8] rounded-lg flex items-center justify-center">
+        <div className="relative w-10 h-10 bg-primary-dark rounded-lg flex items-center justify-center">
           <Image src="/logo.svg" alt="Logo" width={28} height={28} className="object-contain" />
         </div>
-        <span className="font-bold text-xl text-black">Drone4Dengue</span>
+        <span className="font-bold text-xl text-primary-dark">Drone4Dengue</span>
       </div>
 
       <div className="px-2 mb-4">
@@ -39,19 +39,19 @@ export default function AdminSidebar({ current }: { current: string }) {
               key={link.label}
               href={link.href}
               className={`relative flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 group ${
-              isActive ? "bg-[#1D4ED8] text-white" : "text-gray-600 hover:bg-[#EFF6FF]"
+              isActive ? "bg-accent-blue text-white" : "text-gray-600 hover:bg-light-bg/50"
               }`}
             >
               {isActive && (
                 <motion.div
                   layoutId="sidebar-indicator"
-                  className="absolute left-0 top-0 bottom-0 w-1 bg-[#E2C275] rounded-r-md"
+                  className="absolute left-0 top-0 bottom-0 w-1 bg-secondary-blue rounded-r-md"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.2 }}
                 />
               )}
-            <span className={`text-lg ${isActive ? "text-white" : "text-[#1D4ED8] group-hover:text-[#1D4ED8]"}`}>
+            <span className={`text-lg ${isActive ? "text-white" : "text-accent-blue group-hover:text-accent-blue"}`}>
                 {link.icon}
               </span>
               <span className={isActive ? "font-semibold" : ""}>{link.label}</span>
@@ -60,15 +60,15 @@ export default function AdminSidebar({ current }: { current: string }) {
         })}
       </nav>
 
-      {/* <div className="mt-auto mx-4 mb-6 bg-gradient-to-r from-[#FFF6FF] to-[#E2C275]/30 p-4 rounded-xl">
+      {/* <div className="mt-auto mx-4 mb-6 bg-gradient-to-r from-light-bg to-accent-blue/30 p-4 rounded-xl">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-8 h-8 rounded-full bg-[#1D4ED8] flex items-center justify-center text-white">
+          <div className="w-8 h-8 rounded-full bg-accent-blue flex items-center justify-center text-white">
             <FiAlertCircle size={16} />
           </div>
           <p className="font-medium text-sm">Need Help?</p>
         </div>
         <p className="text-xs text-gray-600 mb-3">Contact our support team for assistance</p>
-        <button className="w-full py-2 bg-[#1D4ED8] text-white text-sm font-medium rounded-lg hover:bg-[#1E3A8A] transition-colors">
+        <button className="w-full py-2 bg-accent-blue text-white text-sm font-medium rounded-lg hover:bg-secondary-blue transition-colors">
           Contact Support
         </button>
       </div> */}

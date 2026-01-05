@@ -178,6 +178,7 @@ export default function DroneManagementPage() {
       const data = await fetchAllDrones(currentPage, searchTerm, statusFilter)
       const mappedDrones = data.drones.map((drone: any) => ({
         id: drone.id,
+        droneId: drone.droneId,
         name: drone.name,
         model: drone.model,
         serial: drone.serial,
@@ -223,6 +224,7 @@ export default function DroneManagementPage() {
         const data = await fetchAllDrones(currentPage, searchTerm, statusFilter)
         const mappedDrones = data.drones.map((drone: any) => ({
           id: drone.id,
+          droneId: drone.droneId,
           name: drone.name,
           model: drone.model,
           serial: drone.serial,
@@ -624,16 +626,16 @@ export default function DroneManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FFF7E3] flex flex-row  border-[8px] border-[#E2C275] overflow-hidden">
+    <div className="min-h-screen bg-[#FFF7E3] flex flex-row overflow-hidden">
       <AdminSidebar current="Drone Management" />
       <main className="flex-1 flex flex-col">
         <AdminHeader />
         {/* Content */}
         <motion.section className="px-10 py-8" variants={container} initial="hidden" animate="show">
           <motion.div variants={item} className="mb-8">
-            <h1 className="text-3xl font-bold text-black mb-1">Drone Management</h1>
+            <h1 className="text-3xl font-bold text-primary-dark mb-1">Drone Management</h1>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#1D4ED8]"></div>
+              <div className="w-2 h-2 rounded-full bg-accent-blue"></div>
               <div className="text-lg text-gray-600">Manage all aspects of the drones and images captured by drone within your company</div>
             </div>
           </motion.div>
@@ -663,7 +665,7 @@ export default function DroneManagementPage() {
             ].map((stat, idx) => (
               <motion.div
                 key={stat.label}
-                className="bg-white rounded-xl shadow-md overflow-hidden border border-[#E2C275]/30"
+                className="bg-white rounded-xl shadow-md overflow-hidden border border-accent-blue/30"
                 whileHover={{ y: -5 }}
                 transition={{ type: "spring", stiffness: 300 }}
               >
@@ -681,8 +683,8 @@ export default function DroneManagementPage() {
 
           {/* Drone List Table */}
           <motion.div variants={item} className="mb-10">
-            <div className="bg-white rounded-xl shadow-md overflow-hidden border border-[#E2C275]/30">
-              <div className="bg-[#1D4ED8] px-6 py-4 flex items-center gap-4">
+            <div className="bg-white rounded-xl shadow-md overflow-hidden border border-accent-blue/30">
+              <div className="bg-accent-blue px-6 py-4 flex items-center gap-4">
                 <div className="font-bold text-lg text-white">Drone Fleet</div>
                 <div className="flex-1" />
                 <div className="flex items-center gap-3">
@@ -709,10 +711,10 @@ export default function DroneManagementPage() {
                           onChange={(e) => setStatusFilter(e.target.value)}
                           className="bg-transparent border-none text-white px-3 py-2 focus:outline-none appearance-none cursor-pointer"
                         >
-                          <option value="All" className="text-black">All Status</option>
-                          <option value="Operational" className="text-black">Operational</option>
-                          <option value="Maintenance" className="text-black">Maintenance</option>
-                          <option value="Inactive" className="text-black">Inactive</option>
+                          <option value="All" className="text-primary-dark">All Status</option>
+                          <option value="Operational" className="text-primary-dark">Operational</option>
+                          <option value="Maintenance" className="text-primary-dark">Maintenance</option>
+                          <option value="Inactive" className="text-primary-dark">Inactive</option>
                         </select>
                         <div className="pr-3 pointer-events-none text-white">
                           <FiChevronRight className="rotate-90" size={14} />
@@ -738,7 +740,8 @@ export default function DroneManagementPage() {
               <div className="overflow-x-auto">
                 <table className="min-w-full">
                   <thead>
-                    <tr className="text-left text-black font-semibold text-base border-b border-gray-200 bg-[#F3EAD8]">
+                    <tr className="text-left text-primary-dark font-semibold text-base border-b border-gray-200 bg-light-bg">
+                      <th className="py-4 px-6">Drone ID</th>
                       <th className="py-4 px-6">Drone Name</th>
                       <th className="py-4 px-6">Model</th>
                       <th className="py-4 px-6">Registration Date <br /> Operational Area</th>
@@ -750,16 +753,16 @@ export default function DroneManagementPage() {
                   <tbody>
                     {loadingDrones ? (
                       <tr>
-                        <td colSpan={6} className="py-10 text-center">
+                        <td colSpan={7} className="py-10 text-center">
                           <div className="flex flex-col items-center gap-2">
-                            <div className="w-8 h-8 border-4 border-[#1D4ED8]/30 border-t-[#1D4ED8] rounded-full animate-spin"></div>
+                            <div className="w-8 h-8 border-4 border-accent-blue/30 border-t-accent-blue rounded-full animate-spin"></div>
                             <span className="text-gray-500 font-medium">Loading drones...</span>
                           </div>
                         </td>
                       </tr>
                     ) : filteredDrones.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-10 text-center text-gray-500 italic">
+                        <td colSpan={7} className="py-10 text-center text-gray-500 italic">
                           No drones found
                         </td>
                       </tr>
@@ -767,13 +770,16 @@ export default function DroneManagementPage() {
                       filteredDrones.map((drone, idx) => (
                       <motion.tr
                         key={drone.id}
-                        className={`border-b border-gray-100 last:border-0 hover:bg-[#FFF7E3]/50 transition-colors cursor-pointer ${idx % 2 === 0 ? "bg-white" : "bg-[#F9F6F2]"}`}
+                        className={`border-b border-gray-100 last:border-0 hover:bg-light-bg/50 transition-colors cursor-pointer ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.1 }}
                         onClick={() => setSelectedDrone(drone.id)}
                       >
-                        <td className="py-4 px-6 font-medium text-black">
+                        <td className="py-4 px-6 font-medium text-gray-600">
+                          {drone.droneId}
+                        </td>
+                        <td className="py-4 px-6 font-medium text-primary-dark">
                           {drone.name}
                         </td>
                         <td className="py-4 px-6 font-medium text-gray-700">
@@ -781,11 +787,11 @@ export default function DroneManagementPage() {
                         </td>
                         <td className="py-4 px-6">
                           <div className="flex items-center gap-2 mb-1">
-                            <FiCalendar className="text-[#1D4ED8]" size={16} />
+                            <FiCalendar className="text-accent-blue" size={16} />
                             <span className="text-sm">{drone.date}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <FiMapPin className="text-[#1D4ED8]" size={16} />
+                            <FiMapPin className="text-accent-blue" size={16} />
                             <span className="text-sm text-gray-600">{drone.area}</span>
                           </div>
                         </td>
@@ -797,7 +803,7 @@ export default function DroneManagementPage() {
                         </td>
                         <td className="py-4 px-6">
                           <button 
-                            className="flex items-center gap-2 px-4 py-2 bg-[#1D4ED8] text-white rounded-lg hover:bg-[#1E3A8A] transition-colors text-sm font-medium"
+                            className="flex items-center gap-2 px-4 py-2 bg-accent-blue text-white rounded-lg hover:bg-secondary-blue transition-colors text-sm font-medium"
                             onClick={(e) => {
                               e.stopPropagation()
                               setSelectedDroneForImages(drone)
@@ -811,7 +817,7 @@ export default function DroneManagementPage() {
                         <td className="py-4 px-6">
                           <div className="flex gap-2">
                             <button 
-                              className="p-2 rounded-lg hover:bg-[#EFF6FF] text-[#1D4ED8] transition-colors"
+                              className="p-2 rounded-lg hover:bg-light-bg/50 text-accent-blue transition-colors"
                               title="View Details"
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -822,7 +828,7 @@ export default function DroneManagementPage() {
                               <FiEye size={18} />
                             </button>
                             <button 
-                              className="p-2 rounded-lg hover:bg-[#EFF6FF] text-[#1D4ED8] transition-colors"
+                              className="p-2 rounded-lg hover:bg-light-bg/50 text-accent-blue transition-colors"
                               title="Edit Drone"
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -907,7 +913,7 @@ export default function DroneManagementPage() {
                       return (
                         <button
                           key={pageNum}
-                          className={`w-10 h-10 rounded-lg border font-medium transition-all ${currentPage === pageNum ? "bg-[#1D4ED8] text-white border-[#1D4ED8]" : "border-gray-300 hover:bg-gray-100 text-gray-700"}`}
+                          className={`w-10 h-10 rounded-lg border font-medium transition-all ${currentPage === pageNum ? "bg-accent-blue text-white border-accent-blue" : "border-gray-300 hover:bg-gray-100 text-gray-700"}`}
                           onClick={() => setCurrentPage(pageNum)}
                         >
                           {pageNum}
@@ -940,18 +946,18 @@ export default function DroneManagementPage() {
 
           {/* Drone Images */}
           <motion.div variants={item}>
-            <div className="bg-white rounded-xl shadow-md overflow-hidden border border-[#E2C275]/30">
-              <div className="px-6 py-4 bg-[#F3EAD8] border-b border-[#E2C275]/30">
+            <div className="bg-white rounded-xl shadow-md overflow-hidden border border-accent-blue/30">
+              <div className="px-6 py-4 bg-light-bg border-b border-accent-blue/30">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-lg flex items-center gap-2">
-                    <FiCamera className="text-[#1D4ED8]" />
+                    <FiCamera className="text-accent-blue" />
                     Drone Images
                   </h3>
                   <div className="flex items-center gap-2">
                     <select
                       value={selectedDrone}
                       onChange={(e) => setSelectedDrone(e.target.value)}
-                      className="px-4 py-2 bg-[#1D4ED8] text-white rounded-lg font-medium text-sm"
+                      className="p-2 bg-accent-blue text-white rounded-lg font-medium text-sm"
                     >
                       {droneList.map((drone) => (
                         <option key={drone.id} value={drone.id}>
@@ -966,7 +972,7 @@ export default function DroneManagementPage() {
               <div className="p-6">
                 {loadingImages ? (
                     <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1D4ED8] mx-auto mb-4"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-blue mx-auto mb-4"></div>
                     <p className="text-gray-500">Loading images...</p>
                   </div>
                 ) : droneImages.length > 0 ? (
@@ -1006,7 +1012,7 @@ export default function DroneManagementPage() {
                                   setShowImageModal(true)
                                 }}
                               >
-                                <FiEye className="text-[#1D4ED8]" size={20} />
+                                <FiEye className="text-accent-blue" size={20} />
                               </button>
                               <button className="bg-white/90 backdrop-blur-sm p-3 rounded-full hover:bg-white transition-colors">
                                 <FiDownload className="text-green-600" size={20} />
@@ -1035,7 +1041,7 @@ export default function DroneManagementPage() {
                                   </div>
                                 )}
                               </div>
-                              <button className="text-[#1D4ED8] hover:bg-[#EFF6FF] p-2 rounded-lg transition-colors">
+                              <button className="text-accent-blue hover:bg-light-bg/50 p-2 rounded-lg transition-colors">
                                 <FiChevronRight size={16} />
                               </button>
                             </div>
@@ -1045,7 +1051,7 @@ export default function DroneManagementPage() {
                     </div>
 
                     <div className="flex justify-center mt-6">
-                      <button className="flex items-center gap-2 px-6 py-3 bg-[#1D4ED8] text-white rounded-lg font-medium hover:bg-[#1E3A8A] transition-colors">
+                      <button className="flex items-center gap-2 px-6 py-3 bg-accent-blue text-white rounded-lg font-medium hover:bg-secondary-blue transition-colors">
                         Load More Images
                         <FiChevronRight />
                       </button>
@@ -1073,7 +1079,7 @@ export default function DroneManagementPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto"
           >
-            <div className="bg-[#1D4ED8] px-6 py-4 flex items-center justify-between">
+            <div className="bg-accent-blue px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">Drone Details</h2>
               <button
                 onClick={() => setShowDetailsModal(false)}
@@ -1084,31 +1090,31 @@ export default function DroneManagementPage() {
             </div>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-[#F9F6F2] p-4 rounded-lg">
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="text-sm text-gray-500">Drone Name</div>
                   <div className="font-semibold">{detailsDrone.name || "N/A"}</div>
                 </div>
-                <div className="bg-[#F9F6F2] p-4 rounded-lg">
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="text-sm text-gray-500">Serial Number</div>
                   <div className="font-semibold">{detailsDrone.serial || "N/A"}</div>
                 </div>
-                <div className="bg-[#F9F6F2] p-4 rounded-lg">
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="text-sm text-gray-500">Drone ID</div>
-                  <div className="font-semibold">{detailsDrone.id}</div>
+                  <div className="font-semibold">{detailsDrone.droneId}</div>
                 </div>
-                <div className="bg-[#F9F6F2] p-4 rounded-lg">
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="text-sm text-gray-500">Model</div>
                   <div className="font-semibold">{detailsDrone.model}</div>
                 </div>
-                <div className="bg-[#F9F6F2] p-4 rounded-lg">
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="text-sm text-gray-500">Company Location</div>
                   <div className="font-semibold">{detailsDrone.companyLocation?.name || "No specific location"}</div>
                 </div>
-                <div className="bg-[#F9F6F2] p-4 rounded-lg">
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="text-sm text-gray-500">Registration Date</div>
                   <div className="font-semibold">{detailsDrone.date}</div>
                 </div>
-                <div className="bg-[#F9F6F2] p-4 rounded-lg">
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="text-sm text-gray-500">Operational Area</div>
                   <div className="font-semibold">{detailsDrone.area}</div>
                 </div>
@@ -1116,7 +1122,7 @@ export default function DroneManagementPage() {
 
               <div className="mt-6">
                 <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-                  <FiCamera className="text-[#1D4ED8]" /> Images for {detailsDrone.name || detailsDrone.id}
+                  <FiCamera className="text-accent-blue" /> Images for {detailsDrone.name || detailsDrone.id}
                 </h3>
                 {droneImages.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1160,7 +1166,7 @@ export default function DroneManagementPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4"
           >
-            <div className="bg-[#1D4ED8] px-6 py-4 flex items-center justify-between">
+            <div className="bg-accent-blue px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">Edit Drone</h2>
               <button
                 onClick={() => setEditingDrone(null)}
@@ -1170,56 +1176,17 @@ export default function DroneManagementPage() {
               </button>
             </div>
             <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Drone Name</label>
-                  <input
-                    value={editDroneForm.name}
-                    onChange={(e) => setEditDroneForm(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
-                    placeholder="Enter drone name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Model</label>
-                  <select 
-                    value={editDroneForm.model}
-                    onChange={(e) => setEditDroneForm(prev => ({ ...prev, model: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
-                  >
-                    <option value="">Select Model</option>
-                    <option value="DJI Phantom 4 Pro">DJI Phantom 4 Pro</option>
-                    <option value="DJI Mavic Air 2">DJI Mavic Air 2</option>
-                    <option value="DJI Mini 3 Pro">DJI Mini 3 Pro</option>
-                    <option value="DJI Air 2S">DJI Air 2S</option>
-                    <option value="DJI Mavic 3">DJI Mavic 3</option>
-                    <option value="DJI Mini 2">DJI Mini 2</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Serial Number</label>
-                  <input
-                    value={editDroneForm.serial}
-                    onChange={(e) => setEditDroneForm(prev => ({ ...prev, serial: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
-                    placeholder="Enter serial number"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                  <select 
-                    value={editDroneForm.status}
-                    onChange={(e) => setEditDroneForm(prev => ({ ...prev, status: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
-                  >
-                    <option value="Operational">Operational</option>
-                    <option value="Maintenance">Maintenance</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
-                </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <select 
+                  value={editDroneForm.status}
+                  onChange={(e) => setEditDroneForm(prev => ({ ...prev, status: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
+                >
+                  <option value="Operational">Operational</option>
+                  <option value="Maintenance">Maintenance</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
               </div>
 
               <div className="mb-4">
@@ -1227,7 +1194,7 @@ export default function DroneManagementPage() {
                 <input
                   value={editDroneForm.operationalArea}
                   onChange={(e) => setEditDroneForm(prev => ({ ...prev, operationalArea: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
                   placeholder="Enter operational area"
                 />
               </div>
@@ -1237,7 +1204,7 @@ export default function DroneManagementPage() {
                 <select 
                   value={editDroneForm.companyLocationId}
                   onChange={(e) => setEditDroneForm(prev => ({ ...prev, companyLocationId: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
                   disabled={loadingLocations}
                 >
                   <option value="">No specific location</option>
@@ -1270,7 +1237,7 @@ export default function DroneManagementPage() {
                       alert(`Failed to update drone: ${error.message}`)
                     }
                   }}
-                  className="flex items-center gap-2 px-6 py-2 bg-[#1D4ED8] text-white rounded-lg hover:bg-[#1E3A8A] transition-colors"
+                  className="flex items-center gap-2 px-6 py-2 bg-accent-blue text-white rounded-lg hover:bg-secondary-blue transition-colors"
                 >
                   <FiSave size={18} />
                   Save Changes
@@ -1288,7 +1255,7 @@ export default function DroneManagementPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
           >
-            <div className="bg-[#1D4ED8] px-6 py-4 flex items-center justify-between">
+            <div className="bg-accent-blue px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">Add New Drone</h2>
               <button
                 onClick={() => setShowAddDroneModal(false)}
@@ -1358,7 +1325,7 @@ export default function DroneManagementPage() {
                       type="text"
                       value={droneFormData.name}
                       onChange={(e) => setDroneFormData(prev => ({ ...prev, name: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
                       placeholder="e.g., Drone Alpha"
                     />
                   </div>
@@ -1367,7 +1334,7 @@ export default function DroneManagementPage() {
                     <select 
                       value={droneFormData.model}
                       onChange={(e) => setDroneFormData(prev => ({ ...prev, model: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
                     >
                       <option value="">Select Model</option>
                       <option value="DJI Phantom 4 Pro">DJI Phantom 4 Pro</option>
@@ -1386,7 +1353,7 @@ export default function DroneManagementPage() {
                       type="text"
                       value={droneFormData.serial}
                       onChange={(e) => setDroneFormData(prev => ({ ...prev, serial: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
                       placeholder="e.g., SN123456789"
                     />
                   </div>
@@ -1395,7 +1362,7 @@ export default function DroneManagementPage() {
                     <select 
                       value={droneFormData.status}
                       onChange={(e) => setDroneFormData(prev => ({ ...prev, status: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
                     >
                       <option value="Operational">Operational</option>
                       <option value="Maintenance">Maintenance</option>
@@ -1409,7 +1376,7 @@ export default function DroneManagementPage() {
                     type="text"
                     value={droneFormData.operationalArea}
                     onChange={(e) => setDroneFormData(prev => ({ ...prev, operationalArea: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
                     placeholder="e.g., Kuala Lumpur City Center"
                   />
                 </div>
@@ -1419,7 +1386,7 @@ export default function DroneManagementPage() {
                     <select 
                       value={droneFormData.companyLocationId}
                       onChange={(e) => setDroneFormData(prev => ({ ...prev, companyLocationId: e.target.value }))}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
                       disabled={loadingLocations}
                     >
                       <option value="">No specific location</option>
@@ -1461,7 +1428,7 @@ export default function DroneManagementPage() {
                   <button
                     type="submit"
                     disabled={isCreatingDrone}
-                    className={`flex items-center gap-2 px-6 py-2 bg-[#1D4ED8] text-white rounded-lg hover:bg-[#1E3A8A] transition-colors ${isCreatingDrone ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`flex items-center gap-2 px-6 py-2 bg-accent-blue text-white rounded-lg hover:bg-secondary-blue transition-colors ${isCreatingDrone ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <FiSave size={18} />
                     {isCreatingDrone ? 'Creating...' : 'Add Drone'}
@@ -1481,7 +1448,7 @@ export default function DroneManagementPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto"
           >
-            <div className="bg-[#1D4ED8] px-6 py-4 flex items-center justify-between">
+            <div className="bg-accent-blue px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">Assign Drone to Monitoring Zone</h2>
               <button
                 onClick={() => setShowMapModal(false)}
@@ -1508,7 +1475,7 @@ export default function DroneManagementPage() {
                 >
                   Cancel
                 </button>
-                <button className="flex items-center gap-2 px-6 py-2 bg-[#1D4ED8] text-white rounded-lg hover:bg-[#1E3A8A] transition-colors">
+                <button className="flex items-center gap-2 px-6 py-2 bg-accent-blue text-white rounded-lg hover:bg-secondary-blue transition-colors">
                   <FiSave size={18} />
                   Assign Zone
                 </button>
@@ -1559,7 +1526,7 @@ export default function DroneManagementPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto"
           >
-            <div className="bg-[#1D4ED8] px-6 py-4 flex items-center justify-between">
+            <div className="bg-accent-blue px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">Add Drone Images - {selectedDroneForImages.name}</h2>
               <button
                 onClick={() => {
@@ -1606,8 +1573,8 @@ export default function DroneManagementPage() {
                 <div
                   className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
                     dragActive 
-                      ? 'border-[#1D4ED8] bg-[#1D4ED8]/5' 
-                      : 'border-gray-300 hover:border-[#1D4ED8]/50'
+                      ? 'border-accent-blue bg-accent-blue/5' 
+                      : 'border-gray-300 hover:border-accent-blue/50'
                   }`}
                   onDragEnter={handleDrag}
                   onDragLeave={handleDrag}
@@ -1618,9 +1585,9 @@ export default function DroneManagementPage() {
                     <div className="space-y-3">
                       <div className="flex items-center justify-center">
                         {uploadedFile.type.startsWith('video/') ? (
-                          <FiVideo className="text-[#1D4ED8]" size={48} />
+                          <FiVideo className="text-accent-blue" size={48} />
                         ) : (
-                          <FiCamera className="text-[#1D4ED8]" size={48} />
+                          <FiCamera className="text-accent-blue" size={48} />
                         )}
                       </div>
                       <div>
@@ -1658,7 +1625,7 @@ export default function DroneManagementPage() {
                       />
                       <label
                         htmlFor="media-upload"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#1D4ED8] text-white rounded-lg hover:bg-[#1E3A8A] transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-accent-blue text-white rounded-lg hover:bg-secondary-blue transition-colors cursor-pointer"
                       >
                         <FiUpload size={16} />
                         Choose Media File
@@ -1826,7 +1793,7 @@ export default function DroneManagementPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4"
           >
-            <div className="bg-[#1D4ED8] px-6 py-4 flex items-center justify-between">
+            <div className="bg-accent-blue px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">Add New Location</h2>
               <button
                 onClick={() => {
@@ -1846,7 +1813,7 @@ export default function DroneManagementPage() {
                     type="text"
                     value={newLocation.name}
                     onChange={(e) => setNewLocation(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
                     placeholder="e.g., KLCC Office"
                   />
                 </div>
@@ -1856,7 +1823,7 @@ export default function DroneManagementPage() {
                     type="text"
                     value={newLocation.address}
                     onChange={(e) => setNewLocation(prev => ({ ...prev, address: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
                     placeholder="e.g., Jalan Ampang, Kuala Lumpur"
                   />
                 </div>
@@ -1868,7 +1835,7 @@ export default function DroneManagementPage() {
                       step="any"
                       value={newLocation.latitude}
                       onChange={(e) => setNewLocation(prev => ({ ...prev, latitude: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
                       placeholder="e.g., 3.1579"
                     />
                   </div>
@@ -1879,7 +1846,7 @@ export default function DroneManagementPage() {
                       step="any"
                       value={newLocation.longitude}
                       onChange={(e) => setNewLocation(prev => ({ ...prev, longitude: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
                       placeholder="e.g., 101.7116"
                     />
                   </div>
@@ -1913,7 +1880,7 @@ export default function DroneManagementPage() {
                         alert('Failed to create location. Please try again.')
                       }
                     }}
-                  className="flex items-center gap-2 px-6 py-2 bg-[#1D4ED8] text-white rounded-lg hover:bg-[#1E3A8A] transition-colors"
+                  className="flex items-center gap-2 px-6 py-2 bg-accent-blue text-white rounded-lg hover:bg-secondary-blue transition-colors"
                   >
                     <FiSave size={18} />
                     Create Location
@@ -2050,7 +2017,7 @@ export default function DroneManagementPage() {
                 <p className="text-gray-600 mb-8">{successDialogMessage}</p>
                 <button
                   onClick={() => setShowSuccessDialog(false)}
-                  className="w-full bg-[#1D4ED8] text-white py-3 rounded-xl font-bold hover:bg-[#1E3A8A] transition-colors"
+                  className="w-full bg-accent-blue text-white py-3 rounded-xl font-bold hover:bg-secondary-blue transition-colors"
                 >
                   Great!
                 </button>

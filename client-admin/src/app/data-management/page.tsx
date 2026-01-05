@@ -265,7 +265,7 @@ export default function DataManagementPage() {
           <Tooltip />
           <Legend />
           <Line type="monotone" dataKey="activeCases" stroke="#2563eb" strokeWidth={2} name="Active Cases" />
-          <Line type="monotone" dataKey="hotspotCount" stroke="#1D4ED8" strokeWidth={2} name="Hotspot Detected" />
+          <Line type="monotone" dataKey="hotspotCount" stroke="#4988C4" strokeWidth={2} name="Hotspot Detected" />
         </LineChart>
       </ResponsiveContainer>
     )
@@ -279,16 +279,16 @@ export default function DataManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FFF7E3] flex flex-row border-[8px] border-[#E2C275] overflow-hidden">
+    <div className="min-h-screen bg-[#FFF7E3] flex flex-row  overflow-hidden">
       <AdminSidebar current="Data Management" />
       <main className="flex-1 flex flex-col">
         <AdminHeader />   
         {/* Content */}
         <motion.section className="px-10 py-8" variants={container} initial="hidden" animate="show">
           <motion.div variants={item} className="mb-8">
-            <h1 className="text-3xl font-bold text-black mb-1">Data Management</h1>
+            <h1 className="text-3xl font-bold text-primary-dark mb-1">Data Management</h1>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#1D4ED8]"></div>
+              <div className="w-2 h-2 rounded-full bg-accent-blue"></div>
               <div className="text-lg text-gray-600">
                 View and Analyze data related to dengue cases
               </div>
@@ -303,7 +303,7 @@ export default function DataManagementPage() {
               { label: "Dengue Hotspots", value: summary.hotspotCount, icon: <FiTrendingUp />, color: "bg-purple-500" },
               { label: "Locations Covered", value: summary.locationsCovered, icon: <FiMapPin />, color: "bg-green-500" },
             ].map((stat) => (
-              <Card key={stat.label} className="border-[#E2C275]/30">
+              <Card key={stat.label} className="border-accent-blue/30 bg-white">
                 <CardHeader className="flex-row items-center justify-between">
                   <div className={`p-3 ${stat.color} rounded-lg text-white`}>{stat.icon}</div>
                 </CardHeader>
@@ -318,7 +318,7 @@ export default function DataManagementPage() {
           {/* Upload Button */}
           {/* <motion.div variants={item} className="mb-8">
             <button
-              className={`bg-[#1D4ED8] text-white px-8 py-3 rounded-lg font-bold text-base hover:bg-[#1E3A8A] transition-all flex items-center gap-2 shadow-md ${uploading ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={`bg-accent-blue text-white px-8 py-3 rounded-lg font-bold text-base hover:bg-secondary-blue transition-all flex items-center gap-2 shadow-md ${uploading ? "opacity-50 cursor-not-allowed" : ""}`}
               onClick={onUploadClick}
               disabled={uploading}
             >
@@ -339,9 +339,9 @@ export default function DataManagementPage() {
 
           {/* Data Filters */}
           <motion.div variants={item} className="mb-8">
-            <div className="bg-white rounded-xl p-6 shadow-md border border-[#E2C275]/30">
+            <div className="bg-white rounded-xl p-6 shadow-md border border-accent-blue/30">
               <div className="font-bold text-lg mb-4 flex items-center gap-2">
-                <FiFilter className="text-[#1D4ED8]" />
+                <FiFilter className="text-accent-blue" />
                 Data Filters
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -356,7 +356,7 @@ export default function DataManagementPage() {
                   />
                 </div>
                 <select
-                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
                   value={selectedLocation}
                   onChange={(e) => setSelectedLocation(e.target.value)}
                 >
@@ -367,7 +367,7 @@ export default function DataManagementPage() {
                   ))}
                 </select>
                 <select
-                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
                 >
@@ -383,12 +383,12 @@ export default function DataManagementPage() {
 
           {/* Data Table */}
           <motion.div variants={item} className="mb-10">
-            <div className="bg-white rounded-xl shadow-md overflow-hidden border border-[#E2C275]/30">
-              <div className="px-6 py-4 bg-[#F3EAD8] border-b border-[#E2C275]/30">
+            <div className="bg-white rounded-xl shadow-md overflow-hidden border border-accent-blue/30">
+              <div className="px-6 py-4 bg-light-bg border-b border-accent-blue/30">
                 <div className="flex justify-between items-center">
                   <h3 className="font-bold text-lg">Data Records</h3>
                   <div className="flex gap-2">
-                    <button className="px-4 py-2 bg-[#1D4ED8] text-white rounded-lg text-sm font-medium hover:bg-[#1E3A8A] transition-colors flex items-center gap-2" onClick={onExport}>
+                    <button className="px-4 py-2 bg-accent-blue text-white rounded-lg text-sm font-medium hover:bg-secondary-blue transition-colors flex items-center gap-2" onClick={onExport}>
                       <FiDownload size={16} />
                       Export
                     </button>
@@ -398,7 +398,7 @@ export default function DataManagementPage() {
               <div className="overflow-x-auto">
                 <table className="min-w-full">
                   <thead>
-                    <tr className="text-left text-black font-semibold text-base bg-gray-50 border-b border-gray-200">
+                    <tr className="text-left text-primary-dark font-semibold text-base bg-gray-50 border-b border-gray-200">
                       <th className="py-4 px-6">Date & Location</th>
                       <th className="py-4 px-6">Active/Total Cases</th>
                       <th className="py-4 px-6">Cumulative Duration</th>
@@ -410,17 +410,17 @@ export default function DataManagementPage() {
                     {paginatedData.map((row, idx) => (
                       <motion.tr
                         key={row.id || row.date + row.location}
-                        className={`border-b border-gray-100 last:border-0 hover:bg-[#FFF7E3]/50 transition-colors ${idx % 2 === 0 ? "bg-white" : "bg-[#F9F6F2]"}`}
+                        className={`border-b border-gray-100 last:border-0 hover:bg-light-bg/50 transition-colors ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}` }
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.1 }}
                       >
-                        <td className="py-4 px-6 font-medium text-black flex items-center gap-2">
-                          <FiCalendar className="text-[#1D4ED8]" size={16} />
+                        <td className="py-4 px-6 font-medium text-primary-dark flex items-center gap-2">
+                          <FiCalendar className="text-accent-blue" size={16} />
                           {row.date ? new Date(row.date).toLocaleDateString("en-GB") : "-"}
                         </td>
-                        <td className="py-4 px-6 text-black flex items-center gap-2">
-                          <FiMapPin className="text-[#1D4ED8]" size={16} />
+                        <td className="py-4 px-6 text-primary-dark flex items-center gap-2">
+                          <FiMapPin className="text-accent-blue" size={16} />
                           {row.location}
                         </td>
                         <td className="py-4 px-6">
@@ -437,8 +437,8 @@ export default function DataManagementPage() {
                             </div>
                           )}
                         </td>
-                        <td className="py-4 px-6 text-black">{row.status || '-'}</td>
-                        <td className="py-4 px-6 text-black">
+                        <td className="py-4 px-6 text-primary-dark">{row.status || '-'}</td>
+                        <td className="py-4 px-6 text-primary-dark">
                           <div className="flex flex-col">
                             <span>{row.latitude !== null && row.latitude !== undefined ? row.latitude : '-'}</span>
                             <span>{row.longitude !== null && row.longitude !== undefined ? row.longitude : '-'}</span>
@@ -490,7 +490,7 @@ export default function DataManagementPage() {
                       return (
                         <button
                           key={pageNum}
-                          className={`w-10 h-10 rounded-lg border font-medium transition-all ${currentPage === pageNum ? "bg-[#1D4ED8] text-white border-[#1D4ED8]" : "border-gray-300 hover:bg-gray-100 text-gray-700"}`}
+                          className={`w-10 h-10 rounded-lg border font-medium transition-all ${currentPage === pageNum ? "bg-accent-blue text-white border-accent-blue" : "border-gray-300 hover:bg-gray-100 text-gray-700"}`}
                           onClick={() => setCurrentPage(pageNum)}
                         >
                           {pageNum}
@@ -523,40 +523,40 @@ export default function DataManagementPage() {
 
           {/* Historical Trends & Map */}
           <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-white rounded-xl p-8 shadow-md border border-[#E2C275]/30">
+            <div className="bg-white rounded-xl p-8 shadow-md border border-accent-blue/30">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-lg">Historical Trends</h3>
-                <FiTrendingUp className="text-[#1D4ED8]" />
+                <FiTrendingUp className="text-accent-blue" />
               </div>
               <div className="text-center mb-6">
-                <div className="text-4xl font-extrabold text-[#1D4ED8] mb-2">{
+                <div className="text-4xl font-extrabold text-accent-blue mb-2">{
                   (historicalData || []).reduce((sum, row) => sum + (row.activeCases || 0), 0).toLocaleString()
                 }</div>
                 <div className="text-lg text-gray-500 mb-4">Total Active Cases</div>
               </div>
               <HistoricalTrendsChart />
-              <button className="w-full bg-[#1D4ED8] text-white py-3 rounded-lg font-bold text-base hover:bg-[#1E3A8A] transition-colors">
+              <button className="w-full bg-accent-blue text-white py-3 rounded-lg font-bold text-base hover:bg-secondary-blue transition-colors">
                 View Detailed Analytics
               </button>
             </div>
 
-            <div className="bg-white rounded-xl p-6 shadow-md border border-[#E2C275]/30">
+            <div className="bg-white rounded-xl p-6 shadow-md border border-accent-blue/30">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-lg">Coverage Map</h3>
-                <FiMapPin className="text-[#1D4ED8]" />
+                <FiMapPin className="text-accent-blue" />
               </div>
               <div className="relative rounded-lg overflow-hidden mb-4">
                 <CoverageMap mapData={mapData} />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-3 bg-[#FFF7E3] rounded-lg">
-                  <div className="text-lg font-bold text-[#1D4ED8]">
+                <div className="text-center p-3 bg-light-bg rounded-lg">
+                  <div className="text-lg font-bold text-accent-blue">
                     {uniqueLocations.length - 1}
                   </div>
                   <div className="text-xs text-gray-600">Locations Covered</div>
                 </div>
-                <div className="text-center p-3 bg-[#FFF7E3] rounded-lg">
-                  <div className="text-lg font-bold text-[#1D4ED8]">24/7</div>
+                <div className="text-center p-3 bg-light-bg rounded-lg">
+                  <div className="text-lg font-bold text-accent-blue">24/7</div>
                   <div className="text-xs text-gray-600">Monitoring</div>
                 </div>
               </div>
