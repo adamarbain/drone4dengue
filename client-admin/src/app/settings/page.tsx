@@ -589,16 +589,16 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FFF7E3] flex flex-row  border-[8px] border-[#E2C275] overflow-hidden">
+    <div className="min-h-screen bg-[#FFF7E3] flex flex-row overflow-hidden">
       <AdminSidebar current="Settings" />
       <main className="flex-1 flex flex-col">
         <AdminHeader />
         {/* Content */}
         <motion.section className="px-10 py-6" variants={container} initial="hidden" animate="show">
           <motion.div variants={item} className="mb-8">
-            <h1 className="text-3xl font-bold text-black mb-1">Settings</h1>
+            <h1 className="text-3xl font-bold text-primary-dark mb-1">Settings</h1>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#1D4ED8]"></div>
+              <div className="w-2 h-2 rounded-full bg-accent-blue"></div>
               <div className="text-lg text-gray-600">Manage your account and system preferences</div>
             </div>
           </motion.div>
@@ -607,9 +607,9 @@ export default function SettingsPage() {
             {/* Profile Settings */}
             <motion.div variants={item}>
               <Card className="bg-white shadow-md rounded-xl overflow-hidden">
-                <div className="bg-[#F3EAD8] px-6 py-4 border-b border-[#E2C275]">
+                <div className="bg-light-bg px-6 py-4 border-b border-accent-blue">
                   <h2 className="text-xl font-bold flex items-center gap-2">
-                    <FiUser className="text-[#1D4ED8]" />
+                    <FiUser className="text-accent-blue" />
                     Profile Settings
                   </h2>
                 </div>
@@ -619,7 +619,7 @@ export default function SettingsPage() {
                       <h3 className="text-lg font-semibold">Profile Information</h3>
                       <button
                         onClick={handleToggleProfileEdit}
-                        className="flex items-center gap-2 text-[#1D4ED8] hover:bg-[#F3EAD8] p-2 rounded-lg"
+                        className="flex items-center gap-2 text-accent-blue hover:bg-light-bg/50 p-2 rounded-lg"
                         disabled={profileLoading}
                       >
                         <FiEdit2 />
@@ -641,7 +641,7 @@ export default function SettingsPage() {
                             value={profileForm.name}
                             onChange={handleProfileChange}
                             disabled={!profileEditable}
-                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#1D4ED8]"}`}
+                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-accent-blue focus:border-accent-blue"}`}
                           />
                           {profileFieldErrors.name && <p className="text-xs text-red-600">{profileFieldErrors.name}</p>}
                         </div>
@@ -653,7 +653,7 @@ export default function SettingsPage() {
                             value={profileForm.username}
                             onChange={handleProfileChange}
                             disabled={!profileEditable}
-                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#1D4ED8]"}`}
+                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-accent-blue focus:border-accent-blue"}`}
                           />
                           {profileFieldErrors.username && <p className="text-xs text-red-600">{profileFieldErrors.username}</p>}
                         </div>
@@ -677,7 +677,7 @@ export default function SettingsPage() {
                             value={profileForm.phone}
                             onChange={handleProfileChange}
                             disabled={!profileEditable}
-                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#1D4ED8]"}`}
+                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-accent-blue focus:border-accent-blue"}`}
                           />
                           {profileFieldErrors.phone && <p className="text-xs text-red-600">{profileFieldErrors.phone}</p>}
                         </div>
@@ -689,7 +689,7 @@ export default function SettingsPage() {
                             value={company?.name}
                             onChange={handleProfileChange}
                             disabled={true}
-                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-[#E2C275] focus:border-[#1D4ED8]"}`}
+                            className={`${!profileEditable ? "bg-gray-100 text-gray-700" : "border-accent-blue focus:border-accent-blue"}`}
                           />
                         </div>
                       </>
@@ -698,7 +698,7 @@ export default function SettingsPage() {
                     {profileEditable && !profileLoading && (
                       <div className="pt-4">
                         <button
-                          className="bg-[#1D4ED8] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#1E3A8A] flex items-center gap-2"
+                          className="bg-accent-blue text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-secondary-blue flex items-center gap-2"
                           onClick={handleProfileSave}
                           disabled={profileLoading}
                         >
@@ -716,9 +716,9 @@ export default function SettingsPage() {
             {/* Password Settings */}
             <motion.div variants={item}>
               <Card className="bg-white shadow-md rounded-xl overflow-hidden">
-                <div className="bg-[#F3EAD8] px-6 py-4 border-b border-[#E2C275]">
+                <div className="bg-light-bg px-6 py-4 border-b border-accent-blue">
                   <h2 className="text-xl font-bold flex items-center gap-2">
-                    <FiLock className="text-[#1D4ED8]" />
+                    <FiLock className="text-accent-blue" />
                     Password Settings
                   </h2>
                 </div>
@@ -732,7 +732,7 @@ export default function SettingsPage() {
                         value={currentPassword}
                         onChange={e => setCurrentPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="border-[#E2C275] bg-gray-100 text-gray-700"
+                        className="border-accent-blue bg-gray-100 text-gray-700"
                         autoComplete="current-password"
                         disabled={true}
                       />
@@ -746,12 +746,12 @@ export default function SettingsPage() {
                           value={newPassword}
                           onChange={e => setNewPassword(e.target.value)}
                           placeholder="••••••••"
-                          className="border-[#E2C275] focus:border-[#1D4ED8] pr-12"
+                          className="border-accent-blue focus:border-accent-blue pr-12"
                           autoComplete="new-password"
                         />
                         <button
                           type="button"
-                          className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-[#1D4ED8]"
+                          className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-accent-blue"
                           onClick={() => setShowNewPassword((prev) => !prev)}
                           aria-label={showNewPassword ? "Hide password" : "Show password"}
                         >
@@ -768,12 +768,12 @@ export default function SettingsPage() {
                           value={confirmPassword}
                           onChange={e => setConfirmPassword(e.target.value)}
                           placeholder="••••••••"
-                          className="border-[#E2C275] focus:border-[#1D4ED8] pr-12"
+                          className="border-accent-blue focus:border-accent-blue pr-12"
                           autoComplete="new-password"
                         />
                         <button
                           type="button"
-                          className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-[#1D4ED8]"
+                          className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-accent-blue"
                           onClick={() => setShowConfirmPassword((prev) => !prev)}
                           aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                         >
@@ -785,7 +785,7 @@ export default function SettingsPage() {
                     {passwordSuccess && <div className="text-green-600 mt-2">{passwordSuccess}</div>}
                     <div className="pt-4">
                       <button
-                        className="bg-[#1D4ED8] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#1E3A8A] flex items-center gap-2"
+                        className="bg-accent-blue text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-secondary-blue flex items-center gap-2"
                         onClick={handlePasswordUpdate}
                         disabled={passwordLoading}
                       >
@@ -801,9 +801,9 @@ export default function SettingsPage() {
             {/* Notification Preferences */}
             <motion.div variants={item}>
               <Card className="bg-white shadow-md rounded-xl overflow-hidden">
-                <div className="bg-[#F3EAD8] px-6 py-4 border-b border-[#E2C275]">
+                <div className="bg-light-bg px-6 py-4 border-b border-accent-blue">
                   <h2 className="text-xl font-bold flex items-center gap-2">
-                    <FiMail className="text-[#1D4ED8]" />
+                    <FiMail className="text-accent-blue" />
                     Notification Preferences
                   </h2>
                 </div>
@@ -821,7 +821,7 @@ export default function SettingsPage() {
                           onChange={() => setEmailNotifications(!emailNotifications)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1D4ED8]"></div>
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-blue"></div>
                       </label>
                     </div>
 
@@ -837,7 +837,7 @@ export default function SettingsPage() {
                           onChange={() => setSmsNotifications(!smsNotifications)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1D4ED8]"></div>
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-blue"></div>
                       </label>
                     </div>
 
@@ -847,7 +847,7 @@ export default function SettingsPage() {
                         id="alert-frequency"
                         value={alertFrequency}
                         onChange={(e) => setAlertFrequency(e.target.value)}
-                        className="w-full rounded-lg border border-[#E2C275] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                        className="w-full rounded-lg border border-accent-blue px-4 py-2 focus:outline-none focus:ring-2 focus:ring-accent-blue"
                       >
                         <option value="immediate">Immediate</option>
                         <option value="daily">Daily</option>
@@ -859,7 +859,7 @@ export default function SettingsPage() {
                     {notificationSuccess && <div className="text-green-600 mt-2">{notificationSuccess}</div>}
                     <div className="pt-4">
                       <button 
-                        className="bg-[#1D4ED8] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#1E3A8A] flex items-center gap-2 disabled:opacity-50"
+                        className="bg-accent-blue text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-secondary-blue flex items-center gap-2 disabled:opacity-50"
                         onClick={handleSaveNotificationPreferences}
                         disabled={notificationLoading || companySettingsLoading}
                       >
@@ -875,9 +875,9 @@ export default function SettingsPage() {
             {/* System Configuration */}
             <motion.div variants={item}>
               <Card className="bg-white shadow-md rounded-xl overflow-hidden">
-                <div className="bg-[#F3EAD8] px-6 py-4 border-b border-[#E2C275]">
+                <div className="bg-light-bg px-6 py-4 border-b border-accent-blue">
                   <h2 className="text-xl font-bold flex items-center gap-2">
-                    <FiSettings className="text-[#1D4ED8]" />
+                    <FiSettings className="text-accent-blue" />
                     System Configuration
                   </h2>
                 </div>
@@ -893,7 +893,7 @@ export default function SettingsPage() {
                             value="low"
                             checked={alertThreshold === "low"}
                             onChange={() => setAlertThreshold("low")}
-                            className="accent-[#1D4ED8]"
+                            className="accent-accent-blue"
                           />
                           <span>Low</span>
                         </label>
@@ -904,7 +904,7 @@ export default function SettingsPage() {
                             value="medium"
                             checked={alertThreshold === "medium"}
                             onChange={() => setAlertThreshold("medium")}
-                            className="accent-[#1D4ED8]"
+                            className="accent-accent-blue"
                           />
                           <span>Medium</span>
                         </label>
@@ -915,7 +915,7 @@ export default function SettingsPage() {
                             value="high"
                             checked={alertThreshold === "high"}
                             onChange={() => setAlertThreshold("high")}
-                            className="accent-[#1D4ED8]"
+                            className="accent-accent-blue"
                           />
                           <span>High</span>
                         </label>
@@ -927,7 +927,7 @@ export default function SettingsPage() {
                         <Label htmlFor="prediction-model">Prediction Model Parameters</Label>
                         <button 
                           onClick={() => setShowModelParamsEdit(!showModelParamsEdit)}
-                          className="text-[#1D4ED8] hover:bg-[#F3EAD8] p-2 rounded-lg flex items-center gap-1"
+                          className="text-accent-blue hover:bg-light-bg/50 p-2 rounded-lg flex items-center gap-1"
                         >
                           <FiSliders className="text-sm" />
                           <span className="text-sm">{showModelParamsEdit ? 'Cancel' : 'Edit Parameters'}</span>
@@ -947,7 +947,7 @@ export default function SettingsPage() {
                                 ...predictionModelParams,
                                 temperatureWeight: parseFloat(e.target.value) || 0
                               })}
-                              className="w-20 border-[#E2C275] focus:border-[#1D4ED8]"
+                              className="w-20 border-accent-blue focus:border-accent-blue"
                             />
                           </div>
                           <div className="flex justify-between items-center">
@@ -962,7 +962,7 @@ export default function SettingsPage() {
                                 ...predictionModelParams,
                                 rainfallWeight: parseFloat(e.target.value) || 0
                               })}
-                              className="w-20 border-[#E2C275] focus:border-[#1D4ED8]"
+                              className="w-20 border-accent-blue focus:border-accent-blue"
                             />
                           </div>
                           <div className="flex justify-between items-center">
@@ -977,7 +977,7 @@ export default function SettingsPage() {
                                 ...predictionModelParams,
                                 populationDensityWeight: parseFloat(e.target.value) || 0
                               })}
-                              className="w-20 border-[#E2C275] focus:border-[#1D4ED8]"
+                              className="w-20 border-accent-blue focus:border-accent-blue"
                             />
                           </div>
                         </div>
@@ -1004,7 +1004,7 @@ export default function SettingsPage() {
                         <Label htmlFor="risk-thresholds">Risk Level Thresholds</Label>
                         <button 
                           onClick={() => setShowRiskThresholdsEdit(!showRiskThresholdsEdit)}
-                          className="text-[#1D4ED8] hover:bg-[#F3EAD8] p-2 rounded-lg flex items-center gap-1"
+                          className="text-accent-blue hover:bg-light-bg/50 p-2 rounded-lg flex items-center gap-1"
                         >
                           <FiSliders className="text-sm" />
                           <span className="text-sm">{showRiskThresholdsEdit ? 'Cancel' : 'Edit Thresholds'}</span>
@@ -1023,7 +1023,7 @@ export default function SettingsPage() {
                                 ...predictionModelParams,
                                 lowThreshold: parseFloat(e.target.value) || 0
                               })}
-                              className="w-20 border-[#E2C275] focus:border-[#1D4ED8]"
+                              className="w-20 border-accent-blue focus:border-accent-blue"
                             />
                           </div>
                           <div className="flex justify-between items-center">
@@ -1037,7 +1037,7 @@ export default function SettingsPage() {
                                 ...predictionModelParams,
                                 highThreshold: parseFloat(e.target.value) || 0
                               })}
-                              className="w-20 border-[#E2C275] focus:border-[#1D4ED8]"
+                              className="w-20 border-accent-blue focus:border-accent-blue"
                             />
                           </div>
                           <div className="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-300">
@@ -1075,7 +1075,7 @@ export default function SettingsPage() {
                             value="automatic"
                             checked={syncMode === "automatic"}
                             onChange={() => setSyncMode("automatic")}
-                            className="accent-[#1D4ED8]"
+                            className="accent-accent-blue"
                           />
                           <span>Automatic</span>
                         </label>
@@ -1086,13 +1086,13 @@ export default function SettingsPage() {
                             value="manual"
                             checked={syncMode === "manual"}
                             onChange={() => setSyncMode("manual")}
-                            className="accent-[#1D4ED8]"
+                            className="accent-accent-blue"
                           />
                           <span>Manual</span>
                         </label>
                       </div>
                       {syncMode === "manual" && (
-                        <button className="mt-2 bg-[#E5E7EB] text-black px-4 py-1 rounded-lg text-sm hover:bg-[#F3EAD8] flex items-center gap-1">
+                        <button className="mt-2 bg-[#E5E7EB] text-black px-4 py-1 rounded-lg text-sm hover:bg-light-bg/50 flex items-center gap-1">
                           <FiRefreshCw className="text-xs" />
                           Sync Now
                         </button>
@@ -1103,7 +1103,7 @@ export default function SettingsPage() {
                     {systemConfigSuccess && <div className="text-green-600 mt-2">{systemConfigSuccess}</div>}
                     <div className="pt-4">
                       <button 
-                        className="bg-[#1D4ED8] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#1E3A8A] flex items-center gap-2 disabled:opacity-50"
+                        className="bg-accent-blue text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-secondary-blue flex items-center gap-2 disabled:opacity-50"
                         onClick={handleSaveSystemConfiguration}
                         disabled={systemConfigLoading || companySettingsLoading}
                       >
@@ -1120,15 +1120,15 @@ export default function SettingsPage() {
           {/* Company Locations */}
           <motion.div variants={item} className="mt-8">
             <Card className="bg-white shadow-md rounded-xl overflow-hidden">
-              <div className="bg-[#F3EAD8] px-6 py-4 border-b border-[#E2C275]">
+              <div className="bg-light-bg px-6 py-4 border-b border-accent-blue">
                 <div className="flex justify-between items-center">
                   <h2 className="text-xl font-bold flex items-center gap-2">
-                    <FiMapPin className="text-[#1D4ED8]" />
+                    <FiMapPin className="text-accent-blue" />
                     Company Locations
                   </h2>
                   <button
                     onClick={() => setShowAddLocation(true)}
-                    className="bg-[#1D4ED8] text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#1E3A8A] flex items-center gap-2"
+                    className="bg-accent-blue text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-secondary-blue flex items-center gap-2"
                   >
                     <FiPlus />
                     Add Location
@@ -1147,7 +1147,7 @@ export default function SettingsPage() {
                 ) : (
                   <div className="space-y-4">
                     {locations.map((location: any) => (
-                      <div key={location.id} className="border border-[#E2C275] rounded-lg p-4 bg-[#F9F6F2]">
+                      <div key={location.id} className="border border-accent-blue rounded-lg p-4 bg-gray-50">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
                             <h3 className="font-semibold text-lg text-gray-800">{location.name}</h3>
@@ -1175,7 +1175,7 @@ export default function SettingsPage() {
                           <div className="flex gap-2 ml-4">
                             <button
                               onClick={() => handleEditLocation(location)}
-                              className="text-[#1D4ED8] hover:bg-[#F3EAD8] p-2 rounded-lg"
+                              className="text-accent-blue hover:bg-light-bg/50 p-2 rounded-lg"
                               title="Edit location"
                             >
                               <FiEdit3 />
@@ -1189,7 +1189,7 @@ export default function SettingsPage() {
 
                 {/* Add/Edit Location Form */}
                 {showAddLocation && (
-                  <div className="mt-6 border-t border-[#E2C275] pt-6">
+                  <div className="mt-6 border-t border-accent-blue pt-6">
                     <h3 className="text-lg font-semibold mb-4">
                       {editingLocation ? 'Edit Location' : 'Add New Location'}
                     </h3>
@@ -1203,7 +1203,7 @@ export default function SettingsPage() {
                             value={locationForm.name}
                             onChange={handleLocationChange}
                             placeholder="Enter location name"
-                            className="border-[#E2C275] focus:border-[#1D4ED8]"
+                            className="border-accent-blue focus:border-accent-blue"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1214,7 +1214,7 @@ export default function SettingsPage() {
                             value={locationForm.address}
                             onChange={handleLocationChange}
                             placeholder="Enter address (optional)"
-                            className="border-[#E2C275] focus:border-[#1D4ED8]"
+                            className="border-accent-blue focus:border-accent-blue"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1227,7 +1227,7 @@ export default function SettingsPage() {
                             value={locationForm.latitude}
                             onChange={handleLocationChange}
                             placeholder="Enter latitude (optional)"
-                            className="border-[#E2C275] focus:border-[#1D4ED8]"
+                            className="border-accent-blue focus:border-accent-blue"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1240,7 +1240,7 @@ export default function SettingsPage() {
                             value={locationForm.longitude}
                             onChange={handleLocationChange}
                             placeholder="Enter longitude (optional)"
-                            className="border-[#E2C275] focus:border-[#1D4ED8]"
+                            className="border-accent-blue focus:border-accent-blue"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1250,7 +1250,7 @@ export default function SettingsPage() {
                             name="isActive"
                             value={locationForm.isActive.toString()}
                             onChange={(e) => setLocationForm({ ...locationForm, isActive: e.target.value === 'true' })}
-                            className="w-full rounded-md border border-[#E2C275] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+                            className="w-full rounded-md border border-accent-blue bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-blue"
                           >
                             <option value="true">Active</option>
                             <option value="false">Inactive</option>
@@ -1301,7 +1301,7 @@ export default function SettingsPage() {
                         <button
                           onClick={handleLocationSave}
                           disabled={locationLoading}
-                          className="bg-[#1D4ED8] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#1E3A8A] flex items-center gap-2 disabled:opacity-50"
+                          className="bg-accent-blue text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-secondary-blue flex items-center gap-2 disabled:opacity-50"
                         >
                           <FiSave />
                           {locationLoading ? 'Saving...' : (editingLocation ? 'Update Location' : 'Add Location')}
@@ -1323,9 +1323,9 @@ export default function SettingsPage() {
           {/* Broadcast Notification */}
           <motion.div variants={item} className="mt-8">
             <Card className="bg-white shadow-md rounded-xl overflow-hidden">
-              <div className="bg-[#F3EAD8] px-6 py-4 border-b border-[#E2C275]">
+              <div className="bg-light-bg px-6 py-4 border-b border-accent-blue">
                 <h2 className="text-xl font-bold flex items-center gap-2">
-                  <FiBell className="text-[#1D4ED8]" />
+                  <FiBell className="text-accent-blue" />
                   Broadcast Notification
                 </h2>
                 <p className="text-sm text-gray-600 mt-1">Send push notifications to all mobile app users</p>
@@ -1339,7 +1339,7 @@ export default function SettingsPage() {
                       value={broadcastTitle}
                       onChange={(e) => setBroadcastTitle(e.target.value)}
                       placeholder="Enter notification title"
-                      className="border-[#E2C275] focus:border-[#1D4ED8]"
+                      className="border-accent-blue focus:border-accent-blue"
                       disabled={broadcastLoading}
                     />
                   </div>
@@ -1351,7 +1351,7 @@ export default function SettingsPage() {
                       onChange={(e) => setBroadcastMessage(e.target.value)}
                       placeholder="Enter notification message"
                       rows={4}
-                      className="w-full rounded-lg border border-[#E2C275] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] resize-none"
+                      className="w-full rounded-lg border border-accent-blue px-4 py-2 focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none"
                       disabled={broadcastLoading}
                     />
                   </div>
@@ -1373,7 +1373,7 @@ export default function SettingsPage() {
                   )}
                   <div className="pt-2">
                     <button
-                      className="bg-[#1D4ED8] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#1E3A8A] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="bg-accent-blue text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-secondary-blue flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={handleBroadcastNotification}
                       disabled={broadcastLoading || !broadcastTitle.trim() || !broadcastMessage.trim()}
                     >
@@ -1392,15 +1392,15 @@ export default function SettingsPage() {
           {/* Advanced Settings */}
           <motion.div variants={item} className="mt-8">
             <Card className="bg-white shadow-md rounded-xl overflow-hidden">
-              <div className="bg-[#F3EAD8] px-6 py-4 border-b border-[#E2C275]">
+              <div className="bg-light-bg px-6 py-4 border-b border-accent-blue">
                 <h2 className="text-xl font-bold flex items-center gap-2">
-                  <FiSettings className="text-[#1D4ED8]" />
+                  <FiSettings className="text-accent-blue" />
                   Advanced Settings
                 </h2>
               </div>
               <CardContent className="p-6">
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center p-3 bg-[#F9F6F2] rounded-lg">
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <div>
                       <h3 className="font-semibold">Data Retention Policy</h3>
                       <p className="text-sm text-gray-500">Control how long data is stored in the system</p>
@@ -1410,13 +1410,13 @@ export default function SettingsPage() {
                         // TODO: Implement data retention policy configuration modal
                         alert('Data Retention Policy configuration coming soon!');
                       }}
-                      className="bg-[#E5E7EB] text-black px-4 py-2 rounded-lg text-sm hover:bg-[#F3EAD8]"
+                      className="bg-[#E5E7EB] text-black px-4 py-2 rounded-lg text-sm hover:bg-light-bg/50"
                     >
                       Configure
                     </button>
                   </div>
 
-                  <div className="flex justify-between items-center p-3 bg-[#F9F6F2] rounded-lg">
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <div>
                       <h3 className="font-semibold">API Access</h3>
                       <p className="text-sm text-gray-500">Manage API keys and access permissions</p>
@@ -1426,13 +1426,13 @@ export default function SettingsPage() {
                         // TODO: Implement API access management modal
                         alert('API Access management coming soon!');
                       }}
-                      className="bg-[#E5E7EB] text-black px-4 py-2 rounded-lg text-sm hover:bg-[#F3EAD8]"
+                      className="bg-[#E5E7EB] text-black px-4 py-2 rounded-lg text-sm hover:bg-light-bg/50"
                     >
                       Manage Keys
                     </button>
                   </div>
 
-                  <div className="flex justify-between items-center p-3 bg-[#F9F6F2] rounded-lg">
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <div>
                       <h3 className="font-semibold">System Backup</h3>
                       <p className="text-sm text-gray-500">Configure automatic backups and restore points</p>
@@ -1442,7 +1442,7 @@ export default function SettingsPage() {
                         // TODO: Implement system backup functionality
                         alert('System backup functionality coming soon!');
                       }}
-                      className="bg-[#E5E7EB] text-black px-4 py-2 rounded-lg text-sm hover:bg-[#F3EAD8]"
+                      className="bg-[#E5E7EB] text-black px-4 py-2 rounded-lg text-sm hover:bg-light-bg/50"
                     >
                       Backup Now
                     </button>
@@ -1453,7 +1453,7 @@ export default function SettingsPage() {
                   
                   <div className="pt-4">
                     <button 
-                      className="bg-[#1D4ED8] text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-[#1E3A8A] flex items-center gap-2 disabled:opacity-50"
+                      className="bg-accent-blue text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-secondary-blue flex items-center gap-2 disabled:opacity-50"
                       onClick={handleSaveAdvancedSettings}
                       disabled={advancedSettingsLoading || companySettingsLoading}
                     >
@@ -1494,7 +1494,7 @@ export default function SettingsPage() {
                   <p className="text-gray-600 mb-8">{successDialogMessage}</p>
                   <button
                     onClick={() => setShowSuccessDialog(false)}
-                    className="w-full bg-[#1D4ED8] text-white py-3 rounded-xl font-bold hover:bg-[#1E3A8A] transition-colors"
+                    className="w-full bg-accent-blue text-white py-3 rounded-xl font-bold hover:bg-secondary-blue transition-colors"
                   >
                     Great!
                   </button>

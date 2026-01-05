@@ -119,17 +119,17 @@ export default function AdminHeader() {
     switch (type) {
       case 'prediction':
       case 'daily_prediction':
-        return <FiAlertCircle className="text-[#1D4ED8]" />;
+        return <FiAlertCircle className="text-accent-blue" />;
       case 'dengue_case':
         return <FiAlertCircle className="text-red-600" />;
       case 'drone':
-        return <FiPackage className="text-[#1D4ED8]" />;
+        return <FiPackage className="text-accent-blue" />;
       case 'drone_image':
-        return <FiCamera className="text-[#1D4ED8]" />;
+        return <FiCamera className="text-accent-blue" />;
       case 'location':
-        return <FiMapPin className="text-[#1D4ED8]" />;
+        return <FiMapPin className="text-accent-blue" />;
       default:
-        return <FiAlertCircle className="text-[#1D4ED8]" />;
+        return <FiAlertCircle className="text-accent-blue" />;
     }
   };
 
@@ -201,19 +201,19 @@ export default function AdminHeader() {
 
   return (
     <>
-    <header className="sticky top-0 z-10 flex items-center justify-between px-8 py-4 bg-white border-b border-[#E2C275]/50 shadow-sm">
+    <header className="sticky top-0 z-10 flex items-center justify-between px-8 py-4 bg-white border-b border-accent-blue/30 shadow-sm">
       <div className="flex items-center">
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FFF7E3] rounded-lg">
-          <span className="text-[#1D4ED8] font-medium text-sm">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-light-bg rounded-lg">
+          <span className="text-primary-dark font-medium text-sm">
             {profileLoading ? 'Loading Company...' : companyData?.name || 'Company Portal'}
           </span>
-          <div className="w-2 h-2 rounded-full bg-[#1D4ED8] animate-pulse"></div>
+          <div className="w-2 h-2 rounded-full bg-accent-blue animate-pulse"></div>
         </div>
       </div>
 
       <div className="flex items-center gap-5">
         <div className="relative">
-          <div className="flex items-center bg-[#F9F6F2] rounded-lg focus-within:ring-2 focus-within:ring-[#1D4ED8] transition-all">
+          <div className="flex items-center bg-light-bg/50 rounded-lg focus-within:ring-2 focus-within:ring-accent-blue transition-all">
             <FiSearch className="ml-3 text-gray-400" />
             <input
               type="text"
@@ -224,16 +224,16 @@ export default function AdminHeader() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* <button className="relative p-2 rounded-full hover:bg-[#EFF6FF] transition-colors">
-            <FiMail className="text-[#1D4ED8] w-5 h-5" />
-            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#E2C275] rounded-full text-[10px] flex items-center justify-center font-bold">
+          {/* <button className="relative p-2 rounded-full hover:bg-light-bg/50 transition-colors">
+            <FiMail className="text-accent-blue w-5 h-5" />
+            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-secondary-blue rounded-full text-[10px] flex items-center justify-center font-bold">
               3
             </span>
           </button> */}
 
           <div className="relative" ref={notificationRef}>
             <button
-              className="relative p-2 rounded-full hover:bg-[#EFF6FF] transition-colors"
+              className="relative p-2 rounded-full hover:bg-light-bg/50 transition-colors"
               onClick={() => {
                 setShowNotifications(!showNotifications);
                 if (!showNotifications) {
@@ -241,9 +241,9 @@ export default function AdminHeader() {
                 }
               }}
             >
-              <FiBell className="text-[#1D4ED8] w-5 h-5" />
+              <FiBell className="text-accent-blue w-5 h-5" />
               {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#E2C275] rounded-full text-[10px] flex items-center justify-center font-bold text-[#1D4ED8]">
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-secondary-blue rounded-full text-[10px] flex items-center justify-center font-bold text-white">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
@@ -271,16 +271,16 @@ export default function AdminHeader() {
                       <div
                         key={notification.id}
                         onClick={() => handleNotificationClick(notification)}
-                        className={`px-4 py-3 hover:bg-[#EFF6FF] border-b border-gray-100 last:border-0 cursor-pointer transition-colors ${
-                          !notification.isRead ? 'bg-[#EFF6FF]/50' : ''
+                        className={`px-4 py-3 hover:bg-light-bg/50 border-b border-gray-100 last:border-0 cursor-pointer transition-colors ${
+                          !notification.isRead ? 'bg-light-bg/30' : ''
                         }`}
                       >
                         <div className="flex gap-3">
-                          <div className="w-8 h-8 rounded-full bg-[#1D4ED8]/10 flex items-center justify-center flex-shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-accent-blue/10 flex items-center justify-center flex-shrink-0">
                             {getNotificationIcon(notification.type)}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium ${!notification.isRead ? 'text-[#1D4ED8]' : 'text-gray-900'}`}>
+                            <p className={`text-sm font-medium ${!notification.isRead ? 'text-accent-blue' : 'text-gray-900'}`}>
                               {getNotificationTitle(notification)}
                             </p>
                             <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
@@ -291,7 +291,7 @@ export default function AdminHeader() {
                             </p>
                           </div>
                           {!notification.isRead && (
-                            <div className="w-2 h-2 bg-[#1D4ED8] rounded-full flex-shrink-0 mt-2"></div>
+                            <div className="w-2 h-2 bg-accent-blue rounded-full flex-shrink-0 mt-2"></div>
                           )}
                         </div>
                       </div>
@@ -301,7 +301,7 @@ export default function AdminHeader() {
                 {notifications.length > 0 && unreadCount > 0 && (
                   <div className="px-4 py-2 border-t border-gray-100">
                     <button 
-                      className="text-[#1D4ED8] text-xs font-medium hover:underline w-full text-center flex items-center justify-center gap-1"
+                      className="text-accent-blue text-xs font-medium hover:underline w-full text-center flex items-center justify-center gap-1"
                       onClick={handleMarkAllAsRead}
                     >
                       <FiCheckCircle className="w-3 h-3" />
@@ -316,7 +316,7 @@ export default function AdminHeader() {
           <div className="h-6 w-px bg-gray-300 mx-1"></div>
 
           <button
-            className="flex items-center gap-2 bg-[#1D4ED8] text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-[#1E3A8A] transition-colors"
+            className="flex items-center gap-2 bg-accent-blue text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-secondary-blue transition-colors"
             onClick={() => setShowLogoutConfirm(true)}
           >
             <FiLogOut className="w-4 h-4" />
@@ -334,7 +334,7 @@ export default function AdminHeader() {
                 alt="Profile"
                 width={40}
                 height={40}
-                className="rounded-full border-2 border-[#E2C275] object-cover"
+                className="rounded-full border-2 border-accent-blue object-cover"
               />
               <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
             </div>
@@ -348,7 +348,7 @@ export default function AdminHeader() {
         <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 space-y-4">
           <div className="flex items-start gap-3">
             <div className="mt-1">
-              <FiAlertCircle className="w-6 h-6 text-[#1D4ED8]" />
+              <FiAlertCircle className="w-6 h-6 text-accent-blue" />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Logout Account</h3>
@@ -363,7 +363,7 @@ export default function AdminHeader() {
               Cancel
             </button>
             <button
-              className="px-4 py-2 rounded-lg bg-[#1D4ED8] text-white text-sm font-semibold hover:bg-[#1E3A8A] transition-colors"
+              className="px-4 py-2 rounded-lg bg-accent-blue text-white text-sm font-semibold hover:bg-secondary-blue transition-colors"
               onClick={() => {
                 setShowLogoutConfirm(false)
                 logout()

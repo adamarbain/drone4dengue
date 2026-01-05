@@ -323,16 +323,16 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FFF7E3] flex flex-row  border-[8px] border-[#E2C275] overflow-hidden">
+    <div className="min-h-screen bg-[#FFF7E3] flex flex-row   overflow-hidden">
       <AdminSidebar current="Reports" />
       <main className="flex-1 flex flex-col">
         <AdminHeader />
         {/* Content */}
         <motion.section className="px-10 py-8" variants={container} initial="hidden" animate="show">
           <motion.div variants={item} className="mb-8">
-            <h1 className="text-3xl font-bold text-black mb-1">Report Generation</h1>
+            <h1 className="text-3xl font-bold text-primary-dark mb-1">Report Generation</h1>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#1D4ED8]"></div>
+              <div className="w-2 h-2 rounded-full bg-accent-blue"></div>
               <div className="text-lg text-gray-600">Customize and generate data insights reports for your company</div>
             </div>
           </motion.div>
@@ -347,7 +347,7 @@ export default function ReportsPage() {
             ].map((stat, idx) => (
               <motion.div
                 key={stat.label}
-                className="bg-white rounded-xl shadow-md overflow-hidden border border-[#E2C275]/30"
+                className="bg-white rounded-xl shadow-md overflow-hidden border border-accent-blue/30"
                 whileHover={{ y: -5 }}
                 transition={{ type: "spring", stiffness: 300 }}
               >
@@ -365,34 +365,34 @@ export default function ReportsPage() {
 
           {/* Filters */}
           <motion.div variants={item} className="mb-8">
-            <div className="bg-white rounded-xl p-6 shadow-md border border-[#E2C275]/30">
+            <div className="bg-white rounded-xl p-6 shadow-md border border-accent-blue/30">
               <div className="font-bold text-xl mb-4 flex items-center gap-2">
-                <FiFilter className="text-[#1D4ED8]" />
+                <FiFilter className="text-accent-blue" />
                 Report Filters
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div className="flex flex-col gap-2">
-                  <label className="font-semibold text-black text-sm flex items-center gap-2">
-                    <FiCalendar className="text-[#1D4ED8]" size={16} />
+                  <label className="font-semibold text-primary-dark text-sm flex items-center gap-2">
+                    <FiCalendar className="text-accent-blue" size={16} />
                     Start Date
                   </label>
                   <input
                     type="date"
                     value={startDate}
                     onChange={handleFilterChange(setStartDate)}
-                    className="rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent"
+                    className="rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent"
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="font-semibold text-black text-sm flex items-center gap-2">
-                    <FiCalendar className="text-[#1D4ED8]" size={16} />
+                  <label className="font-semibold text-primary-dark text-sm flex items-center gap-2">
+                    <FiCalendar className="text-accent-blue" size={16} />
                     End Date
                   </label>
                   <input
                     type="date"
                     value={endDate}
                     onChange={handleFilterChange(setEndDate)}
-                    className="rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent"
+                    className="rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent"
                   />
                 </div>
               </div>
@@ -403,7 +403,7 @@ export default function ReportsPage() {
               )}
               <div className="flex gap-4">
                 <button
-                  className={`bg-[#1D4ED8] text-white px-8 py-3 rounded-lg font-bold text-base flex items-center gap-2 shadow-md transition-all relative overflow-hidden ${!filtersComplete || loading ? "opacity-60 cursor-not-allowed" : "hover:bg-[#1E3A8A]"}`}
+                  className={`bg-accent-blue text-white px-8 py-3 rounded-lg font-bold text-base flex items-center gap-2 shadow-md transition-all relative overflow-hidden ${!filtersComplete || loading ? "opacity-60 cursor-not-allowed" : "hover:bg-secondary-blue"}`}
                   onClick={handleGenerateReport}
                   disabled={!filtersComplete || loading}
                 >
@@ -426,7 +426,7 @@ export default function ReportsPage() {
                   )}
                 </button>
                 <button
-                  className="bg-white text-[#1D4ED8] border border-[#1D4ED8] px-8 py-3 rounded-lg font-bold text-base hover:bg-[#EFF6FF] transition-all"
+                  className="bg-white text-accent-blue border border-accent-blue px-8 py-3 rounded-lg font-bold text-base hover:bg-light-bg/50 transition-all"
                   onClick={handleClearFilters}
                   disabled={loading}
                 >
@@ -442,18 +442,18 @@ export default function ReportsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Weekly Overview Card */}
               <motion.div
-                className={`bg-white rounded-xl p-6 shadow-md border border-[#E2C275]/30 ${!reportGenerated ? "opacity-60" : ""}`}
+                className={`bg-white rounded-xl p-6 shadow-md border border-accent-blue/30 ${!reportGenerated ? "opacity-60" : ""}`}
                 whileHover={{ y: -5 }}
                 transition={{ type: "spring", stiffness: 300 }}
               >
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold text-lg flex items-center gap-2">
-                    <FiBarChart2 className="text-[#1D4ED8]" />
+                    <FiBarChart2 className="text-accent-blue" />
                     Weekly Active Dengue Cases Overview
                   </h3>
                   <FiTrendingUp className="text-green-500" />
                 </div>
-                <div className="w-full h-32 mb-4 bg-gradient-to-r from-[#FFF7E3] to-[#F3EAD8] rounded-lg flex items-end p-4">
+                <div className="w-full h-32 mb-4 bg-gradient-to-r from-light-bg to-light-bg/70 rounded-lg flex items-end p-4">
                   {/* Enhanced bar chart */}
                   <svg width="100%" height="100%" viewBox="0 0 200 80" fill="none" xmlns="http://www.w3.org/2000/svg">
                     {reportGenerated && reportData && reportData.weeklyData ? (
@@ -464,24 +464,24 @@ export default function ReportsPage() {
                           y={bar.y} 
                           width="16" 
                           height={bar.height} 
-                          fill={idx === generateBarChartData().length - 1 ? "#1D4ED8" : "#E2C275"} 
+                          fill={idx === generateBarChartData().length - 1 ? "#4988C4" : "#1C4D8D"} 
                           rx="2" 
                         />
                       ))
                     ) : (
                       <>
-                        <rect x="20" y="40" width="16" height="30" fill="#E2C275" rx="2" />
-                        <rect x="44" y="30" width="16" height="40" fill="#E2C275" rx="2" />
-                        <rect x="68" y="50" width="16" height="20" fill="#E2C275" rx="2" />
-                        <rect x="92" y="20" width="16" height="50" fill="#1D4ED8" rx="2" />
-                        <rect x="116" y="35" width="16" height="35" fill="#E2C275" rx="2" />
-                        <rect x="140" y="45" width="16" height="25" fill="#E2C275" rx="2" />
+                        <rect x="20" y="40" width="16" height="30" fill="#1C4D8D" rx="2" />
+                        <rect x="44" y="30" width="16" height="40" fill="#1C4D8D" rx="2" />
+                        <rect x="68" y="50" width="16" height="20" fill="#1C4D8D" rx="2" />
+                        <rect x="92" y="20" width="16" height="50" fill="#4988C4" rx="2" />
+                        <rect x="116" y="35" width="16" height="35" fill="#1C4D8D" rx="2" />
+                        <rect x="140" y="45" width="16" height="25" fill="#1C4D8D" rx="2" />
                       </>
                     )}
                   </svg>
                 </div>
                 <div className="text-center mb-4">
-                  <div className="text-2xl font-bold text-[#1D4ED8]">
+                  <div className="text-2xl font-bold text-accent-blue">
                     {reportGenerated && reportData && reportData.weeklyData && reportData.weeklyData.length > 0
                       ? reportData.weeklyData
                           .reduce(
@@ -502,7 +502,7 @@ export default function ReportsPage() {
                   </div>
                 </div>
                 <button
-                  className="w-full bg-[#1D4ED8] text-white py-2 rounded-lg font-bold hover:bg-[#1E3A8A] transition-colors disabled:cursor-not-allowed"
+                  className="w-full bg-accent-blue text-white py-2 rounded-lg font-bold hover:bg-secondary-blue transition-colors disabled:cursor-not-allowed"
                   disabled={!reportGenerated}
                   onClick={() => handleViewDetails("weekly")}
                 >
@@ -512,18 +512,18 @@ export default function ReportsPage() {
 
               {/* Total Dengue Cases Overview Card */}
               <motion.div
-                className={`bg-white rounded-xl p-6 shadow-md border border-[#E2C275]/30 ${!reportGenerated ? "opacity-60" : ""}`}
+                className={`bg-white rounded-xl p-6 shadow-md border border-accent-blue/30 ${!reportGenerated ? "opacity-60" : ""}`}
                 whileHover={{ y: -5 }}
                 transition={{ type: "spring", stiffness: 300 }}
               >
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold text-lg flex items-center gap-2">
-                    <FiPieChart className="text-[#1D4ED8]" />
+                    <FiPieChart className="text-accent-blue" />
                     Dengue Prediction Overview
                   </h3>
                   <FiTrendingUp className="text-green-500" />
                 </div>
-                <div className={`w-full h-32 mb-4 bg-gradient-to-r from-[#FFF7E3] to-[#F3EAD8] rounded-lg p-4 ${
+                <div className={`w-full h-32 mb-4 bg-gradient-to-r from-light-bg to-light-bg/70 rounded-lg p-4 ${
                   reportGenerated && reportData && reportData.stats && (
                     Object.keys(reportData.stats).length > 0 && 
                     (reportData.stats.highRiskPredictions > 0 || 
@@ -541,8 +541,8 @@ export default function ReportsPage() {
                     <svg width="100%" height="100%" viewBox="0 0 320 80" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <defs>
                         <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="80" gradientUnits="userSpaceOnUse">
-                          <stop stopColor="#1D4ED8" stopOpacity="0.6" />
-                          <stop offset="1" stopColor="#1D4ED8" stopOpacity="0.1" />
+                          <stop stopColor="#4988C4" stopOpacity="0.6" />
+                          <stop offset="1" stopColor="#4988C4" stopOpacity="0.1" />
                         </linearGradient>
                       </defs>
                       {reportData.weeklyData && reportData.weeklyData.length > 0 ? (() => {
@@ -555,12 +555,12 @@ export default function ReportsPage() {
                             />
                             <path
                               d={chartData.path}
-                              stroke="#1D4ED8"
+                              stroke="#4988C4"
                               strokeWidth="2"
                               fill="none"
                             />
                             {chartData.points.map((point: any, idx: number) => (
-                              <circle key={idx} cx={point.x} cy={point.y} r="3" fill="#1D4ED8" />
+                              <circle key={idx} cx={point.x} cy={point.y} r="3" fill="#4988C4" />
                             ))}
                           </>
                         )
@@ -572,13 +572,13 @@ export default function ReportsPage() {
                           />
                           <path
                             d="M0,60 Q40,40 80,50 Q120,70 160,40 Q200,20 240,50 Q280,80 320,40"
-                            stroke="#1D4ED8"
+                            stroke="#4988C4"
                             strokeWidth="2"
                             fill="none"
                           />
-                          <circle cx="80" cy="50" r="3" fill="#1D4ED8" />
-                          <circle cx="160" cy="40" r="3" fill="#1D4ED8" />
-                          <circle cx="240" cy="50" r="3" fill="#1D4ED8" />
+                          <circle cx="80" cy="50" r="3" fill="#4988C4" />
+                          <circle cx="160" cy="40" r="3" fill="#4988C4" />
+                          <circle cx="240" cy="50" r="3" fill="#4988C4" />
                         </>
                       )}
                     </svg>
@@ -590,8 +590,8 @@ export default function ReportsPage() {
                     <svg width="100%" height="100%" viewBox="0 0 320 80" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <defs>
                         <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="80" gradientUnits="userSpaceOnUse">
-                          <stop stopColor="#1D4ED8" stopOpacity="0.6" />
-                          <stop offset="1" stopColor="#1D4ED8" stopOpacity="0.1" />
+                          <stop stopColor="#4988C4" stopOpacity="0.6" />
+                          <stop offset="1" stopColor="#4988C4" stopOpacity="0.1" />
                         </linearGradient>
                       </defs>
                       <path
@@ -600,13 +600,13 @@ export default function ReportsPage() {
                       />
                       <path
                         d="M0,60 Q40,40 80,50 Q120,70 160,40 Q200,20 240,50 Q280,80 320,40"
-                        stroke="#1D4ED8"
+                        stroke="#4988C4"
                         strokeWidth="2"
                         fill="none"
                       />
-                      <circle cx="80" cy="50" r="3" fill="#1D4ED8" />
-                      <circle cx="160" cy="40" r="3" fill="#1D4ED8" />
-                      <circle cx="240" cy="50" r="3" fill="#1D4ED8" />
+                      <circle cx="80" cy="50" r="3" fill="#4988C4" />
+                      <circle cx="160" cy="40" r="3" fill="#4988C4" />
+                      <circle cx="240" cy="50" r="3" fill="#4988C4" />
                     </svg>
                   )}
                 </div>
@@ -638,7 +638,7 @@ export default function ReportsPage() {
                   )}
                 </div>
                 <button
-                  className="w-full bg-[#1D4ED8] text-white py-2 rounded-lg font-bold hover:bg-[#1E3A8A] transition-colors disabled:cursor-not-allowed"
+                  className="w-full bg-accent-blue text-white py-2 rounded-lg font-bold hover:bg-secondary-blue transition-colors disabled:cursor-not-allowed"
                   disabled={
                     !reportGenerated || 
                     !reportData || 
@@ -700,7 +700,7 @@ export default function ReportsPage() {
                                     : formatDate(entry.date)}
                                 </div>
                               </div>
-                              <div className="text-[#1D4ED8] font-semibold">
+                              <div className="text-accent-blue font-semibold">
                                 {entry.value !== undefined ? `${entry.value.toLocaleString()} active cases` : "-"}
                               </div>
                             </div>
@@ -724,7 +724,7 @@ export default function ReportsPage() {
                                 <span className={`inline-block w-3 h-3 rounded-full ${stat.color}`}></span>
                                 {stat.label}
                               </div>
-                              <div className="text-2xl font-bold text-[#1D4ED8]">
+                              <div className="text-2xl font-bold text-accent-blue">
                                 {stat.value !== undefined ? stat.value.toLocaleString() : "-"}
                               </div>
                             </div>
@@ -772,9 +772,9 @@ export default function ReportsPage() {
           {/* Export Options */}
           {reportGenerated && !loading && (
             <motion.div variants={item} className="mb-8">
-              <div className="bg-white rounded-xl p-6 shadow-md border border-[#E2C275]/30">
+              <div className="bg-white rounded-xl p-6 shadow-md border border-accent-blue/30">
                 <div className="font-bold text-xl mb-4 flex items-center gap-2">
-                  <FiDownload className="text-[#1D4ED8]" />
+                  <FiDownload className="text-accent-blue" />
                   Export Options
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -786,7 +786,7 @@ export default function ReportsPage() {
                   ].map((option, idx) => (
                     <motion.button
                       key={option.format}
-                      className="flex flex-col items-center gap-3 p-6 border border-gray-200 rounded-lg hover:border-[#E2C275] hover:bg-[#FFF7E3]/50 transition-all"
+                      className="flex flex-col items-center gap-3 p-6 border border-gray-200 rounded-lg hover:border-accent-blue hover:bg-light-bg/50 transition-all"
                       whileHover={{ y: -2 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => handleExport(option.format)}

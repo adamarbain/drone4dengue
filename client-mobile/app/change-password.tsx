@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import ModalAlert from '../components/ModalAlert';
 import BottomNav from './components/BottomNav';
 
 export default function ChangePasswordPage() {
@@ -296,16 +295,49 @@ export default function ChangePasswordPage() {
                 </ScrollView>
             </KeyboardAvoidingView>
 
-            <ModalAlert
+            {/* Alert Modal */}
+            <Modal
                 visible={modal.visible}
-                type={modal.type}
-                title={modal.type === 'success' ? 'Success' : 'Error'}
-                message={modal.message}
-                onClose={() => {
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => {
                     setModal({ ...modal, visible: false });
                     if (modal.type === 'success') router.back();
                 }}
-            />
+            >
+                <View className="flex-1 bg-black/50 items-center justify-center px-6">
+                    <View className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl">
+                        <View className="items-center mb-4">
+                            <View className={`w-16 h-16 rounded-full items-center justify-center mb-3 ${
+                                modal.type === 'success' ? 'bg-green-100' : 'bg-red-100'
+                            }`}>
+                                <Ionicons 
+                                    name={modal.type === 'success' ? 'checkmark-circle' : 'alert-circle'} 
+                                    size={32} 
+                                    color={modal.type === 'success' ? '#10B981' : '#EF4444'} 
+                                />
+                            </View>
+                            <Text className="text-xl font-bold text-[#181D27] text-center mb-2">
+                                {modal.type === 'success' ? 'Success' : 'Error'}
+                            </Text>
+                            <Text className="text-sm text-[#6B7280] text-center">
+                                {modal.message}
+                            </Text>
+                        </View>
+                        <TouchableOpacity
+                            onPress={() => {
+                                setModal({ ...modal, visible: false });
+                                if (modal.type === 'success') router.back();
+                            }}
+                            className={`py-3 rounded-xl ${
+                                modal.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+                            }`}
+                        >
+                            <Text className="text-center font-semibold text-white">OK</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
 
             {/* Confirmation Modal */}
             <Modal

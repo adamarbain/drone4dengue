@@ -205,21 +205,21 @@ export default function DashboardPage() {
     {
       label: "Risk Prediction Today",
       value: dashboardStats.riskPredictionsToday,
-      icon: <FiActivity className="text-[#1D4ED8]" />,
+      icon: <FiActivity className="text-accent-blue" />,
       change: 0, // This would need historical data to calculate
       isIncrease: true,
     },
     {
       label: "Drone Insights Uploaded",
       value: dashboardStats.droneInsightsUploaded,
-      icon: <FiCamera className="text-[#1D4ED8]" />,
+      icon: <FiCamera className="text-accent-blue" />,
       change: 0, // This would need historical data to calculate
       isIncrease: true,
     },
     {
       label: "Active Users",
       value: dashboardStats.activeUsers,
-      icon: <FiUsers className="text-[#1D4ED8]" />,
+      icon: <FiUsers className="text-accent-blue" />,
       change: 0, // This would need historical data to calculate
       isIncrease: false,
     },
@@ -228,13 +228,13 @@ export default function DashboardPage() {
   // Show loading state if companyId is not available
   if (!companyId) {
     return (
-      <div className="min-h-screen bg-[#FFF7E3] flex flex-row border-[8px] border-[#E2C275] overflow-hidden">
+      <div className="min-h-screen bg-light-bg flex flex-row border-[8px] border-accent-blue overflow-hidden">
         <AdminSidebar current="Dashboard" />
         <main className="flex-1 flex flex-col">
           <AdminHeader />
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <div className="w-8 h-8 border-4 border-[#A21C1C] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <div className="w-8 h-8 border-4 border-accent-blue border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
               <p className="text-gray-600">Loading dashboard...</p>
             </div>
           </div>
@@ -244,7 +244,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FFF7E3] flex flex-row border-[8px] border-[#E2C275] overflow-hidden">
+    <div className="min-h-screen bg-[#FFF7E3] flex flex-row overflow-hidden">
       <AdminSidebar current="Dashboard" />
       <main className="flex-1 flex flex-col">
         <AdminHeader />
@@ -254,11 +254,11 @@ export default function DashboardPage() {
           <motion.div variants={item} className="mb-8">
             <div className="flex justify-between items-center">
               <div>
-                <h1 className="text-3xl font-bold text-black mb-1">
+                <h1 className="text-3xl font-bold text-primary-dark mb-1">
                   Welcome Back, {user?.name || 'Admin'}
                 </h1>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-[#1D4ED8]"></div>
+                  <div className="w-2 h-2 rounded-full bg-accent-blue"></div>
                   <div className="text-lg text-gray-600">
                     Organisation: {company?.name || user?.organization || 'University Malaya'}
                   </div>
@@ -267,7 +267,7 @@ export default function DashboardPage() {
               <button
                 onClick={handleRefresh}
                 disabled={isLoading}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-[#1D4ED8] text-[#1D4ED8] rounded-lg hover:bg-[#EFF6FF] transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-accent-blue text-accent-blue rounded-lg hover:bg-accent-blue hover:text-white transition-colors disabled:opacity-50"
               >
                 <FiRefreshCw className={isLoading ? 'animate-spin' : ''} />
                 Refresh
@@ -287,11 +287,11 @@ export default function DashboardPage() {
               Array.from({ length: 3 }).map((_, idx) => (
                 <motion.div
                   key={idx}
-                  className="bg-white rounded-xl shadow-md overflow-hidden border border-[#E2C275]/30"
+                  className="bg-white rounded-xl shadow-md overflow-hidden border border-accent-blue/30"
                 >
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-4">
-                      <div className="p-3 bg-[#FFF7E3] rounded-lg w-12 h-12 animate-pulse"></div>
+                      <div className="p-3 bg-light-bg rounded-lg w-12 h-12 animate-pulse"></div>
                       <div className="w-20 h-4 bg-gray-200 rounded animate-pulse"></div>
                     </div>
                     <div className="w-16 h-10 bg-gray-200 rounded animate-pulse mb-2"></div>
@@ -304,13 +304,13 @@ export default function DashboardPage() {
               stats.map((stat, idx) => (
                 <motion.div
                   key={stat.label}
-                  className="bg-white rounded-xl shadow-md overflow-hidden border border-[#E2C275]/30"
-                  whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(226, 194, 117, 0.2)" }}
+                  className="bg-white rounded-xl shadow-md overflow-hidden border border-accent-blue/30"
+                  whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(73, 136, 196, 0.2)" }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-4">
-                      <div className="p-3 bg-[#FFF7E3] rounded-lg">{stat.icon}</div>
+                      <div className="p-3 bg-light-bg rounded-lg">{stat.icon}</div>
                       <div
                         className={`flex items-center gap-1 text-sm ${stat.isIncrease ? "text-green-600" : "text-red-600"}`}
                       >
@@ -329,18 +329,18 @@ export default function DashboardPage() {
 
           {/* Quick Action */}
           <motion.div variants={item} className="mb-10">
-            <div className="font-bold text-xl mb-4">Quick Action</div>
+            <div className="font-bold text-xl mb-4 text-primary-dark">Quick Action</div>
             <div className="flex gap-4">
               <button 
                 onClick={() => setIsPredictionModalOpen(true)}
-                className="bg-[#1D4ED8] text-white px-6 py-3 rounded-lg font-bold text-base hover:bg-[#1E3A8A] transition-all flex items-center gap-2 shadow-md hover:shadow-lg"
+                className="bg-accent-blue text-white px-6 py-3 rounded-lg font-bold text-base hover:bg-secondary-blue transition-all flex items-center gap-2 shadow-md hover:shadow-lg"
               >
                 <FiPlus />
                 New Risk Prediction
               </button>
               <Link 
                 href="/drone-management"
-                className="bg-white text-[#1D4ED8] border border-[#1D4ED8] px-6 py-3 rounded-lg font-bold text-base hover:bg-[#EFF6FF] transition-all flex items-center gap-2"
+                className="bg-white text-accent-blue border border-accent-blue px-6 py-3 rounded-lg font-bold text-base hover:bg-accent-blue hover:text-white transition-all flex items-center gap-2"
               >
                 <FiUpload />
                 Upload New Drone Images
@@ -351,15 +351,15 @@ export default function DashboardPage() {
           {/* Recent Predictions Table */}
           <motion.div variants={item} className="mb-10">
             <div className="flex justify-between items-center mb-4">
-              <div className="font-bold text-xl">Recent Predictions</div>
-              <button className="text-[#1D4ED8] hover:underline text-sm font-medium flex items-center gap-1">
+              <div className="font-bold text-xl text-primary-dark">Recent Predictions</div>
+              <button className="text-accent-blue hover:underline text-sm font-medium flex items-center gap-1">
                 View all <FiArrowUp className="rotate-45" size={14} />
               </button>
             </div>
             <div className="overflow-x-auto rounded-xl shadow-md">
               <table className="min-w-full bg-white rounded-xl overflow-hidden">
                 <thead>
-                  <tr className="text-left text-black font-semibold text-base bg-[#F3EAD8]">
+                  <tr className="text-left text-primary-dark font-semibold text-base bg-light-bg">
                     <th className="py-4 px-6">Area</th>
                     <th className="py-4 px-6">Date</th>
                     <th className="py-4 px-6">Status</th>
@@ -371,7 +371,7 @@ export default function DashboardPage() {
                   {isLoading ? (
                     // Loading skeleton for table
                     Array.from({ length: 3 }).map((_, idx) => (
-                      <tr key={idx} className={`border-b border-gray-100 last:border-0 ${idx % 2 === 0 ? "bg-white" : "bg-[#F9F6F2]"}`}>
+                      <tr key={idx} className={`border-b border-gray-100 last:border-0 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
                         <td className="py-4 px-6">
                           <div className="w-24 h-4 bg-gray-200 rounded animate-pulse"></div>
                         </td>
@@ -396,7 +396,7 @@ export default function DashboardPage() {
                     recentPredictions.map((row, idx) => (
                       <tr
                         key={row.id}
-                        className={`border-b border-gray-100 last:border-0 hover:bg-[#FFF7E3]/50 transition-colors ${idx % 2 === 0 ? "bg-white" : "bg-[#F9F6F2]"}`}
+                        className={`border-b border-gray-100 last:border-0 hover:bg-light-bg/50 transition-colors ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
                       >
                         <td className="py-4 px-6 font-medium text-black">
                           {/* Show cached or async resolved area name */}
@@ -420,10 +420,10 @@ export default function DashboardPage() {
                         </td>
                         <td className="py-4 px-6">
                           <div className="flex gap-2">
-                            <button className="p-2 rounded-lg hover:bg-[#EFF6FF] text-[#1D4ED8]">
+                            <button className="p-2 rounded-lg hover:bg-light-bg/50 text-accent-blue">
                               <FiEye size={18} />
                             </button>
-                            <button className="p-2 rounded-lg hover:bg-[#EFF6FF] text-[#1D4ED8]">
+                            <button className="p-2 rounded-lg hover:bg-light-bg/50 text-accent-blue">
                               <FiDownload size={18} />
                             </button>
                           </div>
@@ -444,10 +444,10 @@ export default function DashboardPage() {
 
           {/* Recent Drone Images */}
           <motion.div variants={item}>
-            <div className="font-bold text-xl mb-4">Recent Drone Images</div>
+            <div className="font-bold text-xl mb-4 text-primary-dark">Recent Drone Images</div>
             {loadingImages ? (
               <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1D4ED8] mx-auto mb-4"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-blue mx-auto mb-4"></div>
                 <p className="text-gray-500">Loading images...</p>
               </div>
             ) : recentDroneImages.length > 0 ? (
@@ -455,7 +455,7 @@ export default function DashboardPage() {
                 {recentDroneImages.slice(0, 6).map((image, idx) => (
                   <motion.div
                     key={image.id}
-                    className="rounded-xl overflow-hidden shadow-md bg-white p-3 border border-[#E2C275]/30"
+                    className="rounded-xl overflow-hidden shadow-md bg-white p-3 border border-accent-blue/30"
                     whileHover={{ y: -5 }}
                     transition={{ type: "spring", stiffness: 300 }}
                   >
@@ -486,7 +486,7 @@ export default function DashboardPage() {
                           </div>
                         )}
                       </div>
-                      <button className="text-[#1D4ED8] hover:bg-[#EFF6FF] p-1.5 rounded-lg transition-colors">
+                      <button className="text-accent-blue hover:bg-light-bg/50 p-1.5 rounded-lg transition-colors">
                         <FiEye size={16} />
                       </button>
                     </div>

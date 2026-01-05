@@ -387,15 +387,15 @@ export default function UserManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FFF7E3] flex flex-row border-[8px] border-[#E2C275] overflow-hidden">
+    <div className="min-h-screen bg-[#FFF7E3] flex flex-row overflow-hidden">
       <AdminSidebar current="User Management" />
       <main className="flex-1 flex flex-col">
         <AdminHeader />
         <motion.section className="px-10 py-8" variants={container} initial="hidden" animate="show">
           <motion.div variants={item} className="mb-8">
-            <h1 className="text-3xl font-bold text-black mb-1">User Management</h1>
+            <h1 className="text-3xl font-bold text-primary-dark mb-1">User Management</h1>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#1D4ED8]"></div>
+              <div className="w-2 h-2 rounded-full bg-accent-blue"></div>
               <div className="text-lg text-gray-600">
                 Manage all users within your company. Users can only see and manage data from their own company.
               </div>
@@ -405,14 +405,14 @@ export default function UserManagementPage() {
           {/* Quick Action */}
           <motion.div variants={item} className="mb-8 flex gap-4">
             <button
-              className="bg-[#1D4ED8] text-white px-8 py-3 rounded-lg font-bold text-base hover:bg-[#1E3A8A] transition-all flex items-center gap-2 shadow-md"
+              className="bg-accent-blue text-white px-8 py-3 rounded-lg font-bold text-base hover:bg-secondary-blue transition-all flex items-center gap-2 shadow-md"
               onClick={() => setOpenModalCreateUser(true)}
             >
               <FiPlus />
               Add New User
             </button>
             <button
-              className="bg-white text-[#1D4ED8] border border-[#1D4ED8] px-8 py-3 rounded-lg font-bold text-base hover:bg-[#EFF6FF] transition-all flex items-center gap-2"
+              className="bg-white text-accent-blue border border-accent-blue px-8 py-3 rounded-lg font-bold text-base hover:bg-accent-blue hover:text-white transition-all flex items-center gap-2"
               onClick={handleBulkDelete}
               disabled={selectedUsers.length === 0}
             >
@@ -429,7 +429,7 @@ export default function UserManagementPage() {
               { label: "Pending Users", value: summary.pending || 0, color: "bg-yellow-500" },
               { label: "Admin Users", value: summary.admin || 0, color: "bg-purple-500" },
             ].map((stat) => (
-              <div key={stat.label} className="bg-white rounded-xl p-6 shadow-md border border-[#E2C275]/30">
+              <div key={stat.label} className="bg-white rounded-xl p-6 shadow-md border border-accent-blue/30">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-2xl font-bold">{stat.value}</div>
@@ -446,9 +446,9 @@ export default function UserManagementPage() {
 
           {/* Status Management Quick Actions */}
           <motion.div variants={item} className="mb-8">
-            <div className="bg-white rounded-xl p-6 shadow-md border border-[#E2C275]/30">
+            <div className="bg-white rounded-xl p-6 shadow-md border border-accent-blue/30">
               <div className="font-bold text-lg mb-4 flex items-center gap-2">
-                <FiCheckCircle className="text-[#1D4ED8]" />
+                <FiCheckCircle className="text-accent-blue" />
                 Quick Status Actions
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -530,17 +530,17 @@ export default function UserManagementPage() {
             </div>
 
             {/* Enhanced Header */}
-            <div className="bg-[#1D4ED8] rounded-t-xl px-6 py-4 flex items-center gap-4">
+            <div className="bg-accent-blue rounded-t-xl px-6 py-4 flex items-center gap-4">
               <div className="flex items-center gap-3">
                 <button
-                  className="bg-white text-[#1D4ED8] rounded-lg p-2 hover:bg-gray-100 transition-colors"
+                  className="bg-white text-accent-blue rounded-lg p-2 hover:bg-gray-100 transition-colors"
                   onClick={() => setOpenModalCreateUser(true)}
                 >
                   <FiPlus />
                 </button>
                 <div className="relative">
                   <button
-                    className="bg-white text-[#1D4ED8] rounded-lg p-2 hover:bg-gray-100 transition-colors"
+                    className="bg-white text-accent-blue rounded-lg p-2 hover:bg-gray-100 transition-colors"
                     onClick={() => setFilterOpen(!filterOpen)}
                   >
                     <FiFilter />
@@ -573,7 +573,7 @@ export default function UserManagementPage() {
                       </div>
                       <div className="mt-4 flex gap-2">
                         <button
-                          className="bg-[#1D4ED8] text-white px-3 py-1 rounded"
+                          className="bg-accent-blue text-white px-3 py-1 rounded"
                           onClick={() => {
                             setFilterOpen(false)
                             fetchUsers()
@@ -597,7 +597,7 @@ export default function UserManagementPage() {
                   )}
                 </div>
                 <button
-                  className="bg-white text-[#1D4ED8] rounded-lg p-2 hover:bg-gray-100 transition-colors"
+                  className="bg-white text-accent-blue rounded-lg p-2 hover:bg-gray-100 transition-colors"
                   onClick={exportToCSV}
                   title="Export to CSV"
                 >
@@ -622,11 +622,11 @@ export default function UserManagementPage() {
             <div className="overflow-x-auto rounded-b-xl bg-white shadow-lg">
               <table className="min-w-full">
                 <thead>
-                  <tr className="text-left text-black font-semibold text-base border-b border-gray-200 bg-[#F3EAD8]">
+                  <tr className="text-left text-primary-dark font-semibold text-base border-b border-gray-200 bg-light-bg">
                     <th className="py-4 px-6">
                       <input
                         type="checkbox"
-                        className="accent-[#1D4ED8] rounded"
+                        className="accent-accent-blue rounded"
                         checked={selectedUsers.length === users.length}
                         onChange={toggleSelectAll}
                       />
@@ -643,8 +643,8 @@ export default function UserManagementPage() {
                   {filteredUsers.map((user, idx) => (
                     <motion.tr
                       key={user.id}
-                      className={`border-b border-gray-100 last:border-0 hover:bg-[#FFF7E3]/50 transition-colors ${
-                        idx % 2 === 0 ? "bg-white" : "bg-[#F9F6F2]"
+                      className={`border-b border-gray-100 last:border-0 hover:bg-light-bg/50 transition-colors ${
+                        idx % 2 === 0 ? "bg-white" : "bg-gray-50"
                       }`}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -653,7 +653,7 @@ export default function UserManagementPage() {
                       <td className="py-4 px-6">
                         <input
                           type="checkbox"
-                          className="accent-[#1D4ED8] rounded"
+                          className="accent-accent-blue rounded"
                           checked={selectedUsers.includes(user.id)}
                           onChange={() => toggleSelectUser(user.id)}
                         />
@@ -667,7 +667,7 @@ export default function UserManagementPage() {
                               alt={user.name}
                               width={40}
                               height={40}
-                              className="rounded-full object-cover border-2 border-[#E2C275]"
+                              className="rounded-full object-cover border-2 border-accent-blue"
                             />
                             {user.status === "Verified" && (
                               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
@@ -723,7 +723,7 @@ export default function UserManagementPage() {
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-2">
                           <button
-                            className="p-2 rounded-lg hover:bg-[#EFF6FF] text-[#1D4ED8] transition-colors"
+                            className="p-2 rounded-lg hover:bg-light-bg/50 text-accent-blue transition-colors"
                             onClick={() => setUpdateUser(user)}
                           >
                             <FiEdit2 size={16} />
@@ -767,7 +767,7 @@ export default function UserManagementPage() {
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Modal Header */}
-                <div className="bg-gradient-to-r from-[#1D4ED8] to-[#1E3A8A] px-6 py-4">
+                <div className="bg-gradient-to-r from-accent-blue to-secondary-blue px-6 py-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -817,7 +817,7 @@ export default function UserManagementPage() {
                     {/* Email Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiMail className="text-[#1D4ED8]" size={16} />
+                        <FiMail className="text-accent-blue" size={16} />
                         Email Address <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -825,20 +825,20 @@ export default function UserManagementPage() {
                         placeholder="Enter email address"
                         value={newUser.email}
                         onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all"
                       />
                     </div>
 
                     {/* Role Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiShield className="text-[#1D4ED8]" size={16} />
+                        <FiShield className="text-accent-blue" size={16} />
                         Role <span className="text-red-500">*</span>
                       </label>
                       <select
                         value={newUser.role}
                         onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all"
                       >
                         <option value="user">User</option>
                         <option value="admin">Admin</option>
@@ -848,7 +848,7 @@ export default function UserManagementPage() {
                     {/* Company Field - Read Only */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiShield className="text-[#1D4ED8]" size={16} />
+                        <FiShield className="text-accent-blue" size={16} />
                         Company
                       </label>
                       <div className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
@@ -872,7 +872,7 @@ export default function UserManagementPage() {
                     <button
                       onClick={handleCreateUser}
                       disabled={creating || !newUser.email}
-                      className="flex-1 px-4 py-3 bg-[#1D4ED8] text-white rounded-lg hover:bg-[#1E3A8A] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="flex-1 px-4 py-3 bg-accent-blue text-white rounded-lg hover:bg-secondary-blue transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                     {creating ? (
                       <>
@@ -912,7 +912,7 @@ export default function UserManagementPage() {
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Modal Header */}
-                <div className="bg-gradient-to-r from-[#1D4ED8] to-[#1E3A8A] px-6 py-4">
+                <div className="bg-gradient-to-r from-accent-blue to-secondary-blue px-6 py-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -949,9 +949,9 @@ export default function UserManagementPage() {
                           alt={updateUser.name}
                           width={80}
                           height={80}
-                          className="rounded-full object-cover border-4 border-[#E2C275]"
+                          className="rounded-full object-cover border-4 border-accent-blue"
                         />
-                        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#1D4ED8] rounded-full flex items-center justify-center">
+                        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-accent-blue rounded-full flex items-center justify-center">
                           <FiEdit2 className="text-white" size={14} />
                         </div>
                       </div>
@@ -960,7 +960,7 @@ export default function UserManagementPage() {
                     {/* Name Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiUser className="text-[#1D4ED8]" size={16} />
+                        <FiUser className="text-accent-blue" size={16} />
                         Full Name
                       </label>
                       <input
@@ -968,14 +968,14 @@ export default function UserManagementPage() {
                         placeholder="Enter full name"
                         value={updateUser.name}
                         onChange={(e) => setUpdateUser({ ...updateUser, name: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all"
                       />
                     </div>
 
                     {/* Email Field - Read Only */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiMail className="text-[#1D4ED8]" size={16} />
+                        <FiMail className="text-accent-blue" size={16} />
                         Email Address
                         <span className="text-xs text-gray-400">(cannot be changed)</span>
                       </label>
@@ -987,7 +987,7 @@ export default function UserManagementPage() {
                     {/* Phone Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiPhone className="text-[#1D4ED8]" size={16} />
+                        <FiPhone className="text-accent-blue" size={16} />
                         Phone Number
                       </label>
                       <input
@@ -995,14 +995,14 @@ export default function UserManagementPage() {
                         placeholder="Enter phone number"
                         value={updateUser.phone || ""}
                         onChange={(e) => setUpdateUser({ ...updateUser, phone: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all"
                       />
                     </div>
 
                     {/* Address Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiMapPin className="text-[#1D4ED8]" size={16} />
+                        <FiMapPin className="text-accent-blue" size={16} />
                         Address
                       </label>
                       <input
@@ -1010,14 +1010,14 @@ export default function UserManagementPage() {
                         placeholder="Enter address"
                         value={updateUser.address || ""}
                         onChange={(e) => setUpdateUser({ ...updateUser, address: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E2C275] focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent transition-all"
                       />
                     </div>
 
                     {/* Role Field - Read Only */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiShield className="text-[#1D4ED8]" size={16} />
+                        <FiShield className="text-accent-blue" size={16} />
                         Role
                         <span className="text-xs text-gray-400">(cannot be changed)</span>
                       </label>
@@ -1030,7 +1030,7 @@ export default function UserManagementPage() {
                     {/* Company Field */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <FiShield className="text-[#1D4ED8]" size={16} />
+                        <FiShield className="text-accent-blue" size={16} />
                         Company
                       </label>
                       <div className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
@@ -1051,7 +1051,7 @@ export default function UserManagementPage() {
                   <button
                     onClick={handleUpdateProfile}
                     disabled={updating || !updateUser.name || !updateUser.email}
-                    className="flex-1 px-4 py-3 bg-[#1D4ED8] text-white rounded-lg hover:bg-[#1E3A8A] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-3 bg-accent-blue text-white rounded-lg hover:bg-secondary-blue transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {updating ? (
                       <>
@@ -1196,7 +1196,7 @@ export default function UserManagementPage() {
                   <p className="text-gray-600 mb-8">{successDialogMessage}</p>
                   <button
                     onClick={() => setShowSuccessDialog(false)}
-                    className="w-full bg-[#1D4ED8] text-white py-3 rounded-xl font-bold hover:bg-[#1E3A8A] transition-colors"
+                    className="w-full bg-accent-blue text-white py-3 rounded-xl font-bold hover:bg-secondary-blue transition-colors"
                   >
                     Great!
                   </button>

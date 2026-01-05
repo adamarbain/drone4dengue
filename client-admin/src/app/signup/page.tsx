@@ -160,12 +160,12 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 relative overflow-hidden flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-primary-dark via-secondary-blue to-accent-blue relative overflow-hidden flex items-center justify-center">
       {/* Decorative elements */}
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-yellow-100 rounded-full transform translate-y-1/2 -translate-x-1/4 opacity-80"></div>
-      <div className="absolute top-1/4 right-0 w-80 h-80 bg-blue-600 rounded-full transform translate-x-1/3 -translate-y-1/4 opacity-60"></div>
-      <div className="absolute top-0 right-1/4 w-64 h-64 bg-yellow-200 rounded-full transform -translate-y-1/2 opacity-80"></div>
-      <div className="absolute bottom-1/4 left-1/3 w-48 h-48 bg-blue-500 rounded-full transform translate-y-1/4 opacity-40"></div>
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-light-bg rounded-full transform translate-y-1/2 -translate-x-1/4 opacity-80"></div>
+      <div className="absolute top-1/4 right-0 w-80 h-80 bg-accent-blue rounded-full transform translate-x-1/3 -translate-y-1/4 opacity-60"></div>
+      <div className="absolute top-0 right-1/4 w-64 h-64 bg-light-bg rounded-full transform -translate-y-1/2 opacity-80"></div>
+      <div className="absolute bottom-1/4 left-1/3 w-48 h-48 bg-secondary-blue rounded-full transform translate-y-1/4 opacity-40"></div>
 
       {/* Animated mosquito silhouettes */}
       <motion.div
@@ -202,7 +202,7 @@ export default function SignUpPage() {
           <h1 className="text-white text-3xl font-bold">
             Drone4Dengue
             <br />
-            <span className="text-yellow-300">Admin</span>
+            <span className="text-light-bg">Admin</span>
           </h1>
         </motion.div>
 
@@ -213,7 +213,7 @@ export default function SignUpPage() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="w-full"
         >
-          <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-xl overflow-hidden rounded-2xl mb-10">
+          <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-xl overflow-hidden rounded-2xl mb-10 mt-24">
             <CardContent className="space-y-6 p-8">
               {/* Mosquito icon */}
               <div className="flex justify-center mb-6">
@@ -262,7 +262,7 @@ export default function SignUpPage() {
                     Email Address
                   </Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-200 w-5 h-5" />
                     <Input
                       id="email"
                       type="email"
@@ -300,7 +300,7 @@ export default function SignUpPage() {
                     Full Name
                   </Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-light-bg w-5 h-5" />
                     <Input
                       id="name"
                       type="text"
@@ -308,10 +308,10 @@ export default function SignUpPage() {
                       required
                       value={formData.name}
                       onChange={(e) => handleInputChange("name", e.target.value)}
-                      className="pl-12 pr-4 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="pl-12 pr-4 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-accent-blue focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                   </div>
-                  {fieldErrors.name && <p className="text-xs text-yellow-200">{fieldErrors.name}</p>}
+                  {fieldErrors.name && <p className="text-xs text-light-bg">{fieldErrors.name}</p>}
                 </div>
                 
 
@@ -320,7 +320,7 @@ export default function SignUpPage() {
                     Username
                   </Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-light-bg w-5 h-5" />
                     <Input
                       id="username"
                       type="text"
@@ -328,10 +328,10 @@ export default function SignUpPage() {
                       required
                       value={formData.username}
                       onChange={(e) => handleInputChange("username", e.target.value)}
-                      className="pl-12 pr-4 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="pl-12 pr-4 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-accent-blue focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                   </div>
-                  {fieldErrors.username && <p className="text-xs text-yellow-200">{fieldErrors.username}</p>}
+                  {fieldErrors.username && <p className="text-xs text-light-bg">{fieldErrors.username}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -339,7 +339,7 @@ export default function SignUpPage() {
                     Phone Number
                   </Label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-200 w-5 h-5" />
                     <Input
                       id="phone"
                       type="tel"
@@ -369,13 +369,13 @@ export default function SignUpPage() {
                     Company
                   </Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-light-bg w-5 h-5" />
                     <select
                       id="company"
                       required
                       value={formData.companyId}
                       onChange={(e) => handleInputChange("companyId", e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="w-full pl-12 pr-4 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white focus:border-accent-blue focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                       disabled={loadingCompanies}
                     >
                       <option value="" className="bg-gray-800 text-white">
@@ -388,7 +388,7 @@ export default function SignUpPage() {
                       ))}
                     </select>
                   </div>
-                  {fieldErrors.companyId && <p className="text-xs text-yellow-200">{fieldErrors.companyId}</p>}
+                  {fieldErrors.companyId && <p className="text-xs text-light-bg">{fieldErrors.companyId}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -396,7 +396,7 @@ export default function SignUpPage() {
                     Password
                   </Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-light-bg w-5 h-5" />
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
@@ -431,7 +431,7 @@ export default function SignUpPage() {
                           })
                         }
                       }}
-                      className="pl-12 pr-12 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="pl-12 pr-12 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-accent-blue focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                     <Button
                       type="button"
@@ -443,7 +443,7 @@ export default function SignUpPage() {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
-                  {fieldErrors.password && <p className="text-xs text-yellow-200">{fieldErrors.password}</p>}
+                  {fieldErrors.password && <p className="text-xs text-light-bg">{fieldErrors.password}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -451,7 +451,7 @@ export default function SignUpPage() {
                     Confirm Password
                   </Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-light-bg w-5 h-5" />
                     <Input
                       id="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
@@ -473,7 +473,7 @@ export default function SignUpPage() {
                           })
                         }
                       }}
-                      className="pl-12 pr-12 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-white/40 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="pl-12 pr-12 py-3 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:border-accent-blue focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                     <Button
                       type="button"
@@ -485,14 +485,14 @@ export default function SignUpPage() {
                       {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
-                  {fieldErrors.confirmPassword && <p className="text-xs text-yellow-200">{fieldErrors.confirmPassword}</p>}
+                  {fieldErrors.confirmPassword && <p className="text-xs text-light-bg">{fieldErrors.confirmPassword}</p>}
                 </div>
 
                 <div className="flex items-start gap-2 mt-2">
                   <button
                     type="button"
                     onClick={() => setAcceptedTerms(!acceptedTerms)}
-                    className="mt-0.5 focus:outline-none focus:ring-2 focus:ring-white/40 rounded"
+                    className="mt-0.5 focus:outline-none focus:ring-2 focus:ring-accent-blue rounded"
                     aria-label="Accept Terms and Privacy Policy"
                   >
                     {acceptedTerms ? (
@@ -512,13 +512,13 @@ export default function SignUpPage() {
                     </Link>
                   </span>
                 </div>
-                {fieldErrors.terms && <p className="text-xs text-yellow-200">{fieldErrors.terms}</p>}
+                {fieldErrors.terms && <p className="text-xs text-light-bg">{fieldErrors.terms}</p>}
 
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="pt-2">
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3 bg-gradient-to-r from-white to-white text-blue-900 font-semibold rounded-lg hover:from-gray-100 hover:to-gray-200 transition-all shadow-lg disabled:opacity-70"
+                    className="w-full py-3 bg-gradient-to-r from-white to-white text-primary-dark font-semibold rounded-lg hover:from-gray-100 hover:to-gray-200 transition-all shadow-lg disabled:opacity-70"
                   >
                     {isLoading ? "CREATING ACCOUNT..." : "SIGN UP"}
                   </Button>
