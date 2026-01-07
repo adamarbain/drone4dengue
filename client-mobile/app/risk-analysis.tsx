@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { getNearbyDengueCases } from '../utils/userApi';
 import BottomNav from './components/BottomNav';
+import { isTablet, getHorizontalPadding, getMapHeight } from '../utils/responsive';
 
 interface PredictionResult {
   latitude: number;
@@ -451,53 +452,84 @@ export default function RiskAnalysisPage() {
   
   // Background color based on risk level
   const backgroundColor = riskLevel === 'high' ? '#BF3131' : riskLevel === 'medium' ? '#EAD196' : '#F3F4F6';
+  const tablet = isTablet();
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor }}>
       {/* Header */}
       <View 
-        className="flex-row items-center px-4 py-3"
-        style={{ backgroundColor: headerBg }}
+        className="flex-row items-center"
+        style={{ 
+          backgroundColor: headerBg, 
+          paddingHorizontal: tablet ? 24 : 16, 
+          paddingVertical: tablet ? 16 : 12,
+          maxWidth: tablet ? 800 : undefined,
+          width: '100%',
+          alignSelf: 'center',
+        }}
       >
         <TouchableOpacity onPress={() => router.back()} className="mr-3">
-          <Feather name="arrow-left" size={24} color={headerTextColor} />
+          <Feather name="arrow-left" size={tablet ? 28 : 24} color={headerTextColor} />
         </TouchableOpacity>
         <View className="flex-1 flex-row items-center justify-center">
           <Text 
-            className="text-2xl font-extrabold"
-            style={{ color: headerTextColor, fontFamily: 'SF Pro' }}
+            className="font-extrabold"
+            style={{ color: headerTextColor, fontFamily: 'SF Pro', fontSize: tablet ? 28 : 24 }}
           >
             {riskLevel === 'high' ? 'High Risk' : riskLevel === 'medium' ? 'Medium Risk' : 'Low Risk'}
           </Text>
           {riskLevel === 'high' && (
-            <Text style={{ fontSize: 24, marginLeft: 8 }}>🚨</Text>
+            <Text style={{ fontSize: tablet ? 28 : 24, marginLeft: 8 }}>🚨</Text>
           )}
           {riskLevel === 'medium' && (
-            <Feather name="alert-circle" size={20} color={headerTextColor} style={{ marginLeft: 8 }} />
+            <Feather name="alert-circle" size={tablet ? 24 : 20} color={headerTextColor} style={{ marginLeft: 8 }} />
           )}
           {riskLevel === 'low' && (
-            <Feather name="info" size={20} color="#3B82F6" style={{ marginLeft: 8 }} />
+            <Feather name="info" size={tablet ? 24 : 20} color="#3B82F6" style={{ marginLeft: 8 }} />
           )}
         </View>
-        <View style={{ width: 32 }} />
+        <View style={{ width: tablet ? 40 : 32 }} />
       </View>
 
       <ScrollView 
         showsVerticalScrollIndicator={false} 
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ 
+          paddingBottom: 100,
+          alignItems: tablet ? 'center' : undefined,
+        }}
       >
         {/* White Card Container */}
-        <View className="bg-white mx-4 mt-4 mb-4 rounded-3xl" style={{ overflow: 'hidden' }}>
+        <View 
+          className="bg-white rounded-3xl" 
+          style={{ 
+            overflow: 'hidden',
+            marginHorizontal: tablet ? 0 : 16,
+            marginTop: 16,
+            marginBottom: 16,
+            maxWidth: tablet ? 700 : undefined,
+            width: tablet ? '100%' : undefined,
+          }}
+        >
           {/* Risk Details Title - Above Map */}
-          <View className="px-4 pt-4">
-            <Text className="text-xl font-extrabold text-black mb-3" style={{ fontFamily: 'SF Pro' }}>
+          <View style={{ paddingHorizontal: tablet ? 24 : 16, paddingTop: tablet ? 24 : 16 }}>
+            <Text 
+              className="font-extrabold text-black mb-3" 
+              style={{ fontFamily: 'SF Pro', fontSize: tablet ? 24 : 20 }}
+            >
               Risk Details
             </Text>
           </View>
 
           {/* Map Section */}
-          <View className="h-80 mx-4 rounded-2xl overflow-hidden" style={{ position: 'relative' }}>
+          <View 
+            className="rounded-2xl overflow-hidden" 
+            style={{ 
+              position: 'relative',
+              marginHorizontal: tablet ? 24 : 16,
+              height: getMapHeight(),
+            }}
+          >
             <MapView
               ref={mapRef}
               style={{ width: '100%', height: '100%' }}
@@ -542,9 +574,10 @@ export default function RiskAnalysisPage() {
             
             {/* Floating Nearby Cases Card */}
             <View
-              className="absolute bottom-3 left-3 right-3 rounded-2xl p-4 flex-row items-center justify-between"
+              className="absolute bottom-3 left-3 right-3 rounded-2xl flex-row items-center justify-between"
               style={{ 
                 backgroundColor: riskLevel === 'high' ? '#BF3131' : riskLevel === 'low' ? '#FEF3C7' : '#EAD196',
+                padding: tablet ? 20 : 16,
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.25,
@@ -555,12 +588,12 @@ export default function RiskAnalysisPage() {
               <View className="flex-row items-center flex-1">
                 <Feather 
                   name={riskLevel === 'high' ? 'activity' : 'alert-circle'} 
-                  size={24} 
+                  size={tablet ? 28 : 24} 
                   color={riskLevel === 'high' ? '#FFFFFF' : '#7D0A0A'} 
                 />
                 <Text 
-                  className="ml-3 font-bold text-base"
-                  style={{ color: riskLevel === 'high' ? '#FFFFFF' : '#7D0A0A' }}
+                  className="ml-3 font-bold"
+                  style={{ color: riskLevel === 'high' ? '#FFFFFF' : '#7D0A0A', fontSize: tablet ? 18 : 16 }}
                 >
                   {loadingNearbyCases 
                     ? 'Loading...' 
@@ -579,8 +612,9 @@ export default function RiskAnalysisPage() {
             {showReturnButton && (
               <TouchableOpacity
                 onPress={returnToOriginalLocation}
-                className="absolute top-3 left-3 bg-[#7D0A0A] rounded-full p-3 shadow-lg"
+                className="absolute top-3 left-3 bg-[#7D0A0A] rounded-full shadow-lg"
                 style={{
+                  padding: tablet ? 16 : 12,
                   shadowColor: '#7D0A0A',
                   shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 0.3,
@@ -588,13 +622,13 @@ export default function RiskAnalysisPage() {
                   elevation: 6,
                 }}
               >
-                <Feather name="navigation" size={20} color="white" />
+                <Feather name="navigation" size={tablet ? 24 : 20} color="white" />
               </TouchableOpacity>
             )}
           </View>
 
           {/* Risk Details Section */}
-          <View className="px-4 mt-4 pb-4">
+          <View style={{ paddingHorizontal: tablet ? 24 : 16, marginTop: 16, paddingBottom: 16 }}>
             {/* Location Info */}
             {/* <View className="mb-4">
               <Text className="text-sm text-gray-600 mb-1">Current Location:</Text>
@@ -606,78 +640,75 @@ export default function RiskAnalysisPage() {
 
             {/* Temperature Card */}
             <View
-              className="rounded-2xl p-4 flex-row items-center justify-between"
-              style={{ backgroundColor: getCardBackgroundColor(temperatureLevel) }}
+              className="rounded-2xl flex-row items-center justify-between"
+              style={{ backgroundColor: getCardBackgroundColor(temperatureLevel), padding: tablet ? 20 : 16 }}
             >
               <View className="flex-1">
                 <Text 
-                  className="text-2xl font-extrabold mb-1"
-                  style={{ color: getCardTextColor(temperatureLevel) }}
+                  className="font-extrabold mb-1"
+                  style={{ color: getCardTextColor(temperatureLevel), fontSize: tablet ? 28 : 24 }}
                 >
                   {temperature}° C
                 </Text>
                 <Text 
-                  className="text-sm"
-                  style={{ color: getCardSecondaryTextColor(temperatureLevel) }}
+                  style={{ color: getCardSecondaryTextColor(temperatureLevel), fontSize: tablet ? 16 : 14 }}
                 >
                   {temperatureLevel === 'high' ? 'High Temperature' : temperatureLevel === 'medium' ? 'Moderate Temperature' : 'Low Temperature'}
                 </Text>
               </View>
               <Feather 
                 name="droplet" 
-                size={24} 
+                size={tablet ? 28 : 24} 
                 color={getCardIconColor(temperatureLevel)} 
               />
             </View>
 
             {/* Rainfall Card */}
             <View
-              className="rounded-2xl p-4 flex-row items-center justify-between"
-              style={{ backgroundColor: getCardBackgroundColor(rainfallLevel) }}
+              className="rounded-2xl flex-row items-center justify-between"
+              style={{ backgroundColor: getCardBackgroundColor(rainfallLevel), padding: tablet ? 20 : 16 }}
             >
               <View className="flex-1">
                 <Text 
-                  className="text-2xl font-extrabold mb-1"
-                  style={{ color: getCardTextColor(rainfallLevel) }}
+                  className="font-extrabold mb-1"
+                  style={{ color: getCardTextColor(rainfallLevel), fontSize: tablet ? 28 : 24 }}
                 >
                   {rainfall.toFixed(1)} mm
                 </Text>
                 <Text 
-                  className="text-sm"
-                  style={{ color: getCardSecondaryTextColor(rainfallLevel) }}
+                  style={{ color: getCardSecondaryTextColor(rainfallLevel), fontSize: tablet ? 16 : 14 }}
                 >
                   {rainfallLevel === 'high' ? 'High Rainfall' : rainfallLevel === 'medium' ? 'Moderate Rainfall' : 'Low Rainfall'}
                 </Text>
               </View>
               <Feather 
                 name="cloud-rain" 
-                size={24} 
+                size={tablet ? 28 : 24} 
                 color={getCardIconColor(rainfallLevel)} 
               />
             </View>
 
             {/* Humidity Card */}
             <View
-              className="rounded-2xl p-4 flex-row items-center justify-between"
-              style={{ backgroundColor: getCardBackgroundColor(humidityLevel) }}
+              className="rounded-2xl flex-row items-center justify-between"
+              style={{ backgroundColor: getCardBackgroundColor(humidityLevel), padding: tablet ? 20 : 16 }}
             >
               <View className="flex-1">
                 <Text 
-                  className="text-2xl font-extrabold mb-1"
-                  style={{ color: getCardTextColor(humidityLevel) }}
+                  className="font-extrabold mb-1"
+                  style={{ color: getCardTextColor(humidityLevel), fontSize: tablet ? 28 : 24 }}
                 >
                   {humidity}%
                 </Text>
                 <Text 
-                  className="text-sm"
-                  style={{ color: getCardSecondaryTextColor(humidityLevel) }}
+                  style={{ color: getCardSecondaryTextColor(humidityLevel), fontSize: tablet ? 16 : 14 }}
                 >
                   {humidityLevel === 'high' ? 'High Humidity' : humidityLevel === 'medium' ? 'Moderate Humidity' : 'Low Humidity'}
                 </Text>
               </View>
               <Feather 
                 name="wind" 
-                size={24} 
+                size={tablet ? 28 : 24} 
                 color={getCardIconColor(humidityLevel)} 
               />
             </View>
@@ -686,33 +717,39 @@ export default function RiskAnalysisPage() {
             {/* Actions Section */}
             {riskLevel === 'high' ? (
               <>
-                <Text className="text-xl font-extrabold text-black mb-3 mt-2" style={{ fontFamily: 'SF Pro' }}>
+                <Text 
+                  className="font-extrabold text-black mb-3 mt-2" 
+                  style={{ fontFamily: 'SF Pro', fontSize: tablet ? 24 : 20 }}
+                >
                   Required Actions
                 </Text>
                 <View className="mb-4">
                   <View className="flex-row items-start mb-3">
                     <View className="w-2 h-2 rounded-full bg-gray-400 mt-2 mr-3" />
-                    <Text className="flex-1 text-base text-gray-800">Conduct Immediate Fogging</Text>
+                    <Text className="flex-1 text-gray-800" style={{ fontSize: tablet ? 18 : 16 }}>Conduct Immediate Fogging</Text>
                   </View>
                   <View className="flex-row items-start mb-3">
                     <View className="w-2 h-2 rounded-full bg-gray-400 mt-2 mr-3" />
-                    <Text className="flex-1 text-base text-gray-800">Clear stagnant water around home</Text>
+                    <Text className="flex-1 text-gray-800" style={{ fontSize: tablet ? 18 : 16 }}>Clear stagnant water around home</Text>
                   </View>
                   <View className="flex-row items-start mb-3">
                     <View className="w-2 h-2 rounded-full bg-gray-400 mt-2 mr-3" />
-                    <Text className="flex-1 text-base text-gray-800">Apply Mosquito repellents frequently</Text>
+                    <Text className="flex-1 text-gray-800" style={{ fontSize: tablet ? 18 : 16 }}>Apply Mosquito repellents frequently</Text>
                   </View>
                   <View className="flex-row items-start mb-3">
                     <View className="w-2 h-2 rounded-full bg-gray-400 mt-2 mr-3" />
-                    <Text className="flex-1 text-base text-gray-800">Wear long sleeve shirts and long pants</Text>
+                    <Text className="flex-1 text-gray-800" style={{ fontSize: tablet ? 18 : 16 }}>Wear long sleeve shirts and long pants</Text>
                   </View>
                 </View>
 
                 {/* Call Local Authority Button - Only for High Risk */}
                 <TouchableOpacity
                   onPress={callLocalAuthority}
-                  className="bg-[#BF3131] rounded-2xl py-4 px-6 mb-6 items-center justify-center"
+                  className="bg-[#BF3131] rounded-2xl items-center justify-center"
                   style={{
+                    paddingVertical: tablet ? 20 : 16,
+                    paddingHorizontal: tablet ? 32 : 24,
+                    marginBottom: 24,
                     shadowColor: '#BF3131',
                     shadowOffset: { width: 0, height: 4 },
                     shadowOpacity: 0.3,
@@ -720,62 +757,110 @@ export default function RiskAnalysisPage() {
                     elevation: 6,
                   }}
                 >
-                  <Text className="text-white font-bold text-lg">Call Local Authority Now</Text>
+                  <Text className="text-white font-bold" style={{ fontSize: tablet ? 20 : 18 }}>Call Local Authority Now</Text>
                 </TouchableOpacity>
               </>
             ) : riskLevel === 'medium' ? (
               <>
-                <Text className="text-xl font-extrabold text-black mb-3 mt-2" style={{ fontFamily: 'SF Pro' }}>
+                <Text 
+                  className="font-extrabold text-black mb-3 mt-2" 
+                  style={{ fontFamily: 'SF Pro', fontSize: tablet ? 24 : 20 }}
+                >
                   Recommended Actions
                 </Text>
                 <View className="mb-4">
                   <View className="flex-row items-start mb-3">
                     <View className="w-2 h-2 rounded-full bg-gray-400 mt-2 mr-3" />
-                    <Text className="flex-1 text-base text-gray-800">Regularly check and remove standing water</Text>
+                    <Text className="flex-1 text-gray-800" style={{ fontSize: tablet ? 18 : 16 }}>Regularly check and remove standing water</Text>
                   </View>
                   <View className="flex-row items-start mb-3">
                     <View className="w-2 h-2 rounded-full bg-gray-400 mt-2 mr-3" />
-                    <Text className="flex-1 text-base text-gray-800">Use mosquito nets while sleeping</Text>
+                    <Text className="flex-1 text-gray-800" style={{ fontSize: tablet ? 18 : 16 }}>Use mosquito nets while sleeping</Text>
                   </View>
                   <View className="flex-row items-start mb-3">
                     <View className="w-2 h-2 rounded-full bg-gray-400 mt-2 mr-3" />
-                    <Text className="flex-1 text-base text-gray-800">Apply mosquito repellent when outdoors</Text>
+                    <Text className="flex-1 text-gray-800" style={{ fontSize: tablet ? 18 : 16 }}>Apply mosquito repellent when outdoors</Text>
                   </View>
                   <View className="flex-row items-start mb-3">
                     <View className="w-2 h-2 rounded-full bg-gray-400 mt-2 mr-3" />
-                    <Text className="flex-1 text-base text-gray-800">Keep windows and doors closed during peak hours</Text>
+                    <Text className="flex-1 text-gray-800" style={{ fontSize: tablet ? 18 : 16 }}>Keep windows and doors closed during peak hours</Text>
                   </View>
                   <View className="flex-row items-start mb-3">
                     <View className="w-2 h-2 rounded-full bg-gray-400 mt-2 mr-3" />
-                    <Text className="flex-1 text-base text-gray-800">Maintain clean surroundings and proper drainage</Text>
+                    <Text className="flex-1 text-gray-800" style={{ fontSize: tablet ? 18 : 16 }}>Maintain clean surroundings and proper drainage</Text>
                   </View>
                 </View>
               </>
             ) : (
               <>
-                <Text className="text-xl font-extrabold text-black mb-3 mt-2" style={{ fontFamily: 'SF Pro' }}>
+                <Text 
+                  className="font-extrabold text-black mb-3 mt-2" 
+                  style={{ fontFamily: 'SF Pro', fontSize: tablet ? 24 : 20 }}
+                >
                   Preventive Measures
                 </Text>
                 <View className="mb-6">
                   <View className="flex-row items-start mb-3">
                     <View className="w-2 h-2 rounded-full bg-gray-400 mt-2 mr-3" />
-                    <Text className="flex-1 text-base text-gray-800">Maintain cleanliness of home surroundings.</Text>
+                    <Text className="flex-1 text-gray-800" style={{ fontSize: tablet ? 18 : 16 }}>Maintain cleanliness of home surroundings.</Text>
                   </View>
                   <View className="flex-row items-start mb-3">
                     <View className="w-2 h-2 rounded-full bg-gray-400 mt-2 mr-3" />
-                    <Text className="flex-1 text-base text-gray-800">Encourage family and community to stay informed through official channels</Text>
+                    <Text className="flex-1 text-gray-800" style={{ fontSize: tablet ? 18 : 16 }}>Encourage family and community to stay informed through official channels</Text>
                   </View>
                   <View className="flex-row items-start mb-3">
                     <View className="w-2 h-2 rounded-full bg-gray-400 mt-2 mr-3" />
-                    <Text className="flex-1 text-base text-gray-800">Stay Hydrated by drinking 8L water per day.</Text>
+                    <Text className="flex-1 text-gray-800" style={{ fontSize: tablet ? 18 : 16 }}>Stay Hydrated by drinking 8L water per day.</Text>
                   </View>
                   <View className="flex-row items-start mb-3">
                     <View className="w-2 h-2 rounded-full bg-gray-400 mt-2 mr-3" />
-                    <Text className="flex-1 text-base text-gray-800">Check and clean flower pots, roof gutters, and water containers weekly.</Text>
+                    <Text className="flex-1 text-gray-800" style={{ fontSize: tablet ? 18 : 16 }}>Check and clean flower pots, roof gutters, and water containers weekly.</Text>
                   </View>
                 </View>
               </>
             )}
+
+            {/* Data Sources Section */}
+            <View className="mt-4 pt-4 border-t border-gray-200">
+              <Text className="font-semibold text-gray-700 mb-2" style={{ fontSize: tablet ? 16 : 14 }}>Data Sources & References</Text>
+              <View className="flex-row flex-wrap">
+                <TouchableOpacity 
+                  onPress={() => Linking.openURL('https://www.who.int/news-room/fact-sheets/detail/dengue-and-severe-dengue')}
+                  className="bg-blue-50 rounded-lg mr-2 mb-2 flex-row items-center"
+                  style={{ paddingHorizontal: tablet ? 12 : 8, paddingVertical: tablet ? 8 : 4 }}
+                >
+                  <Text className="text-blue-700" style={{ fontSize: tablet ? 14 : 12 }}>WHO</Text>
+                  <Feather name="external-link" size={tablet ? 14 : 10} color="#1D4ED8" style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => Linking.openURL('https://idengue.mysa.gov.my/')}
+                  className="bg-green-50 rounded-lg mr-2 mb-2 flex-row items-center"
+                  style={{ paddingHorizontal: tablet ? 12 : 8, paddingVertical: tablet ? 8 : 4 }}
+                >
+                  <Text className="text-green-700" style={{ fontSize: tablet ? 14 : 12 }}>iDengue (KKM)</Text>
+                  <Feather name="external-link" size={tablet ? 14 : 10} color="#15803D" style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => Linking.openURL('https://www.cdc.gov/dengue/')}
+                  className="bg-red-50 rounded-lg mr-2 mb-2 flex-row items-center"
+                  style={{ paddingHorizontal: tablet ? 12 : 8, paddingVertical: tablet ? 8 : 4 }}
+                >
+                  <Text className="text-red-700" style={{ fontSize: tablet ? 14 : 12 }}>CDC</Text>
+                  <Feather name="external-link" size={tablet ? 14 : 10} color="#B91C1C" style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => Linking.openURL('https://open-meteo.com/')}
+                  className="bg-amber-50 rounded-lg mb-2 flex-row items-center"
+                  style={{ paddingHorizontal: tablet ? 12 : 8, paddingVertical: tablet ? 8 : 4 }}
+                >
+                  <Text className="text-amber-700" style={{ fontSize: tablet ? 14 : 12 }}>Open-Meteo</Text>
+                  <Feather name="external-link" size={tablet ? 14 : 10} color="#B45309" style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
+              </View>
+              <Text className="text-gray-500 mt-2 italic" style={{ fontSize: tablet ? 14 : 12 }}>
+                Predictions are for informational purposes only. Consult healthcare professionals for medical advice.
+              </Text>
+            </View>
           </View>
         </View>
       </ScrollView>

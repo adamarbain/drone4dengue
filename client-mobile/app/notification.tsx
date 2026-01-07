@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import BottomNav from './components/BottomNav';
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../utils/userApi';
+import { isTablet, getHorizontalPadding, getModalContainerStyle } from '../utils/responsive';
 
 interface Notification {
   id: string;
@@ -204,44 +205,64 @@ export default function NotificationPage() {
     return `${displayHours}:${displayMinutes} ${ampm}`;
   };
 
+  const tablet = isTablet();
+  const iconSize = tablet ? 56 : 48;
+  const riskIconSize = tablet ? 28 : 24;
+
   return (
     <SafeAreaView className="flex-1 bg-white">
-      {/* Header */}
-      <View className="px-6 pt-4 pb-4">
-        <View className="mb-4">
-          <View className="flex-row items-start justify-between mb-2">
-            <View className="flex-1 mr-3">
-              <Text className="text-4xl font-extrabold" style={{ fontFamily: 'SF Pro', color: '#0F2854' }}>
-                Notification
-              </Text>
-              <Text className="text-sm mt-1" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
-                View and keep track of your dengue risk alerts and updates
-              </Text>
+      {/* Header Container for Tablet Centering */}
+      <View style={{ 
+        width: '100%', 
+        maxWidth: tablet ? 700 : undefined,
+        alignSelf: 'center',
+        paddingHorizontal: tablet ? getHorizontalPadding() : 0,
+      }}>
+        {/* Header */}
+        <View style={{ paddingHorizontal: tablet ? 0 : 24, paddingTop: 16, paddingBottom: 16 }}>
+          <View className="mb-4">
+            <View className="flex-row items-start justify-between mb-2">
+              <View className="flex-1 mr-3">
+                <Text 
+                  className="font-extrabold" 
+                  style={{ fontFamily: 'SF Pro', color: '#0F2854', fontSize: tablet ? 44 : 36 }}
+                >
+                  Notification
+                </Text>
+                <Text style={{ fontSize: tablet ? 16 : 14, marginTop: 4, color: 'rgba(15, 40, 84, 0.75)' }}>
+                  View and keep track of your dengue risk alerts and updates
+                </Text>
+              </View>
+              {hasUnreadNotifications && (
+                <TouchableOpacity
+                  onPress={handleMarkAllAsRead}
+                  disabled={markingAllAsRead}
+                  className="flex-row items-center bg-[#1C4D8D] rounded-lg"
+                  style={{ paddingHorizontal: tablet ? 16 : 12, paddingVertical: tablet ? 12 : 8 }}
+                >
+                  {markingAllAsRead ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Feather name="check-circle" size={tablet ? 20 : 16} color="#FFFFFF" />
+                      <Text 
+                        className="text-white font-semibold ml-1"
+                        style={{ fontSize: tablet ? 16 : 14 }}
+                      >
+                        Mark All Read
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
-            {hasUnreadNotifications && (
-              <TouchableOpacity
-                onPress={handleMarkAllAsRead}
-                disabled={markingAllAsRead}
-                className="flex-row items-center bg-[#1C4D8D] px-3 py-2 rounded-lg"
-              >
-                {markingAllAsRead ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
-                    <Feather name="check-circle" size={16} color="#FFFFFF" />
-                    <Text className="text-white text-sm font-semibold ml-1">Mark All Read</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            )}
           </View>
-        </View>
 
-        {/* Filters */}
-        <View className="mb-4">
-          {/* Read Status Filter */}
-          <View className="mb-3">
-            <Text className="text-sm font-semibold mb-2" style={{ color: '#0F2854' }}>Notification Status</Text>
+          {/* Filters */}
+          <View className="mb-4">
+            {/* Read Status Filter */}
+            <View className="mb-3">
+              <Text className="font-semibold mb-2" style={{ color: '#0F2854', fontSize: tablet ? 16 : 14 }}>Notification Status</Text>
             {Platform.OS === 'ios' ? (
               <>
                 <TouchableOpacity
@@ -316,7 +337,7 @@ export default function NotificationPage() {
 
           {/* Type Filter */}
           <View>
-            <Text className="text-sm font-semibold mb-2" style={{ color: '#0F2854' }}>Notification Type</Text>
+            <Text className="font-semibold mb-2" style={{ color: '#0F2854', fontSize: tablet ? 16 : 14 }}>Notification Type</Text>
             {Platform.OS === 'ios' ? (
               <>
                 <TouchableOpacity
@@ -398,106 +419,122 @@ export default function NotificationPage() {
           </View>
         </View>
       </View>
+      </View>
 
       {/* Notifications List */}
       {loading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#1C4D8D" />
-          <Text className="mt-4" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>Loading notifications...</Text>
+          <Text className="mt-4" style={{ color: 'rgba(15, 40, 84, 0.75)', fontSize: tablet ? 16 : 14 }}>Loading notifications...</Text>
         </View>
       ) : notifications.length === 0 ? (
         <View className="flex-1 items-center justify-center">
-          <Feather name="bell-off" size={48} color="#9CA3AF" />
-          <Text className="text-gray-600 mt-4 text-base">No notifications</Text>
+          <Feather name="bell-off" size={tablet ? 64 : 48} color="#9CA3AF" />
+          <Text className="text-gray-600 mt-4" style={{ fontSize: tablet ? 18 : 16 }}>No notifications</Text>
         </View>
       ) : (
         <ScrollView 
           showsVerticalScrollIndicator={false}
           className="flex-1"
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ 
+            paddingBottom: 100,
+            alignItems: tablet ? 'center' : undefined,
+          }}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
           }
         >
-          {notifications.map((notification, index) => (
-            <View key={notification.id}>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => handleNotificationPress(notification)}
-                className={`mx-4 rounded-2xl p-4 ${notification.isRead ? 'bg-[#BDE8F5]' : 'bg-white'}`}
-                style={{
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 2,
-                  elevation: 2,
-                  borderLeftWidth: notification.isRead ? 0 : 4,
-                  borderLeftColor: '#4988C4',
-                }}
-              >
-                <View className="flex-row items-start">
-                  {/* Icon */}
-                  <View className="mr-4">
-                    {getRiskIcon(notification.riskLevel || 'low', notification.type)}
+          <View style={{ 
+            width: '100%', 
+            maxWidth: tablet ? 700 : undefined,
+            paddingHorizontal: tablet ? getHorizontalPadding() : 0,
+          }}>
+            {notifications.map((notification, index) => (
+              <View key={notification.id}>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => handleNotificationPress(notification)}
+                  className={`rounded-2xl ${notification.isRead ? 'bg-white' : 'bg-white'}`}
+                  style={{
+                    marginHorizontal: tablet ? 0 : 16,
+                    padding: tablet ? 20 : 16,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 2,
+                    elevation: 2,
+                    borderLeftWidth: notification.isRead ? 0 : 4,
+                    borderLeftColor: '#4988C4',
+                  }}
+                >
+                  <View className="flex-row items-start">
+                    {/* Icon */}
+                    <View className="mr-4">
+                      {getRiskIcon(notification.riskLevel || 'low', notification.type)}
+                    </View>
+
+                    {/* Content */}
+                    <View className="flex-1">
+                      {/* Title */}
+                      <Text 
+                        className="font-bold mb-2" 
+                        style={{ 
+                          fontFamily: 'SF Pro', 
+                          color: notification.isRead ? 'rgba(15, 40, 84, 0.65)' : '#0F2854',
+                          fontSize: tablet ? 18 : 16 
+                        }}
+                      >
+                        {notification.title}
+                      </Text>
+
+                      {/* Message */}
+                      <Text className="mb-2" style={{ color: 'rgba(15, 40, 84, 0.8)', fontSize: tablet ? 16 : 14 }}>
+                        {notification.message}
+                      </Text>
+
+                      {/* Recommendations if available (for daily_prediction) */}
+                      {notification.metadata?.recommendations && notification.metadata.recommendations.length > 0 && (
+                        <View className="mt-2 mb-1">
+                          <Text className="font-semibold mb-1" style={{ color: 'rgba(15, 40, 84, 0.75)', fontSize: tablet ? 14 : 12 }}>Recommendations:</Text>
+                          {notification.metadata.recommendations.slice(0, 2).map((rec: any, idx: number) => (
+                            <Text key={idx} className="ml-2" style={{ color: 'rgba(15, 40, 84, 0.75)', fontSize: tablet ? 14 : 12 }}>
+                              • {rec.title}
+                            </Text>
+                          ))}
+                        </View>
+                      )}
+
+                      {/* Location if available */}
+                      {notification.location && notification.type !== 'daily_prediction' && (
+                        <View className="flex-row items-center mb-1">
+                          <Feather name="map-pin" size={tablet ? 18 : 14} color="#4988C4" />
+                          <Text className="ml-2" style={{ color: 'rgba(15, 40, 84, 0.8)', fontSize: tablet ? 16 : 14 }}>{notification.location}</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Time */}
+                    <View className="ml-2">
+                      <Text style={{ color: 'rgba(15, 40, 84, 0.5)', fontSize: tablet ? 14 : 12 }}>
+                        {formatTime(new Date(notification.createdAt))}
+                      </Text>
+                      {!notification.isRead && (
+                        <View 
+                          className="bg-[#4988C4] rounded-full mt-1 ml-auto" 
+                          style={{ width: tablet ? 10 : 8, height: tablet ? 10 : 8 }}
+                        />
+                      )}
+                    </View>
                   </View>
+                </TouchableOpacity>
 
-                  {/* Content */}
-                  <View className="flex-1">
-                    {/* Title */}
-                    <Text className="text-base font-bold mb-2" style={{ fontFamily: 'SF Pro', color: notification.isRead ? 'rgba(15, 40, 84, 0.65)' : '#0F2854' }}>
-                      {notification.title}
-                    </Text>
-
-                    {/* Message */}
-                    <Text className="text-sm mb-2" style={{ color: 'rgba(15, 40, 84, 0.8)' }}>
-                      {notification.message}
-                    </Text>
-
-                    {/* Recommendations if available (for daily_prediction) */}
-                    {notification.metadata?.recommendations && notification.metadata.recommendations.length > 0 && (
-                      <View className="mt-2 mb-1">
-                        <Text className="text-xs font-semibold mb-1" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>Recommendations:</Text>
-                        {notification.metadata.recommendations.slice(0, 2).map((rec: any, idx: number) => (
-                          <Text key={idx} className="text-xs ml-2" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
-                            • {rec.title}
-                          </Text>
-                        ))}
-                      </View>
-                    )}
-
-                    {/* Location if available */}
-                    {notification.location && notification.type !== 'daily_prediction' && (
-                      <View className="flex-row items-center mb-1">
-                        <Feather name="map-pin" size={14} color="#4988C4" />
-                        <Text className="text-sm ml-2" style={{ color: 'rgba(15, 40, 84, 0.8)' }}>{notification.location}</Text>
-                      </View>
-                    )}
-
-                    {/* Type */}
-                    {/* <View className="flex-row items-center">
-                      <Feather name="tag" size={14} color="#1D4ED8" />
-                      <Text className="text-sm text-gray-700 ml-2 capitalize">{notification.type.replace('_', ' ')}</Text>
-                    </View> */}
-                  </View>
-
-                  {/* Time */}
-                  <View className="ml-2">
-                    <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.5)' }}>
-                      {formatTime(new Date(notification.createdAt))}
-                    </Text>
-                    {!notification.isRead && (
-                      <View className="w-2 h-2 bg-[#4988C4] rounded-full mt-1 ml-auto" />
-                    )}
-                  </View>
-                </View>
-              </TouchableOpacity>
-
-              {/* Separator Line */}
-              {index < notifications.length - 1 && (
-                <View className="h-px bg-black mx-4" style={{ opacity: 0.1 }} />
-              )}
-            </View>
-          ))}
+                {/* Separator Line */}
+                {index < notifications.length - 1 && (
+                  <View className="h-px bg-black" style={{ opacity: 0.1, marginHorizontal: tablet ? 0 : 16 }} />
+                )}
+              </View>
+            ))}
+          </View>
         </ScrollView>
       )}
 

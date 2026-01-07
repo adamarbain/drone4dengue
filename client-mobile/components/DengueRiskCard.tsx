@@ -505,6 +505,11 @@ export default function DengueRiskCard({ onPredictionUpdate }: DengueRiskCardPro
               )}
             </TouchableOpacity>
           )}
+          
+          {/* Disclaimer Note */}
+          <Text className="text-xs text-gray-500 mt-3 italic text-center">
+            For informational purposes only. Not medical advice.
+          </Text>
         </View>
       )}
 

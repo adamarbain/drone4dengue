@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchCurrentUser } from '../utils/userApi';
+import { isTablet, getHorizontalPadding, moderateScale } from '../utils/responsive';
 
 type User = {
   id: string;
@@ -26,7 +27,6 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [showAboutModal, setShowAboutModal] = useState(false);
 
   // Debug: Check token and expiration
   useEffect(() => {
@@ -138,28 +138,73 @@ export default function ProfilePage() {
     <SafeAreaView className="flex-1 bg-white">
       <ScrollView 
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ 
+          paddingBottom: 100,
+          alignItems: isTablet() ? 'center' : undefined,
+        }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View className="px-6 pt-10 pb-2">
-          <Text className="text-4xl font-extrabold mb-1" style={{ fontFamily: 'SF Pro', color: '#0F2854' }}>
-            Profile
-          </Text>
-          <Text className="text-sm mb-4" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
-            Manage your account settings and personal information
-          </Text>
-          <Text className="text-base font-semibold mb-2" style={{ color: '#0F2854' }}>Welcome back, {user?.username || ''}!</Text>
-        </View>
-
-        {/* User Card */}
-        <View className="mx-6 bg-[#1C4D8D] rounded-2xl shadow-lg flex-row items-center p-4 mb-6">
-          <View className="w-16 h-16 rounded-full overflow-hidden border-4 border-white mr-4">
-            <Image source={require('../assets/profile-user-image.png')} className="w-full h-full" resizeMode="cover" />
+        <View style={{ 
+          width: '100%', 
+          maxWidth: isTablet() ? 600 : undefined,
+          paddingHorizontal: isTablet() ? getHorizontalPadding() : 24,
+        }}>
+          {/* Header */}
+          <View className="pt-10 pb-2">
+            <Text 
+              className="font-extrabold mb-1" 
+              style={{ 
+                fontFamily: 'SF Pro', 
+                color: '#0F2854',
+                fontSize: isTablet() ? 42 : 36,
+              }}
+            >
+              Profile
+            </Text>
+            <Text 
+              className="mb-4" 
+              style={{ 
+                color: 'rgba(15, 40, 84, 0.75)',
+                fontSize: isTablet() ? 16 : 14,
+              }}
+            >
+              Manage your account settings and personal information
+            </Text>
+            <Text 
+              className="font-semibold mb-2" 
+              style={{ 
+                color: '#0F2854',
+                fontSize: isTablet() ? 18 : 16,
+              }}
+            >
+              Welcome back, {user?.username || ''}!
+            </Text>
           </View>
-          <View className="flex-1">
-            <Text className="text-lg font-bold text-white" style={{ fontFamily: 'SF Pro' }}>{user?.name || ''}</Text>
-            <Text className="text-xs text-[#D7D7D7]" style={{ fontFamily: 'SF Pro' }}>@{user?.username || ''}</Text>
+
+          {/* User Card */}
+          <View 
+            className="bg-[#1C4D8D] rounded-2xl shadow-lg flex-row items-center mb-6"
+            style={{ padding: isTablet() ? 20 : 16 }}
+          >
+            <View 
+              className="rounded-full overflow-hidden border-4 border-white mr-4"
+              style={{ width: isTablet() ? 80 : 64, height: isTablet() ? 80 : 64 }}
+            >
+              <Image source={require('../assets/profile-user-image.png')} className="w-full h-full" resizeMode="cover" />
+            </View>
+            <View className="flex-1">
+              <Text 
+                className="font-bold text-white" 
+                style={{ fontFamily: 'SF Pro', fontSize: isTablet() ? 22 : 18 }}
+              >
+                {user?.name || ''}
+              </Text>
+              <Text 
+                className="text-[#D7D7D7]" 
+                style={{ fontFamily: 'SF Pro', fontSize: isTablet() ? 14 : 12 }}
+              >
+                @{user?.username || ''}
+              </Text>
             <View className="flex-row items-center mt-1">
               {user?.status === 'Verified' ? (
                 <View className="flex-row items-center bg-green-500/20 px-2 py-1 rounded-full">
@@ -179,88 +224,170 @@ export default function ProfilePage() {
             className="ml-2 flex-row items-center px-3 h-10 rounded-full bg-white"
             style={{ shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }}
           >
-            <Ionicons name="log-out-outline" size={22} color="#1C4D8D" />
-            <Text className="ml-2 font-bold text-sm" style={{ color: '#1C4D8D' }}>Log Out</Text>
+            <Ionicons name="log-out-outline" size={isTablet() ? 26 : 22} color="#1C4D8D" />
+            <Text 
+              className="ml-2 font-bold" 
+              style={{ color: '#1C4D8D', fontSize: isTablet() ? 16 : 14 }}
+            >
+              Log Out
+            </Text>
           </TouchableOpacity>
         </View>
 
         {/* Profile Options */}
-        <View className="mx-6 space-y-5">
+        <View className="space-y-5">
 
           {/* Verify Account - Email OTP */}
           {user?.status !== 'Verified' && (
             <TouchableOpacity
               onPress={() => router.push('/verify-otp')}
-              className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4 border-2"
-              style={{ borderColor: '#F59E0B' }}
+              className="flex-row items-center bg-white rounded-2xl shadow mb-4 border-2"
+              style={{ borderColor: '#F59E0B', padding: isTablet() ? 24 : 20 }}
             >
-              <View className="w-12 h-12 rounded-full bg-yellow-100 items-center justify-center mr-4">
-                <Ionicons name="mail-outline" size={26} color="#F59E0B" />
+              <View 
+                className="rounded-full bg-yellow-100 items-center justify-center mr-4"
+                style={{ width: isTablet() ? 56 : 48, height: isTablet() ? 56 : 48 }}
+              >
+                <Ionicons name="mail-outline" size={isTablet() ? 30 : 26} color="#F59E0B" />
               </View>
               <View className="flex-1">
-                <Text className="text-lg font-semibold" style={{ color: '#0F2854' }}>Verify Account</Text>
-                <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.6)' }}>Verify your email address via OTP</Text>
+                <Text 
+                  className="font-semibold" 
+                  style={{ color: '#0F2854', fontSize: isTablet() ? 20 : 18 }}
+                >
+                  Verify Account
+                </Text>
+                <Text 
+                  style={{ color: 'rgba(15, 40, 84, 0.6)', fontSize: isTablet() ? 14 : 12 }}
+                >
+                  Verify your email address via OTP
+                </Text>
               </View>
               <View className="bg-yellow-100 px-2 py-1 rounded-full">
-                <Text className="text-xs text-yellow-700 font-semibold">Required</Text>
+                <Text 
+                  className="text-yellow-700 font-semibold"
+                  style={{ fontSize: isTablet() ? 14 : 12 }}
+                >
+                  Required
+                </Text>
               </View>
             </TouchableOpacity>
           )}
 
           {/* My Account */}
-          <TouchableOpacity onPress={() => router.push('/edit-profile')} className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4 border" style={{ borderColor: '#4988C4' }}>
-            <View className="w-12 h-12 rounded-full bg-white items-center justify-center mr-4">
-              <Ionicons name="person-outline" size={26} color="#4988C4" />
+          <TouchableOpacity 
+            onPress={() => router.push('/edit-profile')} 
+            className="flex-row items-center bg-white rounded-2xl shadow mb-4 border" 
+            style={{ borderColor: '#4988C4', padding: isTablet() ? 24 : 20 }}
+          >
+            <View 
+              className="rounded-full bg-white items-center justify-center mr-4"
+              style={{ width: isTablet() ? 56 : 48, height: isTablet() ? 56 : 48 }}
+            >
+              <Ionicons name="person-outline" size={isTablet() ? 30 : 26} color="#4988C4" />
             </View>
             <View className="flex-1">
-              <Text className="text-lg font-semibold" style={{ color: '#0F2854' }}>My Account</Text>
-              <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.6)' }}>Update name, username, and address</Text>
+              <Text 
+                className="font-semibold" 
+                style={{ color: '#0F2854', fontSize: isTablet() ? 20 : 18 }}
+              >
+                My Account
+              </Text>
+              <Text 
+                style={{ color: 'rgba(15, 40, 84, 0.6)', fontSize: isTablet() ? 14 : 12 }}
+              >
+                Update name, username, and address
+              </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#4988C4" />
+            <Ionicons name="chevron-forward" size={isTablet() ? 24 : 20} color="#4988C4" />
           </TouchableOpacity>
 
           {/* Change Password */}
-          <TouchableOpacity onPress={() => router.push('/change-password')} className="flex-row items-center bg-white] rounded-2xl shadow p-5 mb-4 border" style={{ borderColor: '#4988C4' }}>
-            <View className="w-12 h-12 rounded-full bg-white items-center justify-center mr-4">
-              <Ionicons name="lock-closed-outline" size={26} color="#4988C4" />
+          <TouchableOpacity 
+            onPress={() => router.push('/change-password')} 
+            className="flex-row items-center bg-white rounded-2xl shadow mb-4 border" 
+            style={{ borderColor: '#4988C4', padding: isTablet() ? 24 : 20 }}
+          >
+            <View 
+              className="rounded-full bg-white items-center justify-center mr-4"
+              style={{ width: isTablet() ? 56 : 48, height: isTablet() ? 56 : 48 }}
+            >
+              <Ionicons name="lock-closed-outline" size={isTablet() ? 30 : 26} color="#4988C4" />
             </View>
             <View className="flex-1">
-              <Text className="text-lg font-semibold" style={{ color: '#0F2854' }}>Change Password</Text>
-              <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.6)' }}>Update your account password</Text>
+              <Text 
+                className="font-semibold" 
+                style={{ color: '#0F2854', fontSize: isTablet() ? 20 : 18 }}
+              >
+                Change Password
+              </Text>
+              <Text 
+                style={{ color: 'rgba(15, 40, 84, 0.6)', fontSize: isTablet() ? 14 : 12 }}
+              >
+                Update your account password
+              </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#4988C4" />
+            <Ionicons name="chevron-forward" size={isTablet() ? 24 : 20} color="#4988C4" />
           </TouchableOpacity>
 
           {/* Organisation Details - Hidden for companyId = comp-999 */}
           {user?.companyId !== 'comp-999' && (
             <TouchableOpacity 
               onPress={() => router.push('/organisation-details')}
-              className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4 border" style={{ borderColor: '#4988C4' }}
+              className="flex-row items-center bg-white rounded-2xl shadow mb-4 border" 
+              style={{ borderColor: '#4988C4', padding: isTablet() ? 24 : 20 }}
             >
-              <View className="w-12 h-12 rounded-full bg-white items-center justify-center mr-4">
-                <Ionicons name="shield-checkmark-outline" size={26} color="#4988C4" />
+              <View 
+                className="rounded-full bg-white items-center justify-center mr-4"
+                style={{ width: isTablet() ? 56 : 48, height: isTablet() ? 56 : 48 }}
+              >
+                <Ionicons name="shield-checkmark-outline" size={isTablet() ? 30 : 26} color="#4988C4" />
               </View>
               <View className="flex-1">
-                <Text className="text-lg font-semibold" style={{ color: '#0F2854' }}>Organisation Details</Text>
-                <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.6)' }}>View details about your organisation</Text>
+                <Text 
+                  className="font-semibold" 
+                  style={{ color: '#0F2854', fontSize: isTablet() ? 20 : 18 }}
+                >
+                  Organisation Details
+                </Text>
+                <Text 
+                  style={{ color: 'rgba(15, 40, 84, 0.6)', fontSize: isTablet() ? 14 : 12 }}
+                >
+                  View details about your organisation
+                </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#4988C4" />
+              <Ionicons name="chevron-forward" size={isTablet() ? 24 : 20} color="#4988C4" />
             </TouchableOpacity>
           )}
 
           {/* About App */}
           <TouchableOpacity 
-            onPress={() => setShowAboutModal(true)}
-            className="flex-row items-center bg-white rounded-2xl shadow p-5 mb-4 border" style={{ borderColor: '#4988C4' }}
+            onPress={() => router.push('/about')}
+            className="flex-row items-center bg-white rounded-2xl shadow mb-4 border" 
+            style={{ borderColor: '#4988C4', padding: isTablet() ? 24 : 20 }}
           >
-            <View className="w-12 h-12 rounded-full bg-white items-center justify-center mr-4">
-              <Ionicons name="information-circle-outline" size={26} color="#4988C4" />
+            <View 
+              className="rounded-full bg-white items-center justify-center mr-4"
+              style={{ width: isTablet() ? 56 : 48, height: isTablet() ? 56 : 48 }}
+            >
+              <Ionicons name="information-circle-outline" size={isTablet() ? 30 : 26} color="#4988C4" />
             </View>
             <View className="flex-1">
-              <Text className="text-lg font-semibold" style={{ color: '#0F2854' }}>About App</Text>
-              <Text className="text-xs" style={{ color: 'rgba(15, 40, 84, 0.6)' }}>Learn more about DengueEye</Text>
+              <Text 
+                className="font-semibold" 
+                style={{ color: '#0F2854', fontSize: isTablet() ? 20 : 18 }}
+              >
+                About App
+              </Text>
+              <Text 
+                style={{ color: 'rgba(15, 40, 84, 0.6)', fontSize: isTablet() ? 14 : 12 }}
+              >
+                Disclaimer, data sources & more
+              </Text>
             </View>
+            <Ionicons name="chevron-forward" size={isTablet() ? 24 : 20} color="#4988C4" />
           </TouchableOpacity>
+        </View>
         </View>
       </ScrollView>
 
@@ -299,34 +426,6 @@ export default function ProfilePage() {
                 <Text className="text-center font-semibold text-white">Log Out</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* About App Coming Soon Modal */}
-      <Modal
-        visible={showAboutModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowAboutModal(false)}
-      >
-        <View className="flex-1 bg-black/50 items-center justify-center px-6">
-          <View className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl">
-            <View className="items-center mb-4">
-              <View className="w-16 h-16 rounded-full bg-[#BDE8F5] items-center justify-center mb-3">
-                <Ionicons name="construct-outline" size={32} color="#4988C4" />
-              </View>
-              <Text className="text-xl font-bold text-center" style={{ color: '#0F2854' }}>Coming Soon</Text>
-              <Text className="text-sm text-center mt-2" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
-                This feature is currently under development. Stay tuned for updates!
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => setShowAboutModal(false)}
-              className="py-3 rounded-xl bg-[#1C4D8D] mt-4"
-            >
-              <Text className="text-center font-semibold text-white">Got it</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>

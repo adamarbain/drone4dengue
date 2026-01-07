@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setupNotificationListeners, initializePushNotifications, setBadgeCount } from '../utils/pushNotifications';
 import { getUnreadNotificationCount } from '../utils/userApi';
 import ErrorBoundary from '../components/ErrorBoundary';
+import MedicalDisclaimerModal from '../components/MedicalDisclaimerModal';
 
 export default function AppLayout() {
   const router = useRouter();
@@ -120,6 +121,7 @@ export default function AppLayout() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
+        <MedicalDisclaimerModal />
         <Stack
           screenOptions={{
             headerShown: false,
