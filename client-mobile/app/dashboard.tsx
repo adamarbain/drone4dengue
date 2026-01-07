@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator, Alert, TextInput, Modal } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator, Alert, TextInput, Modal, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker, Region } from 'react-native-maps';
 import { Feather } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import BottomNav from './components/BottomNav';
 import DengueRiskCard from '../components/DengueRiskCard';
 import { fetchCurrentUser, getCompanyLocations, getCompanyPredictions, getCompanySettings, getLatestDengueCases, getUserLocationAlerts, createLocationAlert, deleteLocationAlert, toggleLocationAlert } from '../utils/userApi';
 import { Ionicons } from '@expo/vector-icons';
+import { isTablet, getMapHeight, getHorizontalPadding, moderateScale } from '../utils/responsive';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -683,13 +684,34 @@ export default function Dashboard() {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <View className="flex-1 px-4 pt-2 pb-20">
+      <View 
+        className="flex-1 pt-2 pb-20"
+        style={{ 
+          paddingHorizontal: isTablet() ? getHorizontalPadding() : 16,
+          maxWidth: isTablet() ? 800 : undefined,
+          alignSelf: isTablet() ? 'center' : undefined,
+          width: '100%',
+        }}
+      >
         {/* Title */}
         <View className="mb-4">
-          <Text className="text-4xl font-extrabold" style={{ fontFamily: 'SF Pro', color: '#0F2854' }}>
+          <Text 
+            className="font-extrabold" 
+            style={{ 
+              fontFamily: 'SF Pro', 
+              color: '#0F2854',
+              fontSize: isTablet() ? 42 : 36,
+            }}
+          >
             Dashboard
           </Text>
-          <Text className="text-sm mt-1" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
+          <Text 
+            className="mt-1" 
+            style={{ 
+              color: 'rgba(15, 40, 84, 0.75)',
+              fontSize: isTablet() ? 16 : 14,
+            }}
+          >
             Monitor dengue risk predictions and case data in your area
           </Text>
         </View>
@@ -697,18 +719,32 @@ export default function Dashboard() {
         {hasCompany ? (
           <View className="flex-row mb-6 rounded-lg overflow-hidden border" style={{ borderColor: '#4988C4' }}>
             <TouchableOpacity 
-              className={`flex-1 py-3 ${activeTab === 'current' ? 'bg-[#1C4D8D]' : 'bg-[#BDE8F5]'}`}
+              className={`flex-1 ${activeTab === 'current' ? 'bg-[#1C4D8D]' : 'bg-[#BDE8F5]'}`}
+              style={{ paddingVertical: isTablet() ? 16 : 12 }}
               onPress={() => setActiveTab('current')}
             >
-              <Text className={`text-center font-bold text-base ${activeTab === 'current' ? 'text-white' : ''}`} style={activeTab === 'current' ? undefined : { color: '#0F2854' }}>
+              <Text 
+                className="text-center font-bold" 
+                style={{ 
+                  color: activeTab === 'current' ? '#FFFFFF' : '#0F2854',
+                  fontSize: isTablet() ? 18 : 16,
+                }}
+              >
                 Current
               </Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              className={`flex-1 py-3 ${activeTab === 'organisation' ? 'bg-[#1C4D8D]' : 'bg-[#BDE8F5]'}`}
+              className={`flex-1 ${activeTab === 'organisation' ? 'bg-[#1C4D8D]' : 'bg-[#BDE8F5]'}`}
+              style={{ paddingVertical: isTablet() ? 16 : 12 }}
               onPress={() => setActiveTab('organisation')}
             >
-              <Text className={`text-center font-bold text-base ${activeTab === 'organisation' ? 'text-white' : ''}`} style={activeTab === 'organisation' ? undefined : { color: '#0F2854' }}>
+              <Text 
+                className="text-center font-bold" 
+                style={{ 
+                  color: activeTab === 'organisation' ? '#FFFFFF' : '#0F2854',
+                  fontSize: isTablet() ? 18 : 16,
+                }}
+              >
                 {companyId === 'comp-999' ? 'Dengue Cases' : 'Organisation'}
               </Text>
             </TouchableOpacity>
@@ -719,7 +755,8 @@ export default function Dashboard() {
           <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
             {/* Map */}
             <View
-              className="rounded-2xl overflow-hidden mb-2 w-full h-80"
+              className="rounded-2xl overflow-hidden mb-2 w-full"
+              style={{ height: getMapHeight() }}
             >
               {locationLoading ? (
                 <View className="w-full h-full bg-gray-200 items-center justify-center">
@@ -827,7 +864,7 @@ export default function Dashboard() {
                   <View className="flex-1">
                     {/* Location Search - Positioned absolutely on top of map */}
                     <View className="absolute top-0 left-0 right-0 z-10 px-2 pt-2">
-                      <View className="flex-row items-center bg-[#BDE8F5] rounded-xl border px-3 py-2 shadow-md" style={{ borderColor: '#4988C4' }}>
+                      <View className="flex-row items-center bg-white rounded-xl border px-3 py-2 shadow-md" style={{ borderColor: '#4988C4' }}>
                         <Feather name="search" size={20} color="#4988C4" />
                         <TextInput
                           className="flex-1 ml-2 py-2 text-md"
@@ -1372,7 +1409,7 @@ export default function Dashboard() {
                           
                           {/* Selected Location Info */}
                           {newAlertLocation && (
-                            <View className="bg-[#BDE8F5] rounded-xl p-3 mb-4" style={{ borderColor: '#4988C4', borderWidth: 1 }}>
+                            <View className="bg-white rounded-xl p-3 mb-4" style={{ borderColor: '#4988C4', borderWidth: 1 }}>
                               <View className="flex-row items-start">
                                 <Ionicons name="location" size={18} color="#4988C4" style={{ marginTop: 2 }} />
                                 <Text className="text-sm ml-2 flex-1" style={{ color: '#0F2854' }} numberOfLines={2}>

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Pressable, ScrollView, Modal, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Pressable, ScrollView, Modal, ActivityIndicator, Image, KeyboardAvoidingView, Platform, useWindowDimensions } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
@@ -7,6 +7,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initGoogleSignIn, signInWithGoogle } from '../../utils/googleAuth';
+import { isTablet, moderateScale, getContentContainerStyle, getModalContainerStyle } from '../../utils/responsive';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -227,18 +228,26 @@ export default function LoginScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
-          {/* <ScrollView 
-            contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }} 
+          <ScrollView 
+            contentContainerStyle={{ 
+              flexGrow: 1, 
+              paddingBottom: 40,
+              alignItems: isTablet() ? 'center' : undefined,
+            }} 
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-          > */}
-            <View style={{ paddingHorizontal: 24 }}>
+          >
+            <View style={{ 
+              paddingHorizontal: isTablet() ? 40 : 24,
+              maxWidth: isTablet() ? 500 : undefined,
+              width: '100%',
+            }}>
               {/* Header with Logo */}
-              <View style={{ alignItems: 'center', marginTop: 40, marginBottom: 40 }}>
+              <View style={{ alignItems: 'center', marginTop: isTablet() ? 60 : 40, marginBottom: isTablet() ? 48 : 40 }}>
                 <View style={{ 
-                  width: 96, 
-                  height: 96, 
-                  borderRadius: 24, 
+                  width: isTablet() ? 120 : 96, 
+                  height: isTablet() ? 120 : 96, 
+                  borderRadius: isTablet() ? 30 : 24, 
                   backgroundColor: '#BDE8F5',
                   alignItems: 'center', 
                   justifyContent: 'center', 
@@ -251,14 +260,14 @@ export default function LoginScreen() {
                 }}>
                   <Image 
                     source={require('../../assets/dengueeye_logo.png')} 
-                    style={{ width: 64, height: 64 }}
+                    style={{ width: isTablet() ? 80 : 64, height: isTablet() ? 80 : 64 }}
                     resizeMode="contain"
                   />
                 </View>
-                <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#0F2854', letterSpacing: -0.5 }}>
+                <Text style={{ fontSize: isTablet() ? 34 : 28, fontWeight: 'bold', color: '#0F2854', letterSpacing: -0.5 }}>
                   Welcome Back
                 </Text>
-                <Text style={{ fontSize: 16, color: '#0F2854', marginTop: 8, textAlign: 'center', opacity: 0.7 }}>
+                <Text style={{ fontSize: isTablet() ? 18 : 16, color: '#0F2854', marginTop: 8, textAlign: 'center', opacity: 0.7 }}>
                   Sign in to continue protecting your community
                 </Text>
               </View>
@@ -437,15 +446,15 @@ export default function LoginScreen() {
 
               {/* Sign Up Link */}
               <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 32 }}>
-                <Text style={{ color: '#0F2854', fontSize: 16, opacity: 0.7 }}>Don't have an account? </Text>
+                <Text style={{ color: '#0F2854', fontSize: isTablet() ? 18 : 16, opacity: 0.7 }}>Don't have an account? </Text>
                 <Link href="./register" asChild>
                   <TouchableOpacity>
-                    <Text style={{ color: '#4988C4', fontWeight: 'bold', fontSize: 16 }}>Sign Up</Text>
+                    <Text style={{ color: '#4988C4', fontWeight: 'bold', fontSize: isTablet() ? 18 : 16 }}>Sign Up</Text>
                   </TouchableOpacity>
                 </Link>
               </View>
             </View>
-          {/* </ScrollView> */}
+          </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
 

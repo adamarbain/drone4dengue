@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import BottomNav from './components/BottomNav';
+import { isTablet, getHorizontalPadding, moderateScale } from '../utils/responsive';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
 
 export default function ActionPage() {
   const router = useRouter();
   const [counts, setCounts] = useState({ high: 0, medium: 0, low: 0 });
+  const tablet = isTablet();
 
   useEffect(() => {
     // Fetch recommendation counts for each risk level
@@ -37,74 +39,127 @@ export default function ActionPage() {
     fetchCounts();
   }, []);
 
+  const cardImageSize = tablet ? 160 : 128;
+  const cardTitleSize = tablet ? 24 : 18;
+  const cardTipSize = tablet ? 16 : 12;
+  const iconSize = tablet ? 18 : 14;
+
   return (
     <SafeAreaView className="flex-1 bg-white">
-      {/* Header */}
-      <View className="px-6 pt-10 pb-8">
-        <Text className="text-4xl font-extrabold text-black mb-2" style={{ fontFamily: 'SF Pro' }}>
-          Action
-        </Text>
-        <Text className="text-sm text-gray-600">
-          Get preventive recommendations based on dengue risk levels
-        </Text>
-      </View>
+      <ScrollView 
+        className="flex-1"
+        contentContainerStyle={{ 
+          flexGrow: 1,
+          alignItems: tablet ? 'center' : undefined,
+        }}
+      >
+        {/* Content Container for Tablet Centering */}
+        <View style={{ 
+          width: '100%', 
+          maxWidth: tablet ? 700 : undefined,
+          paddingHorizontal: tablet ? getHorizontalPadding() : 0,
+        }}>
+          {/* Header */}
+          <View className="px-6 pt-10 pb-8">
+            <Text 
+              className="font-extrabold text-black mb-2" 
+              style={{ fontFamily: 'SF Pro', fontSize: tablet ? 44 : 36 }}
+            >
+              Action
+            </Text>
+            <Text style={{ fontSize: tablet ? 16 : 14, color: '#6B7280' }}>
+              Get preventive recommendations based on dengue risk levels
+            </Text>
+          </View>
 
-      {/* Action Cards */}
-      <View className="flex-1 justify-top items-center">
-        <View className="w-full px-4 flex-col gap-y-4">
-          {/* High Risk */}
-          <TouchableOpacity onPress={() => router.push({ pathname: '/recommendations', params: { risk: 'high' } })}>
-            <View className="bg-[#BF3131] rounded-2xl flex-row items-center px-6 py-2">
-              <Image source={require('../assets/high-risk.png')} className="w-32 h-32 mr-6" resizeMode="contain" />
-              <View className="flex-1 justify-center">
-                <Text className="text-xl font-bold text-white text-right leading-tight">
-                  High Risk{"\n"}Recommendation
-                </Text>
-                {counts.high > 0 && (
-                  <View className="flex-row items-center justify-end mt-2">
-                    <Ionicons name="document-text-outline" size={14} color="rgba(255,255,255,0.8)" />
-                    <Text className="text-sm text-white/80 ml-1">{counts.high} tips</Text>
+          {/* Action Cards */}
+          <View className="flex-1 justify-top items-center">
+            <View className="w-full px-4 flex-col gap-y-4">
+              {/* High Risk */}
+              <TouchableOpacity onPress={() => router.push({ pathname: '/recommendations', params: { risk: 'high' } })}>
+                <View 
+                  className="bg-[#BF3131] rounded-2xl flex-row items-center"
+                  style={{ paddingHorizontal: tablet ? 32 : 24, paddingVertical: tablet ? 16 : 8 }}
+                >
+                  <Image 
+                    source={require('../assets/high-risk.png')} 
+                    style={{ width: cardImageSize, height: cardImageSize, marginRight: tablet ? 32 : 24 }}
+                    resizeMode="contain" 
+                  />
+                  <View className="flex-1 justify-center">
+                    <Text 
+                      className="font-bold text-white text-right leading-tight"
+                      style={{ fontSize: cardTitleSize }}
+                    >
+                      High Risk{"\n"}Recommendation
+                    </Text>
+                    {counts.high > 0 && (
+                      <View className="flex-row items-center justify-end mt-2">
+                        <Ionicons name="document-text-outline" size={iconSize} color="rgba(255,255,255,0.8)" />
+                        <Text style={{ fontSize: cardTipSize }} className="text-white/80 ml-1">{counts.high} tips</Text>
+                      </View>
+                    )}
                   </View>
-                )}
-              </View>
-            </View>
-          </TouchableOpacity>
-          {/* Medium Risk */}
-          <TouchableOpacity onPress={() => router.push({ pathname: '/recommendations', params: { risk: 'medium' } })}>
-            <View className="bg-[#EAD196] rounded-2xl flex-row items-center px-6 py-2">
-              <Image source={require('../assets/medium-risk.png')} className="w-32 h-32 mr-6" resizeMode="contain" />
-              <View className="flex-1 justify-center">
-                <Text className="text-xl font-bold text-black text-right leading-tight">
-                  Medium Risk{"\n"}Recommendation
-                </Text>
-                {counts.medium > 0 && (
-                  <View className="flex-row items-center justify-end mt-2">
-                    <Ionicons name="document-text-outline" size={14} color="rgba(0,0,0,0.6)" />
-                    <Text className="text-sm text-black/60 ml-1">{counts.medium} tips</Text>
+                </View>
+              </TouchableOpacity>
+              {/* Medium Risk */}
+              <TouchableOpacity onPress={() => router.push({ pathname: '/recommendations', params: { risk: 'medium' } })}>
+                <View 
+                  className="bg-[#EAD196] rounded-2xl flex-row items-center"
+                  style={{ paddingHorizontal: tablet ? 32 : 24, paddingVertical: tablet ? 16 : 8 }}
+                >
+                  <Image 
+                    source={require('../assets/medium-risk.png')} 
+                    style={{ width: cardImageSize, height: cardImageSize, marginRight: tablet ? 32 : 24 }}
+                    resizeMode="contain" 
+                  />
+                  <View className="flex-1 justify-center">
+                    <Text 
+                      className="font-bold text-black text-right leading-tight"
+                      style={{ fontSize: cardTitleSize }}
+                    >
+                      Medium Risk{"\n"}Recommendation
+                    </Text>
+                    {counts.medium > 0 && (
+                      <View className="flex-row items-center justify-end mt-2">
+                        <Ionicons name="document-text-outline" size={iconSize} color="rgba(0,0,0,0.6)" />
+                        <Text style={{ fontSize: cardTipSize }} className="text-black/60 ml-1">{counts.medium} tips</Text>
+                      </View>
+                    )}
                   </View>
-                )}
-              </View>
-            </View>
-          </TouchableOpacity>
-          {/* Low Risk */}
-          <TouchableOpacity onPress={() => router.push({ pathname: '/recommendations', params: { risk: 'low' } })}>
-            <View className="bg-[#F3F3F3] rounded-2xl flex-row items-center px-6 py-2">
-              <Image source={require('../assets/low-risk.png')} className="w-32 h-32 mr-6" resizeMode="contain" />
-              <View className="flex-1 justify-center">
-                <Text className="text-xl font-bold text-black text-right leading-tight">
-                  Low Risk{"\n"}Recommendation
-                </Text>
-                {counts.low > 0 && (
-                  <View className="flex-row items-center justify-end mt-2">
-                    <Ionicons name="document-text-outline" size={14} color="rgba(0,0,0,0.6)" />
-                    <Text className="text-sm text-black/60 ml-1">{counts.low} tips</Text>
+                </View>
+              </TouchableOpacity>
+              {/* Low Risk */}
+              <TouchableOpacity onPress={() => router.push({ pathname: '/recommendations', params: { risk: 'low' } })}>
+                <View 
+                  className="bg-[#F3F3F3] rounded-2xl flex-row items-center"
+                  style={{ paddingHorizontal: tablet ? 32 : 24, paddingVertical: tablet ? 16 : 8 }}
+                >
+                  <Image 
+                    source={require('../assets/low-risk.png')} 
+                    style={{ width: cardImageSize, height: cardImageSize, marginRight: tablet ? 32 : 24 }}
+                    resizeMode="contain" 
+                  />
+                  <View className="flex-1 justify-center">
+                    <Text 
+                      className="font-bold text-black text-right leading-tight"
+                      style={{ fontSize: cardTitleSize }}
+                    >
+                      Low Risk{"\n"}Recommendation
+                    </Text>
+                    {counts.low > 0 && (
+                      <View className="flex-row items-center justify-end mt-2">
+                        <Ionicons name="document-text-outline" size={iconSize} color="rgba(0,0,0,0.6)" />
+                        <Text style={{ fontSize: cardTipSize }} className="text-black/60 ml-1">{counts.low} tips</Text>
+                      </View>
+                    )}
                   </View>
-                )}
-              </View>
+                </View>
+              </TouchableOpacity>
             </View>
-          </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </ScrollView>
 
       {/* Bottom Navigation */}
       <BottomNav />
