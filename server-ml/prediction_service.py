@@ -773,9 +773,14 @@ class DenguePredictionService:
             if not scores:
                 raise Exception("No valid predictions from any model")
             
-            # Use weighted average: 60% historical, 40% weather
-            weights = [0.6, 0.4] if len(scores) == 2 else [1.0]
-            results["combined_score"] = float(np.average(scores, weights=weights[:len(scores)]))
+            # Use weighted average: 45% historical, 45% weather, 10% images (Model 3 = 0.0 when no images)
+            # When no images: Model 1 = 45%, Model 2 = 45%, Model 3 = 10% (but contributes 0.0)
+            # Both models available: 45% + 45% = 90%, Model 3 (0.0) gets 10%
+            model1_score = results["model1_score"] if results["model1_score"] is not None else 0.0
+            model2_score = results["model2_score"] if results["model2_score"] is not None else 0.0
+            model3_score = 0.0  # No images available
+            
+            results["combined_score"] = float(0.45 * model1_score + 0.45 * model2_score + 0.10 * model3_score)
             
             # Determine risk level
             if results["combined_score"] >= 3:
