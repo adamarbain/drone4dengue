@@ -57,18 +57,17 @@ Password: Test123!
 Company: Automatically assigned 'comp-999'
 ```
 
-### Test Case 1.2: Google OAuth Registration/Login
-**Objective**: Verify Google OAuth integration for quick signup/signin
+### Test Case 1.2: Standard Login Flow
+**Objective**: Verify normal email and password login functionality
 
 **Test Steps**:
-1. On login/register screen, tap "Sign in with Google"
-2. Select Google account from picker
-3. Complete Google authentication flow
-4. Grant necessary permissions
+1. On login screen, enter registered email address
+2. Enter password
+3. Tap "Login" or "Sign In" button
 
 **Expected Results**:
-- User authenticated via Google OAuth
-- Account created/accessed with companyId 'comp-999'
+- User is authenticated with email and password
+- Account accessed with companyId 'comp-999'
 - User redirected to main dashboard
 
 ### Test Case 1.3: Password Reset Flow
