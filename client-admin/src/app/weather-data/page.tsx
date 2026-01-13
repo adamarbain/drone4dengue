@@ -1289,7 +1289,7 @@ export default function WeatherDataPage() {
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-gray-200">
-                            <th className="text-left py-3 px-4 font-medium text-primary-dark">Date & Time</th>
+                            <th className="text-left py-3 px-4 font-medium text-primary-dark min-w-[180px] w-[180px]">Date & Time</th>
                             <th className="text-left py-3 px-4 font-medium text-primary-dark">Temperature</th>
                             <th className="text-left py-3 px-4 font-medium text-primary-dark">Humidity</th>
                             <th className="text-left py-3 px-4 font-medium text-primary-dark">Rainfall</th>
@@ -1309,9 +1309,9 @@ export default function WeatherDataPage() {
                               whileHover="hover"
                               className="border-b border-gray-100"
                             >
-                              <td className="py-3 px-4">
+                              <td className="py-3 px-4 min-w-[180px] w-[180px]">
                                 <div className="flex items-start gap-2">
-                                  <Calendar className="h-4 w-4 text-gray-400 mt-1" />
+                                  <Calendar className="h-4 w-4 text-gray-400 mt-1 flex-shrink-0" />
                                   <div className="flex flex-col">
                                     <span>{formatDateTime(record.date, record.updatedAt).formattedDate}</span>
                                     <span className="text-sm text-gray-600">{formatDateTime(record.date, record.updatedAt).formattedTime}</span>
