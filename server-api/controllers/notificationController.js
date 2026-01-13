@@ -73,7 +73,9 @@ async function getNotifications(req, res) {
       offset: parseInt(offset)
     });
   } catch (error) {
-    logger.error('[GET NOTIFICATIONS ERROR]', { error: error.message, stack: error.stack, userId, companyId });
+    const errorUserId = req.user?.userId;
+    const errorCompanyId = req.companyId || req.user?.companyId;
+    logger.error('[GET NOTIFICATIONS ERROR]', { error: error.message, stack: error.stack, userId: errorUserId, companyId: errorCompanyId });
     return sendInternalError(res, 'Failed to fetch notifications', error);
   }
 }
@@ -147,7 +149,9 @@ async function markAllAsRead(req, res) {
 
     res.json({ updated: result.count });
   } catch (error) {
-    logger.error('[MARK ALL NOTIFICATIONS READ ERROR]', { error: error.message, stack: error.stack, userId, companyId });
+    const errorUserId = req.user?.userId;
+    const errorCompanyId = req.companyId || req.user?.companyId;
+    logger.error('[MARK ALL NOTIFICATIONS READ ERROR]', { error: error.message, stack: error.stack, userId: errorUserId, companyId: errorCompanyId });
     return sendInternalError(res, 'Failed to mark all notifications as read', error);
   }
 }
@@ -190,7 +194,9 @@ async function getUnreadCount(req, res) {
 
     res.json({ count });
   } catch (error) {
-    logger.error('[GET UNREAD COUNT ERROR]', { error: error.message, stack: error.stack, userId, companyId });
+    const errorUserId = req.user?.userId;
+    const errorCompanyId = req.companyId || req.user?.companyId;
+    logger.error('[GET UNREAD COUNT ERROR]', { error: error.message, stack: error.stack, userId: errorUserId, companyId: errorCompanyId });
     return sendInternalError(res, 'Failed to get unread count', error);
   }
 }
