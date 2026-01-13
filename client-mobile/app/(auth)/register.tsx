@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { initGoogleSignIn, signInWithGoogle } from '../../utils/googleAuth';
+import { PASSWORD_POLICY_DESCRIPTION, getPasswordValidationError } from '../../utils/passwordPolicy';
 
 export default function RegisterScreen() {
     const [email, setEmail] = useState('');
@@ -35,10 +36,13 @@ export default function RegisterScreen() {
             setError('Please enter a valid email address.');
             return false;
         }
-        if (password.length < 6) {
-            setError('Password must be at least 6 characters.');
+
+        const passwordError = getPasswordValidationError(password, 'Password');
+        if (passwordError) {
+            setError(passwordError);
             return false;
         }
+
         if (password !== confirmPassword) {
             setError('Passwords do not match.');
             return false;
@@ -247,7 +251,7 @@ export default function RegisterScreen() {
                                         </Pressable>
                                     </View>
                                     <Text style={{ fontSize: 12, color: 'rgba(15, 40, 84, 0.7)', marginTop: 6, marginLeft: 4 }}>
-                                        Minimum 6 characters
+                                        {PASSWORD_POLICY_DESCRIPTION}
                                     </Text>
                                 </View>
 
