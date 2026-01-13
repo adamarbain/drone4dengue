@@ -5,6 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import BottomNav from './components/BottomNav';
 import { isTablet, getHorizontalPadding } from '../utils/responsive';
+import FullScreenLoader from '../components/FullScreenLoader';
+import { useMinimumLoadingTime } from '../utils/useMinimumLoadingTime';
 
 type RiskLevel = 'high' | 'medium' | 'low';
 type Recommendation = { 
@@ -51,6 +53,7 @@ export default function RecommendationsPage() {
     const [selected, setSelected] = useState<number | null>(null);
     const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
     const [loading, setLoading] = useState(true);
+    // const showLoader = useMinimumLoadingTime(loading, 1000);
     const riskLevel: RiskLevel = (typeof risk === 'string' && ['high', 'medium', 'low'].includes(risk)) ? (risk as RiskLevel) : 'low';
     const riskConfig = getRiskConfig(riskLevel);
     const tablet = isTablet();
@@ -72,6 +75,15 @@ export default function RecommendationsPage() {
     const openReferenceLink = (url: string) => {
         Linking.openURL(url).catch(err => console.error('Failed to open URL:', err));
     };
+
+    // if (showLoader) {
+    //     return (
+    //         <FullScreenLoader
+    //             title="Loading recommendations..."
+    //             subtitle={`Fetching preventive measures for ${riskLevel} risk level`}
+    //         />
+    //     );
+    // }
 
     return (
         <SafeAreaView className="flex-1" style={{ backgroundColor: riskConfig.backgroundColor }}>
@@ -115,12 +127,7 @@ export default function RecommendationsPage() {
                         {recommendations.length} recommendation{recommendations.length !== 1 ? 's' : ''} for {riskLevel} risk
                     </Text>
 
-                    {loading ? (
-                        <View className="flex-1 items-center justify-center">
-                            <ActivityIndicator size="large" color={riskConfig.backgroundColor} />
-                            <Text className="text-gray-500 mt-4" style={{ fontSize: tablet ? 16 : 14 }}>Loading recommendations...</Text>
-                        </View>
-                    ) : recommendations.length === 0 ? (
+                    {recommendations.length === 0 ? (
                         <View className="flex-1 items-center justify-center">
                             <Ionicons name="document-text-outline" size={tablet ? 64 : 48} color="#9CA3AF" />
                             <Text className="text-gray-500 mt-4 text-center" style={{ fontSize: tablet ? 16 : 14 }}>No recommendations available for this risk level</Text>

@@ -5,6 +5,8 @@ import { useRouter } from 'expo-router';
 import BottomNav from './components/BottomNav';
 import { fetchCurrentUser, updateUserProfile } from '../utils/userApi';
 import { Ionicons } from '@expo/vector-icons';
+import FullScreenLoader from '../components/FullScreenLoader';
+import { useMinimumLoadingTime } from '../utils/useMinimumLoadingTime';
 
 export default function EditProfilePage() {
     const router = useRouter();
@@ -13,6 +15,7 @@ export default function EditProfilePage() {
     const [phone, setPhone] = useState('');
     const [address, setAddress] = useState('');
     const [loading, setLoading] = useState(true);
+    // const showLoader = useMinimumLoadingTime(loading, 1000);
     const [saving, setSaving] = useState(false);
     const [modal, setModal] = useState<{ visible: boolean; type: 'success' | 'error'; message: string }>({
         visible: false,
@@ -60,13 +63,14 @@ export default function EditProfilePage() {
         }
     };
 
-    if (loading) {
-        return (
-            <SafeAreaView className="flex-1 bg-white items-center justify-center">
-                <ActivityIndicator size="large" color="#1C4D8D" />
-            </SafeAreaView>
-        );
-    }
+    // if (showLoader) {
+    //     return (
+    //         <FullScreenLoader
+    //             title="Loading profile..."
+    //             subtitle="Fetching your account information"
+    //         />
+    //     );
+    // }
 
     return (
         <SafeAreaView className="flex-1 bg-white">

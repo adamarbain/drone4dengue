@@ -8,11 +8,14 @@ import { setupNotificationListeners, initializePushNotifications, setBadgeCount 
 import { getUnreadNotificationCount } from '../utils/userApi';
 import ErrorBoundary from '../components/ErrorBoundary';
 import MedicalDisclaimerModal from '../components/MedicalDisclaimerModal';
+import FullScreenLoader from '../components/FullScreenLoader';
+import { useMinimumLoadingTime } from '../utils/useMinimumLoadingTime';
 
 export default function AppLayout() {
   const router = useRouter();
   const segments = useSegments();
   const [isAuthChecked, setIsAuthChecked] = useState(false);
+  // const showLoader = useMinimumLoadingTime(!isAuthChecked, 2000);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -116,7 +119,14 @@ export default function AppLayout() {
     checkAuth();
   }, [segments, router]);
 
-  if (!isAuthChecked) return null; // Optionally show a splash/loading screen
+  // if (showLoader) {
+  //   return (
+  //     <FullScreenLoader
+  //       title="Checking your session..."
+  //       subtitle="Making sure your DengueEye data is up to date"
+  //     />
+  //   );
+  // }
 
   return (
     <ErrorBoundary>

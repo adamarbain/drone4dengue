@@ -10,6 +10,8 @@ import DengueRiskCard from '../components/DengueRiskCard';
 import { fetchCurrentUser, getCompanyLocations, getCompanyPredictions, getCompanySettings, getLatestDengueCases, getUserLocationAlerts, createLocationAlert, deleteLocationAlert, toggleLocationAlert } from '../utils/userApi';
 import { Ionicons } from '@expo/vector-icons';
 import { isTablet, getMapHeight, getHorizontalPadding, moderateScale } from '../utils/responsive';
+import FullScreenLoader from '../components/FullScreenLoader';
+import { useMinimumLoadingTime } from '../utils/useMinimumLoadingTime';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -44,15 +46,17 @@ export default function Dashboard() {
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationLoading, setLocationLoading] = useState(true);
   const [hasPrediction, setHasPrediction] = useState(false);
+  const [latestPrediction, setLatestPrediction] = useState<any | null>(null);
   const [showLocationButton, setShowLocationButton] = useState(false);
   const mapRef = useRef<MapView>(null);
-  
+
   // Organisation tab states
   const [companyLocations, setCompanyLocations] = useState<CompanyLocation[]>([]);
   const [companyPredictions, setCompanyPredictions] = useState<CompanyPrediction[]>([]);
   const [loadingOrganisation, setLoadingOrganisation] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<CompanyLocation | null>(null);
   const [selectedPrediction, setSelectedPrediction] = useState<CompanyPrediction | null>(null);
+  const [showFactorDetails, setShowFactorDetails] = useState(false);
   const orgMapRef = useRef<MapView>(null);
   
   // Dengue Cases tab states (for comp-999)
@@ -103,6 +107,8 @@ export default function Dashboard() {
   
   // Risk threshold settings
   const [riskThresholds, setRiskThresholds] = useState({ lowThreshold: 1.0, highThreshold: 3.0 });
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  // const showLoader = useMinimumLoadingTime(isInitialLoading, 2000);
 
   useEffect(() => {
     let isMounted = true;
@@ -145,6 +151,15 @@ export default function Dashboard() {
     })();
     return () => { isMounted = false; };
   }, []);
+
+  // Determine when the dashboard has finished its initial load
+  useEffect(() => {
+    // Initial load is considered done once we know the company status
+    // and location loading has either succeeded or failed.
+    if (hasCompany !== null && !locationLoading) {
+      setIsInitialLoading(false);
+    }
+  }, [hasCompany, locationLoading]);
 
   // Fetch organisation data when switching to organisation tab
   useEffect(() => {
@@ -206,6 +221,7 @@ export default function Dashboard() {
   }, []);
   const handlePredictionUpdate = (prediction: any) => {
     setHasPrediction(prediction !== null);
+    setLatestPrediction(prediction);
   };
 
   const fetchDengueCases = async () => {
@@ -359,6 +375,7 @@ export default function Dashboard() {
       p => p.companyLocationId === location.id
     );
     setSelectedPrediction(prediction || null);
+    setShowFactorDetails(false);
     
     // Center map on location
     if (location.latitude && location.longitude && orgMapRef.current) {
@@ -374,6 +391,7 @@ export default function Dashboard() {
   const handleCloseDetails = () => {
     setSelectedLocation(null);
     setSelectedPrediction(null);
+    setShowFactorDetails(false);
   };
 
   // Get locations with predictions for navigation
@@ -682,6 +700,15 @@ export default function Dashboard() {
     }
   };
 
+  // if (showLoader) {
+  //   return (
+  //     <FullScreenLoader
+  //       title="Loading your dashboard..."
+  //       subtitle="Fetching your location, organisation data, and latest dengue predictions"
+  //     />
+  //   );
+  // }
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       <View 
@@ -825,12 +852,19 @@ export default function Dashboard() {
             <DengueRiskCard onPredictionUpdate={handlePredictionUpdate} />
             
             {/* Action Cards - Only show when prediction exists */}
-            {hasPrediction && (
+            {hasPrediction && latestPrediction && (
               <View className="flex-row gap-1 mt-1 mb-8">
                 <TouchableOpacity 
                   className="flex-1 bg-[#EAD196] rounded-2xl items-center justify-center" 
                   style={{ height: 100 }}
-                  onPress={() => router.push('/risk-analysis')}
+                  onPress={() => {
+                    router.push({
+                      pathname: '/risk-analysis',
+                      params: {
+                        prediction: JSON.stringify(latestPrediction),
+                      },
+                    });
+                  }}
                   activeOpacity={0.8}
                 >
                   <Image source={require('../assets/analysis.png')} style={{ width: '100%', height: '100%', resizeMode: 'contain' }} />
@@ -1567,7 +1601,8 @@ export default function Dashboard() {
                           </Text>
                         </View>
                       </View>
-                      {selectedPrediction.model1Score !== null && selectedPrediction.model1Score !== undefined && (
+
+                      {showFactorDetails && selectedPrediction.model1Score !== null && selectedPrediction.model1Score !== undefined && (
                         <View className="flex-row justify-between items-center py-2 border-b border-gray-100 mb-2">
                           <Text className="text-sm font-semibold text-gray-600">Historical Cases Factor</Text>
                           <View 
@@ -1583,7 +1618,7 @@ export default function Dashboard() {
                           </View>
                         </View>
                       )}
-                      {selectedPrediction.model2Score !== null && selectedPrediction.model2Score !== undefined && (
+                      {showFactorDetails && selectedPrediction.model2Score !== null && selectedPrediction.model2Score !== undefined && (
                         <View className="flex-row justify-between items-center py-2 border-b border-gray-100 mb-2">
                           <Text className="text-sm font-semibold text-gray-600">Weather-Based Factor</Text>
                           <View 
@@ -1599,7 +1634,7 @@ export default function Dashboard() {
                           </View>
                         </View>
                       )}
-                      {selectedPrediction.model3Score !== null && 
+                      {showFactorDetails && selectedPrediction.model3Score !== null && 
                        selectedPrediction.model3Score !== undefined && 
                        selectedPrediction.model3Score.toFixed(2) !== '0.00' && (
                         <View className="flex-row justify-between items-center py-2 border-b border-gray-100 mb-2">
@@ -1623,6 +1658,18 @@ export default function Dashboard() {
                           {new Date(selectedPrediction.createdAt).toLocaleDateString()}
                         </Text>
                       </View>
+
+                      {!showFactorDetails && (
+                        <TouchableOpacity
+                          onPress={() => setShowFactorDetails(true)}
+                          className="py-2 mt-2"
+                          activeOpacity={0.7}
+                        >
+                          <Text className="text-sm font-extrabold text-[#1C4D8D] text-right">
+                            <Text style={{ fontWeight: 'bold' }}>Display Factor Details</Text>
+                          </Text>
+                        </TouchableOpacity>
+                      )}
 
                     {/* Navigation buttons */}
                     {canNavigate && (

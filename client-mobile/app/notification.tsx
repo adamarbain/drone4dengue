@@ -6,6 +6,8 @@ import { Picker } from '@react-native-picker/picker';
 import BottomNav from './components/BottomNav';
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../utils/userApi';
 import { isTablet, getHorizontalPadding, getModalContainerStyle } from '../utils/responsive';
+import FullScreenLoader from '../components/FullScreenLoader';
+import { useMinimumLoadingTime } from '../utils/useMinimumLoadingTime';
 
 interface Notification {
   id: string;
@@ -25,6 +27,7 @@ type NotificationType = 'all' | 'prediction' | 'dengue_case' | 'drone' | 'drone_
 export default function NotificationPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  // const showLoader = useMinimumLoadingTime(loading, 1000);
   const [refreshing, setRefreshing] = useState(false);
   const [readStatusFilter, setReadStatusFilter] = useState<ReadStatus>('all');
   const [typeFilter, setTypeFilter] = useState<NotificationType>('all');
@@ -209,8 +212,18 @@ export default function NotificationPage() {
   const iconSize = tablet ? 56 : 48;
   const riskIconSize = tablet ? 28 : 24;
 
+  // if (showLoader) {
+  //   return (
+  //     <FullScreenLoader
+  //       title="Loading notifications..."
+  //       subtitle="Fetching your dengue risk alerts and updates"
+  //     />
+  //   );
+  // }
+
   return (
     <SafeAreaView className="flex-1 bg-white">
+      <>
       {/* Header Container for Tablet Centering */}
       <View style={{ 
         width: '100%', 
@@ -422,12 +435,7 @@ export default function NotificationPage() {
       </View>
 
       {/* Notifications List */}
-      {loading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#1C4D8D" />
-          <Text className="mt-4" style={{ color: 'rgba(15, 40, 84, 0.75)', fontSize: tablet ? 16 : 14 }}>Loading notifications...</Text>
-        </View>
-      ) : notifications.length === 0 ? (
+      {notifications.length === 0 ? (
         <View className="flex-1 items-center justify-center">
           <Feather name="bell-off" size={tablet ? 64 : 48} color="#9CA3AF" />
           <Text className="text-gray-600 mt-4" style={{ fontSize: tablet ? 18 : 16 }}>No notifications</Text>
@@ -539,6 +547,7 @@ export default function NotificationPage() {
       )}
 
       <BottomNav />
+      </>
     </SafeAreaView>
   );
 }

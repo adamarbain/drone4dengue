@@ -3,12 +3,14 @@ import { View, Text, ScrollView, TouchableOpacity, Image, Linking, Alert } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker, Region } from 'react-native-maps';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { getNearbyDengueCases } from '../utils/userApi';
 import BottomNav from './components/BottomNav';
 import { isTablet, getHorizontalPadding, getMapHeight } from '../utils/responsive';
+import FullScreenLoader from '../components/FullScreenLoader';
+import { useMinimumLoadingTime } from '../utils/useMinimumLoadingTime';
 
 interface PredictionResult {
   latitude: number;
@@ -28,9 +30,11 @@ interface WeatherData {
 
 export default function RiskAnalysisPage() {
   const router = useRouter();
+  const { prediction: predictionParam } = useLocalSearchParams<{ prediction?: string | string[] }>();
   const [prediction, setPrediction] = useState<PredictionResult | null>(null);
   const [locationName, setLocationName] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  // const showLoader = useMinimumLoadingTime(loading || !prediction, 2000);
   const [showReturnButton, setShowReturnButton] = useState(false);
   const [nearbyCasesCount, setNearbyCasesCount] = useState<number | null>(null);
   const [nearbyCasesData, setNearbyCasesData] = useState<Array<{latitude: number; longitude: number; location: string; state: string; totalCases: number}>>([]);
@@ -40,8 +44,38 @@ export default function RiskAnalysisPage() {
   const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
-    loadPredictionData();
-  }, []);
+    const initialize = async () => {
+      // If prediction is passed via navigation params, prefer that
+      if (predictionParam) {
+        try {
+          const paramValue = Array.isArray(predictionParam) ? predictionParam[0] : predictionParam;
+          if (paramValue) {
+            const parsed = JSON.parse(paramValue);
+            setPrediction(parsed);
+
+            // Get location name for the passed prediction
+            if (parsed.latitude && parsed.longitude) {
+              const name = await getLocationName(parsed.latitude, parsed.longitude);
+              setLocationName(name);
+            }
+
+            // Sync to AsyncStorage so subsequent visits can still use it
+            await AsyncStorage.setItem('lastPrediction', JSON.stringify(parsed));
+
+            setLoading(false);
+            return;
+          }
+        } catch (error) {
+          console.warn('Failed to parse prediction from navigation params, falling back to stored prediction', error);
+        }
+      }
+
+      // Fallback: load from AsyncStorage as before
+      await loadPredictionData();
+    };
+
+    initialize();
+  }, [predictionParam]);
 
   useEffect(() => {
     if (prediction && prediction.latitude && prediction.longitude) {
@@ -423,13 +457,21 @@ export default function RiskAnalysisPage() {
     }
   };
 
-  if (loading || !prediction) {
+  // if (showLoader) {
+  //   return (
+  //     <FullScreenLoader
+  //       title="Loading risk analysis..."
+  //       subtitle="Preparing detailed dengue risk information and nearby case data"
+  //     />
+  //   );
+  // }
+
+  if (!prediction) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
-        <View className="flex-1 items-center justify-center">
-          <Text className="text-gray-600">Loading...</Text>
-        </View>
-      </SafeAreaView>
+      <FullScreenLoader
+        title="Loading risk analysis..."
+        subtitle="Preparing detailed dengue risk information and nearby case data"
+      />
     );
   }
 
