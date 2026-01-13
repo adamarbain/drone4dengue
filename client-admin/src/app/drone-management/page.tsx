@@ -1057,28 +1057,68 @@ export default function DroneManagementPage() {
                                   try {
                                     setImageActionLoadingId(image.id)
 
-                                    const response = await fetch(`${API_URL}/drones/images/${image.id}/download`, {
-                                      headers: {
-                                        'Authorization': `Bearer ${getToken()}`,
-                                      },
-                                    })
+                                    const imageUrl = getImageUrl(image)
+                                    
+                                    // If it's a Firebase URL, download directly
+                                    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+                                      // Check if it's Firebase URL
+                                      if (imageUrl.includes('storage.googleapis.com') || imageUrl.includes('firebasestorage.googleapis.com')) {
+                                        // Download directly from Firebase URL
+                                        const response = await fetch(imageUrl)
+                                        if (!response.ok) {
+                                          throw new Error('Failed to download image from Firebase')
+                                        }
+                                        const blob = await response.blob()
+                                        const url = window.URL.createObjectURL(blob)
+                                        const link = document.createElement('a')
+                                        link.href = url
+                                        link.download = image.filename || 'drone-image.jpg'
+                                        document.body.appendChild(link)
+                                        link.click()
+                                        link.remove()
+                                        window.URL.revokeObjectURL(url)
+                                      } else {
+                                        // Other HTTP URLs - download directly
+                                        const link = document.createElement('a')
+                                        link.href = imageUrl
+                                        link.download = image.filename || 'drone-image.jpg'
+                                        link.target = '_blank'
+                                        document.body.appendChild(link)
+                                        link.click()
+                                        link.remove()
+                                      }
+                                    } else {
+                                      // Local file - use backend download endpoint
+                                      const response = await fetch(`${API_URL}/drones/images/${image.id}/download`, {
+                                        headers: {
+                                          'Authorization': `Bearer ${getToken()}`,
+                                        },
+                                      })
 
-                                    if (!response.ok) {
-                                      throw new Error('Failed to download image')
+                                      if (!response.ok) {
+                                        const errorData = await response.json().catch(() => ({}))
+                                        throw new Error(errorData.error || 'Failed to download image')
+                                      }
+
+                                      // Handle redirect or blob response
+                                      if (response.redirected) {
+                                        // If redirected, open the redirect URL
+                                        window.open(response.url, '_blank')
+                                      } else {
+                                        const blob = await response.blob()
+                                        const url = window.URL.createObjectURL(blob)
+                                        const link = document.createElement('a')
+                                        link.href = url
+                                        link.download = image.filename || 'drone-image.jpg'
+                                        document.body.appendChild(link)
+                                        link.click()
+                                        link.remove()
+                                        window.URL.revokeObjectURL(url)
+                                      }
                                     }
-
-                                    const blob = await response.blob()
-                                    const url = window.URL.createObjectURL(blob)
-                                    const link = document.createElement('a')
-                                    link.href = url
-                                    link.download = image.filename || 'drone-image.jpg'
-                                    document.body.appendChild(link)
-                                    link.click()
-                                    link.remove()
-                                    window.URL.revokeObjectURL(url)
-                                  } catch (error) {
+                                  } catch (error: any) {
                                     console.error('Download image error:', error)
-                                    alert('Failed to download image. Please try again.')
+                                    alert(`Failed to download image: ${error.message || 'Please try again.'}`)
                                   } finally {
                                     setImageActionLoadingId(null)
                                   }
@@ -1110,25 +1150,31 @@ export default function DroneManagementPage() {
                                         })
 
                                         if (!response.ok) {
-                                          throw new Error('Failed to delete image')
+                                          const errorData = await response.json().catch(() => ({}))
+                                          throw new Error(errorData.error || 'Failed to delete image')
                                         }
 
-                                        // Remove deleted image from local state
+                                        // Remove deleted image from local state immediately
                                         setDroneImages((prev) => prev.filter((img) => img.id !== image.id))
 
-                                        // Optionally refresh from backend (keeps pagination accurate)
+                                        // Refetch current page to ensure pagination is accurate
                                         if (selectedDrone) {
-                                          const { images, pagination } = await fetchDroneImages(selectedDrone, 1)
-                                          setDroneImages(images)
-                                          setImagePage(pagination.page)
-                                          setImageTotalPages(pagination.pages)
+                                          try {
+                                            const { images, pagination } = await fetchDroneImages(selectedDrone, imagePage)
+                                            setDroneImages(images)
+                                            setImagePage(pagination.page)
+                                            setImageTotalPages(pagination.pages)
+                                          } catch (refetchError) {
+                                            console.error('Error refetching images after delete:', refetchError)
+                                            // If refetch fails, at least the image is removed from UI
+                                          }
                                         }
 
                                         setSuccessDialogMessage('Image deleted successfully.')
                                         setShowSuccessDialog(true)
-                                      } catch (error) {
+                                      } catch (error: any) {
                                         console.error('Delete image error:', error)
-                                        alert('Failed to delete image. Please try again.')
+                                        alert(`Failed to delete image: ${error.message || 'Please try again.'}`)
                                       } finally {
                                         setImageActionLoadingId(null)
                                       }
