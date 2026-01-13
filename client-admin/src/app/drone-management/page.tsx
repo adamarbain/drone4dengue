@@ -162,6 +162,7 @@ export default function DroneManagementPage() {
   const [imagePage, setImagePage] = useState(1)
   const [imageTotalPages, setImageTotalPages] = useState(1)
   const [imageActionLoadingId, setImageActionLoadingId] = useState<string | null>(null)
+  const [serialNumberError, setSerialNumberError] = useState<string | null>(null)
 
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean
@@ -1431,7 +1432,10 @@ export default function DroneManagementPage() {
             <div className="bg-accent-blue px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">Add New Drone</h2>
               <button
-                onClick={() => setShowAddDroneModal(false)}
+                onClick={() => {
+                  setShowAddDroneModal(false)
+                  setSerialNumberError(null)
+                }}
                 className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
               >
                 <FiX size={20} />
@@ -1449,14 +1453,13 @@ export default function DroneManagementPage() {
                     return
                   }
 
-                  // Check for existing name or serial number
-                  const exists = droneList.some(d => 
-                    d.name.toLowerCase() === droneFormData.name.toLowerCase() || 
+                  // Check for existing serial number (serial must be unique)
+                  const serialExists = droneList.some(d => 
                     d.serial.toLowerCase() === droneFormData.serial.toLowerCase()
                   )
 
-                  if (exists) {
-                    alert('Drone with this serial/name already exists')
+                  if (serialExists) {
+                    setSerialNumberError('This serial number is already in use. Please enter a unique serial number.')
                     return
                   }
                   
@@ -1477,6 +1480,7 @@ export default function DroneManagementPage() {
                       status: 'Operational',
                       companyLocationId: ''
                     })
+                    setSerialNumberError(null)
                     setShowAddDroneModal(false)
                     
                     alert('Drone created successfully!')
@@ -1519,10 +1523,53 @@ export default function DroneManagementPage() {
                     <input
                       type="text"
                       value={droneFormData.serial}
-                      onChange={(e) => setDroneFormData(prev => ({ ...prev, serial: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
+                      onChange={(e) => {
+                        const serialValue = e.target.value
+                        setDroneFormData(prev => ({ ...prev, serial: serialValue }))
+                        
+                        // Check if serial number already exists
+                        if (serialValue.trim()) {
+                          const exists = droneList.some(d => 
+                            d.serial.toLowerCase() === serialValue.toLowerCase()
+                          )
+                          if (exists) {
+                            setSerialNumberError('This serial number is already in use. Please enter a unique serial number.')
+                          } else {
+                            setSerialNumberError(null)
+                          }
+                        } else {
+                          setSerialNumberError(null)
+                        }
+                      }}
+                      onBlur={(e) => {
+                        // Re-check on blur to ensure validation
+                        const serialValue = e.target.value
+                        if (serialValue.trim()) {
+                          const exists = droneList.some(d => 
+                            d.serial.toLowerCase() === serialValue.toLowerCase()
+                          )
+                          if (exists) {
+                            setSerialNumberError('This serial number is already in use. Please enter a unique serial number.')
+                          } else {
+                            setSerialNumberError(null)
+                          }
+                        } else {
+                          setSerialNumberError(null)
+                        }
+                      }}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                        serialNumberError 
+                          ? 'border-red-500 focus:ring-red-500' 
+                          : 'border-gray-300 focus:ring-accent-blue'
+                      }`}
                       placeholder="e.g., SN123456789"
                     />
+                    {serialNumberError && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                        <FiAlertCircle size={14} />
+                        {serialNumberError}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
@@ -1581,15 +1628,18 @@ export default function DroneManagementPage() {
                 <div className="flex justify-end gap-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => setShowAddDroneModal(false)}
+                    onClick={() => {
+                      setShowAddDroneModal(false)
+                      setSerialNumberError(null)
+                    }}
                     className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    disabled={isCreatingDrone}
-                    className={`flex items-center gap-2 px-6 py-2 bg-accent-blue text-white rounded-lg hover:bg-secondary-blue transition-colors ${isCreatingDrone ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={isCreatingDrone || !!serialNumberError}
+                    className={`flex items-center gap-2 px-6 py-2 bg-accent-blue text-white rounded-lg hover:bg-secondary-blue transition-colors ${(isCreatingDrone || serialNumberError) ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <FiSave size={18} />
                     {isCreatingDrone ? 'Creating...' : 'Add Drone'}

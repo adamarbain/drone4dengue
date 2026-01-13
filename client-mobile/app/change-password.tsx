@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import BottomNav from './components/BottomNav';
 import { StatusBar } from 'expo-status-bar';
+import { PASSWORD_POLICY_DESCRIPTION, getPasswordValidationError } from '../utils/passwordPolicy';
 
 export default function ChangePasswordPage() {
     const router = useRouter();
@@ -30,14 +31,13 @@ export default function ChangePasswordPage() {
             setModal({ visible: true, type: 'error', message: 'Please enter your current password' });
             return false;
         }
-        if (!newPassword) {
-            setModal({ visible: true, type: 'error', message: 'Please enter a new password' });
+
+        const strengthError = getPasswordValidationError(newPassword, 'New password');
+        if (strengthError) {
+            setModal({ visible: true, type: 'error', message: strengthError });
             return false;
         }
-        if (newPassword.length < 6) {
-            setModal({ visible: true, type: 'error', message: 'New password must be at least 6 characters' });
-            return false;
-        }
+
         if (newPassword !== confirmPassword) {
             setModal({ visible: true, type: 'error', message: 'New passwords do not match' });
             return false;
@@ -202,7 +202,7 @@ export default function ChangePasswordPage() {
                                 </TouchableOpacity>
                             </View>
                             <Text className="text-xs mt-1 ml-1" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>
-                                Must be at least 6 characters
+                                {PASSWORD_POLICY_DESCRIPTION}
                             </Text>
                         </View>
 

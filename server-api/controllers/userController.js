@@ -131,11 +131,11 @@ const generateRandomPassword = (length = 12) => {
 // PATCH /users/:id
 exports.updateProfile = async (req, res) => {
   const userId = req.params.id;
-  const { name, username, phone, organization, address, role, status } = req.body;
+  const { name, username, phone, organization, address, role, status, email } = req.body;
   
   console.log('[UPDATE PROFILE] Request received:', {
     userId,
-    requestBody: { name, username, phone, organization, address, role, status }
+    requestBody: { name, username, phone, organization, address, role, status, email }
   });
 
   if (!name && !username && !email && !phone && !address && !role && !status) {
@@ -180,6 +180,7 @@ exports.getUserById = async (req, res) => {
         username: true,
         email: true,
         phone: true,
+        address: true,
         role: true,
         status: true,
         createdAt: true,
@@ -267,6 +268,7 @@ exports.getAllUsers = async (req, res) => {
         email: true,
         username: true,
         phone: true,
+        address: true,
         role: true,
         status: true,
         organization: true,

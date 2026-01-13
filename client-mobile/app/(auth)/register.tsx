@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { initGoogleSignIn, signInWithGoogle } from '../../utils/googleAuth';
+import { PASSWORD_POLICY_DESCRIPTION, getPasswordValidationError } from '../../utils/passwordPolicy';
 
 export default function RegisterScreen() {
     const [email, setEmail] = useState('');
@@ -16,6 +17,7 @@ export default function RegisterScreen() {
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [error, setError] = useState('');
+    const [emailError, setEmailError] = useState('');
     const [focusedField, setFocusedField] = useState<string | null>(null);
     const router = useRouter();
 
@@ -28,17 +30,24 @@ export default function RegisterScreen() {
 
     const validateForm = () => {
         if (!email || !password || !confirmPassword) {
+            if (!email) {
+                setEmailError('Email is required.');
+            }
             setError('Please fill in all fields.');
             return false;
         }
+        setEmailError('');
         if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-            setError('Please enter a valid email address.');
+            setEmailError('Please enter a valid email address.');
             return false;
         }
-        if (password.length < 6) {
-            setError('Password must be at least 6 characters.');
+
+        const passwordError = getPasswordValidationError(password, 'Password');
+        if (passwordError) {
+            setError(passwordError);
             return false;
         }
+
         if (password !== confirmPassword) {
             setError('Passwords do not match.');
             return false;
@@ -55,6 +64,7 @@ export default function RegisterScreen() {
         if (!validateForm()) return;
         setLoading(true);
         setError('');
+        setEmailError('');
         try {
             const response = await fetch(`${API_URL}/auth/register`, {
                 method: 'POST',
@@ -67,7 +77,20 @@ export default function RegisterScreen() {
             });
             const data = await response.json();
             if (!response.ok) {
-                setError(data.message || data.error || 'Registration failed.');
+                const serverMessage =
+                    data?.error?.message || data?.message || data?.error || 'Registration failed.';
+
+                // If backend says email already registered, show field-level error under email
+                if (
+                    response.status === 409 ||
+                    typeof serverMessage === 'string' &&
+                    serverMessage.toLowerCase().includes('email already registered')
+                ) {
+                    setEmailError('Email already exists. Please use another email.');
+                    setError('');
+                } else {
+                    setError(serverMessage);
+                }
             } else {
                 Alert.alert('Success', 'Registration successful!', [
                     { text: 'OK', onPress: () => router.replace('./login') }
@@ -201,13 +224,21 @@ export default function RegisterScreen() {
                                             placeholder="Enter your email"
                                             placeholderTextColor="rgba(15, 40, 84, 0.55)"
                                             value={email}
-                                            onChangeText={setEmail}
+                                            onChangeText={(text) => {
+                                                setEmail(text);
+                                                if (emailError) setEmailError('');
+                                            }}
                                             keyboardType="email-address"
                                             autoCapitalize="none"
                                             onFocus={() => setFocusedField('email')}
                                             onBlur={() => setFocusedField(null)}
                                         />
                                     </View>
+                                    {emailError ? (
+                                        <Text style={{ fontSize: 12, color: '#DC2626', marginTop: 4, marginLeft: 4 }}>
+                                            {emailError}
+                                        </Text>
+                                    ) : null}
                                 </View>
 
                                 {/* Password Input */}
@@ -247,7 +278,7 @@ export default function RegisterScreen() {
                                         </Pressable>
                                     </View>
                                     <Text style={{ fontSize: 12, color: 'rgba(15, 40, 84, 0.7)', marginTop: 6, marginLeft: 4 }}>
-                                        Minimum 6 characters
+                                        {PASSWORD_POLICY_DESCRIPTION}
                                     </Text>
                                 </View>
 
