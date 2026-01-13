@@ -27,6 +27,7 @@ import {
   TrendingUp,
   Database,
   RefreshCw,
+  X,
 } from "lucide-react"
 import axios from "axios"
 import { useAuth } from "@/context/AuthContext"
@@ -247,6 +248,7 @@ export default function WeatherDataPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingRecord, setEditingRecord] = useState<WeatherRecord | null>(null)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [filterDate, setFilterDate] = useState<string>("")
   const [filteredWeatherData, setFilteredWeatherData] = useState<WeatherRecord[]>([])
@@ -413,6 +415,7 @@ export default function WeatherDataPage() {
         )
         setSuccess("Weather record updated successfully")
         setEditingRecord(null)
+        setShowEditModal(false)
       } else {
         // Add new record
         await axios.post(
@@ -484,7 +487,29 @@ export default function WeatherDataPage() {
       location: record.location,
       companyLocationId: record.companyLocationId,
     })
-    setShowAddForm(true)
+    setShowEditModal(true)
+  }
+
+  // Helper function to format date and time
+  const formatDateTime = (dateString: string, updatedAtString: string) => {
+    const date = new Date(dateString)
+    const updatedAt = new Date(updatedAtString)
+    
+    // Format date as DD/M/YYYY
+    const day = date.getDate()
+    const month = date.getMonth() + 1
+    const year = date.getFullYear()
+    const formattedDate = `${day}/${month}/${year}`
+    
+    // Format time as H.MM.SS AM/PM
+    const hours = updatedAt.getHours()
+    const minutes = updatedAt.getMinutes()
+    const seconds = updatedAt.getSeconds()
+    const ampm = hours >= 12 ? 'PM' : 'AM'
+    const displayHours = hours % 12 || 12
+    const formattedTime = `${displayHours}.${minutes.toString().padStart(2, '0')}.${seconds.toString().padStart(2, '0')} ${ampm}`
+    
+    return { formattedDate, formattedTime }
   }
 
   const handleDelete = async (id: string) => {
@@ -1264,13 +1289,12 @@ export default function WeatherDataPage() {
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-gray-200">
-                            <th className="text-left py-3 px-4 font-medium text-primary-dark">Date</th>
+                            <th className="text-left py-3 px-4 font-medium text-primary-dark">Date & Time</th>
                             <th className="text-left py-3 px-4 font-medium text-primary-dark">Temperature</th>
                             <th className="text-left py-3 px-4 font-medium text-primary-dark">Humidity</th>
                             <th className="text-left py-3 px-4 font-medium text-primary-dark">Rainfall</th>
                             <th className="text-left py-3 px-4 font-medium text-primary-dark">Location</th>
                             <th className="text-left py-3 px-4 font-medium text-primary-dark">Company Location</th>
-                            <th className="text-left py-3 px-4 font-medium text-primary-dark">Last Updated</th>
                             <th className="text-left py-3 px-4 font-medium text-primary-dark">Actions</th>
                           </tr>
                         </thead>
@@ -1286,9 +1310,12 @@ export default function WeatherDataPage() {
                               className="border-b border-gray-100"
                             >
                               <td className="py-3 px-4">
-                                <div className="flex items-center gap-2">
-                                  <Calendar className="h-4 w-4 text-gray-400" />
-                                  {new Date(record.date).toLocaleDateString()}
+                                <div className="flex items-start gap-2">
+                                  <Calendar className="h-4 w-4 text-gray-400 mt-1" />
+                                  <div className="flex flex-col">
+                                    <span>{formatDateTime(record.date, record.updatedAt).formattedDate}</span>
+                                    <span className="text-sm text-gray-600">{formatDateTime(record.date, record.updatedAt).formattedTime}</span>
+                                  </div>
                                 </div>
                               </td>
                               <td className="py-3 px-4">
@@ -1319,9 +1346,6 @@ export default function WeatherDataPage() {
                                 ) : (
                                   <span className="text-gray-500">N/A</span>
                                 )}
-                              </td>
-                              <td className="py-3 px-4 text-sm text-gray-600">
-                                {new Date(record.updatedAt).toLocaleString()}
                               </td>
                               <td className="py-3 px-4">
                                 <div className="flex gap-2">
@@ -1359,6 +1383,203 @@ export default function WeatherDataPage() {
           </motion.div>
         </motion.section>
       </div>
+
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {showEditModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => {
+              setShowEditModal(false)
+              setEditingRecord(null)
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+                <CardTitle className="flex items-center gap-2">
+                  <motion.div
+                    animate={{ rotate: [0, 10, -10, 0] }}
+                    transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY }}
+                  >
+                    <Edit3 className="h-5 w-5 text-blue-600" />
+                  </motion.div>
+                  Edit Weather Record
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowEditModal(false)
+                    setEditingRecord(null)
+                  }}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <CardContent className="p-6">
+                <form
+                  onSubmit={handleFormSubmit}
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                >
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                  >
+                    <Label htmlFor="modal-date">Date</Label>
+                    <Input
+                      id="modal-date"
+                      type="date"
+                      value={formData.date}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, date: e.target.value }))}
+                      className="mt-1"
+                      required
+                    />
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <Label htmlFor="modal-temperature">Temperature (°C)</Label>
+                    <Input
+                      id="modal-temperature"
+                      type="number"
+                      step="0.1"
+                      value={formData.temperature}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, temperature: e.target.value }))}
+                      className="mt-1"
+                      placeholder="28.5"
+                      required
+                    />
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <Label htmlFor="modal-humidity">Humidity (%)</Label>
+                    <Input
+                      id="modal-humidity"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      value={formData.humidity}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, humidity: e.target.value }))}
+                      className="mt-1"
+                      placeholder="75"
+                      required
+                    />
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                  >
+                    <Label htmlFor="modal-rainfall">Rainfall (mm)</Label>
+                    <Input
+                      id="modal-rainfall"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={formData.rainfall}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, rainfall: e.target.value }))}
+                      className="mt-1"
+                      placeholder="12.3"
+                      required
+                    />
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                  >
+                    <Label htmlFor="modal-location">Location</Label>
+                    <Input
+                      id="modal-location"
+                      type="text"
+                      value={formData.location}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, location: e.target.value }))}
+                      className="mt-1"
+                      placeholder="Kuala Lumpur"
+                      required
+                    />
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6 }}
+                  >
+                    <Label htmlFor="modal-companyLocationId">Company Location</Label>
+                    <select
+                      id="modal-companyLocationId"
+                      value={formData.companyLocationId}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, companyLocationId: e.target.value }))}
+                      className="mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+                      required
+                    >
+                      <option value="">Select a company location</option>
+                      {companyLocations.map((location) => (
+                        <option key={location.id} value={location.id}>
+                          {location.name} - {location.address}
+                        </option>
+                      ))}
+                    </select>
+                  </motion.div>
+                  <motion.div
+                    className="md:col-span-2 lg:col-span-3 flex gap-3 mt-4"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.7 }}
+                  >
+                    <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button type="submit" disabled={uploading} className="w-full">
+                        {uploading ? (
+                          <motion.div className="flex items-center gap-2">
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </motion.div>
+                            Saving...
+                          </motion.div>
+                        ) : (
+                          "Update Record"
+                        )}
+                      </Button>
+                    </motion.div>
+                    <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setShowEditModal(false)
+                          setEditingRecord(null)
+                        }}
+                        className="w-full"
+                      >
+                        Cancel
+                      </Button>
+                    </motion.div>
+                  </motion.div>
+                </form>
+              </CardContent>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
