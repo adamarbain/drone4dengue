@@ -6,6 +6,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import ModalAlert from '../components/ModalAlert';
 import { fetchCurrentUser } from '../utils/userApi';
+import FullScreenLoader from '../components/FullScreenLoader';
+import { useMinimumLoadingTime } from '../utils/useMinimumLoadingTime';
 
 export default function UpdatePhonePage() {
     const router = useRouter();
@@ -16,6 +18,7 @@ export default function UpdatePhonePage() {
     const [sending, setSending] = useState(false);
     const [verifying, setVerifying] = useState(false);
     const [loading, setLoading] = useState(true);
+    const showLoader = useMinimumLoadingTime(loading, 1000);
     const [timer, setTimer] = useState(0);
     const [message, setMessage] = useState('');
     const [messageType, setMessageType] = useState<'success' | 'error' | ''>('');
@@ -240,11 +243,12 @@ export default function UpdatePhonePage() {
         return phone;
     };
 
-    if (loading) {
+    if (showLoader) {
         return (
-            <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center">
-                <ActivityIndicator size="large" color="#1D4ED8" />
-            </SafeAreaView>
+            <FullScreenLoader
+                title="Loading phone settings..."
+                subtitle="Fetching your current phone number"
+            />
         );
     }
 

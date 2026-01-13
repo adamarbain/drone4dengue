@@ -6,6 +6,8 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchCurrentUser, getCompanyDetails } from '../utils/userApi';
 import BottomNav from './components/BottomNav';
+import FullScreenLoader from '../components/FullScreenLoader';
+import { useMinimumLoadingTime } from '../utils/useMinimumLoadingTime';
 
 type Company = {
   id: string;
@@ -28,6 +30,7 @@ export default function OrganisationDetailsPage() {
   const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // const showLoader = useMinimumLoadingTime(loading, 1000);
 
   useFocusEffect(
     useCallback(() => {
@@ -102,14 +105,14 @@ export default function OrganisationDetailsPage() {
     return colors[threshold] || '#6B7280';
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView className="flex-1 bg-white items-center justify-center">
-        <ActivityIndicator size="large" color="#1C4D8D" />
-        <Text className="mt-4" style={{ color: 'rgba(15, 40, 84, 0.75)' }}>Loading organisation details...</Text>
-      </SafeAreaView>
-    );
-  }
+  // if (showLoader) {
+  //   return (
+  //     <FullScreenLoader
+  //       title="Loading organisation details..."
+  //       subtitle="Fetching your company information and settings"
+  //     />
+  //   );
+  // }
 
   if (error) {
     return (

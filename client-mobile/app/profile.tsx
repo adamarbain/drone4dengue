@@ -7,6 +7,8 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchCurrentUser } from '../utils/userApi';
 import { isTablet, getHorizontalPadding, moderateScale } from '../utils/responsive';
+import FullScreenLoader from '../components/FullScreenLoader';
+import { useMinimumLoadingTime } from '../utils/useMinimumLoadingTime';
 
 type User = {
   id: string;
@@ -25,6 +27,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  // const showLoader = useMinimumLoadingTime(loading, 1000);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
@@ -126,13 +129,14 @@ export default function ProfilePage() {
     return email;
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView className="flex-1 bg-white items-center justify-center">
-        <ActivityIndicator size="large" color="#1C4D8D" />
-      </SafeAreaView>
-    );
-  }
+  // if (showLoader) {
+  //   return (
+  //     <FullScreenLoader
+  //       title="Loading your profile..."
+  //       subtitle="Fetching your account information and settings"
+  //     />
+  //   );
+  // }
 
   return (
     <SafeAreaView className="flex-1 bg-white">
