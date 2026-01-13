@@ -540,6 +540,7 @@ class DenguePredictionService:
             model3_risk_level = "low"
             breeding_area_detections = []
             model3_error = None
+            images_successfully_processed = False
             
             # Process breeding area detection if image URLs are provided
             if image_urls and len(image_urls) > 0:
@@ -570,6 +571,7 @@ class DenguePredictionService:
                     # Calculate average Model 3 score
                     if processed_images > 0:
                         model3_score = total_score / processed_images
+                        images_successfully_processed = True
                         
                         # Determine risk level based on Model 3 score
                         if model3_score >= 0.7:
@@ -609,17 +611,34 @@ class DenguePredictionService:
             model3_normalized = min(max(model3_score, 0.0), 1.0)  # Already 0-1, but ensure clamped
             
             # Weighted combination strategy:
-            # - Model 1 (40%): Historical data is most reliable predictor (based on actual case trends)
+            # When images are provided and successfully processed:
+            # - Model 1 (35%): Historical data is most reliable predictor (based on actual case trends)
             # - Model 2 (35%): Weather conditions are important for dengue risk but can change rapidly
-            # - Model 3 (25%): Visual breeding area detection is strong evidence but requires images
+            # - Model 3 (30%): Visual breeding area detection is strong evidence but requires images
+            # 
+            # When images are NOT provided or failed to process:
+            # - Model 1 (45%): Historical data gets increased weight
+            # - Model 2 (45%): Weather conditions get increased weight
+            # - Model 3 (10%): Reduced weight when no visual evidence is available
             # 
             # Rationale: Historical patterns (Model 1) are most predictive, but weather (Model 2) 
             # and immediate visual evidence (Model 3) provide important context for current risk.
-            combined_score_normalized = (
-                0.35 * model1_normalized + 
-                0.30 * model2_normalized + 
-                0.35 * model3_normalized
-            )
+            # When visual evidence is unavailable, we rely more on historical and weather data.
+            
+            if images_successfully_processed:
+                # Use 35/35/30 weights when images are available and successfully processed
+                combined_score_normalized = (
+                    0.35 * model1_normalized + 
+                    0.35 * model2_normalized + 
+                    0.30 * model3_normalized
+                )
+            else:
+                # Use 45/45/10 weights when images are not provided or failed
+                combined_score_normalized = (
+                    0.45 * model1_normalized + 
+                    0.45 * model2_normalized + 
+                    0.10 * model3_normalized
+                )
             
             # Scale back to 0-5 range for consistency with two-model prediction output
             # This maintains compatibility with existing frontend/API expectations
@@ -627,9 +646,9 @@ class DenguePredictionService:
             
             # Determine overall risk level (based on 0-5 scale)
             # Thresholds: High >= 3.5 (0.7 normalized), Medium >= 2.0 (0.4 normalized)
-            if combined_score >= 3.5:  # >= 0.7 normalized * 5
+            if combined_score >= 3.0:  # >= 0.7 normalized * 5
                 overall_risk_level = "high"
-            elif combined_score >= 2.0:  # >= 0.4 normalized * 5
+            elif combined_score >= 1.0:  # >= 0.4 normalized * 5
                 overall_risk_level = "medium"
             else:
                 overall_risk_level = "low"
