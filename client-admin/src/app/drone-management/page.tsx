@@ -30,6 +30,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useState, useEffect } from "react"
 import type { JSX } from "react"
 import { useAuth } from "@/context/AuthContext"
+import MapPicker from "@/components/MapPicker"
 
 const drones: any[] = []
 
@@ -158,6 +159,9 @@ export default function DroneManagementPage() {
   const [droneImages, setDroneImages] = useState<any[]>([])
   const [loadingImages, setLoadingImages] = useState(false)
   const [loadingDrones, setLoadingDrones] = useState(false)
+  const [imagePage, setImagePage] = useState(1)
+  const [imageTotalPages, setImageTotalPages] = useState(1)
+  const [imageActionLoadingId, setImageActionLoadingId] = useState<string | null>(null)
 
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean
@@ -259,10 +263,16 @@ export default function DroneManagementPage() {
   useEffect(() => {
     if (selectedDrone && droneList.length > 0) {
       const loadImages = async () => {
-        const images = await fetchDroneImages(selectedDrone)
+        const { images, pagination } = await fetchDroneImages(selectedDrone, 1)
         setDroneImages(images)
+        setImagePage(pagination.page)
+        setImageTotalPages(pagination.pages)
       }
       loadImages()
+    } else {
+      setDroneImages([])
+      setImagePage(1)
+      setImageTotalPages(1)
     }
   }, [selectedDrone, droneList])
 
@@ -599,12 +609,18 @@ export default function DroneManagementPage() {
     }
   }
 
-  // Fetch drone images function
-  const fetchDroneImages = async (droneId: string) => {
+  // Fetch drone images function (supports pagination)
+  const fetchDroneImages = async (droneId: string, page: number = 1) => {
     try {
       setLoadingImages(true)
-      console.log('Fetching drone images for drone:', droneId)
-      const response = await fetch(`${API_URL}/drones/${droneId}/images`, {
+      console.log('Fetching drone images for drone:', droneId, 'page:', page)
+
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: '12',
+      })
+
+      const response = await fetch(`${API_URL}/drones/${droneId}/images?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${getToken()}`
         }
@@ -616,10 +632,27 @@ export default function DroneManagementPage() {
       }
 
       const data = await response.json()
-      return data.images || []
+
+      return {
+        images: data.images || [],
+        pagination: data.pagination || {
+          page,
+          limit: 12,
+          total: (data.images || []).length,
+          pages: 1,
+        },
+      }
     } catch (error) {
       console.error('Fetch drone images error:', error)
-      return []
+      return {
+        images: [],
+        pagination: {
+          page,
+          limit: 12,
+          total: 0,
+          pages: 1,
+        },
+      }
     } finally {
       setLoadingImages(false)
     }
@@ -792,7 +825,9 @@ export default function DroneManagementPage() {
                           </div>
                           <div className="flex items-center gap-2">
                             <FiMapPin className="text-accent-blue" size={16} />
-                            <span className="text-sm text-gray-600">{drone.area}</span>
+                            <span className="text-sm text-gray-600">
+                              {drone.companyLocation?.name || "No specific location"}
+                            </span>
                           </div>
                         </td>
                         <td className="py-4 px-6">
@@ -961,7 +996,7 @@ export default function DroneManagementPage() {
                     >
                       {droneList.map((drone) => (
                         <option key={drone.id} value={drone.id}>
-                          {drone.name} - {drone.area}
+                          {drone.name} - {drone.companyLocation?.name || "No Location"}
                         </option>
                       ))}
                     </select>
@@ -1006,7 +1041,8 @@ export default function DroneManagementPage() {
                             </div>
                             <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button 
-                                className="bg-white/90 backdrop-blur-sm p-3 rounded-full hover:bg-white transition-colors"
+                                className="bg-white/90 backdrop-blur-sm p-3 rounded-full hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={!!imageActionLoadingId}
                                 onClick={() => {
                                   setSelectedImage(getImageUrl(image))
                                   setShowImageModal(true)
@@ -1014,10 +1050,92 @@ export default function DroneManagementPage() {
                               >
                                 <FiEye className="text-accent-blue" size={20} />
                               </button>
-                              <button className="bg-white/90 backdrop-blur-sm p-3 rounded-full hover:bg-white transition-colors">
+                              <button
+                                className="bg-white/90 backdrop-blur-sm p-3 rounded-full hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={imageActionLoadingId === image.id}
+                                onClick={async () => {
+                                  try {
+                                    setImageActionLoadingId(image.id)
+
+                                    const response = await fetch(`${API_URL}/drones/images/${image.id}/download`, {
+                                      headers: {
+                                        'Authorization': `Bearer ${getToken()}`,
+                                      },
+                                    })
+
+                                    if (!response.ok) {
+                                      throw new Error('Failed to download image')
+                                    }
+
+                                    const blob = await response.blob()
+                                    const url = window.URL.createObjectURL(blob)
+                                    const link = document.createElement('a')
+                                    link.href = url
+                                    link.download = image.filename || 'drone-image.jpg'
+                                    document.body.appendChild(link)
+                                    link.click()
+                                    link.remove()
+                                    window.URL.revokeObjectURL(url)
+                                  } catch (error) {
+                                    console.error('Download image error:', error)
+                                    alert('Failed to download image. Please try again.')
+                                  } finally {
+                                    setImageActionLoadingId(null)
+                                  }
+                                }}
+                              >
                                 <FiDownload className="text-green-600" size={20} />
                               </button>
-                              <button className="bg-white/90 backdrop-blur-sm p-3 rounded-full hover:bg-white transition-colors">
+                              <button
+                                className="bg-white/90 backdrop-blur-sm p-3 rounded-full hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={imageActionLoadingId === image.id}
+                                onClick={() => {
+                                  setConfirmDialog({
+                                    isOpen: true,
+                                    title: 'Delete Image',
+                                    message: 'Are you sure you want to delete this drone image? This action cannot be undone.',
+                                    confirmText: 'Delete',
+                                    cancelText: 'Cancel',
+                                    type: 'danger',
+                                    onConfirm: async () => {
+                                      try {
+                                        setImageActionLoadingId(image.id)
+                                        setConfirmDialog(null)
+
+                                        const response = await fetch(`${API_URL}/drones/images/${image.id}`, {
+                                          method: 'DELETE',
+                                          headers: {
+                                            'Authorization': `Bearer ${getToken()}`,
+                                          },
+                                        })
+
+                                        if (!response.ok) {
+                                          throw new Error('Failed to delete image')
+                                        }
+
+                                        // Remove deleted image from local state
+                                        setDroneImages((prev) => prev.filter((img) => img.id !== image.id))
+
+                                        // Optionally refresh from backend (keeps pagination accurate)
+                                        if (selectedDrone) {
+                                          const { images, pagination } = await fetchDroneImages(selectedDrone, 1)
+                                          setDroneImages(images)
+                                          setImagePage(pagination.page)
+                                          setImageTotalPages(pagination.pages)
+                                        }
+
+                                        setSuccessDialogMessage('Image deleted successfully.')
+                                        setShowSuccessDialog(true)
+                                      } catch (error) {
+                                        console.error('Delete image error:', error)
+                                        alert('Failed to delete image. Please try again.')
+                                      } finally {
+                                        setImageActionLoadingId(null)
+                                      }
+                                    },
+                                  })
+                                }}
+                              >
                                 <FiTrash2 className="text-red-600" size={20} />
                               </button>
                             </div>
@@ -1050,12 +1168,25 @@ export default function DroneManagementPage() {
                       ))}
                     </div>
 
-                    <div className="flex justify-center mt-6">
-                      <button className="flex items-center gap-2 px-6 py-3 bg-accent-blue text-white rounded-lg font-medium hover:bg-secondary-blue transition-colors">
-                        Load More Images
-                        <FiChevronRight />
-                      </button>
-                    </div>
+                    {imagePage < imageTotalPages && (
+                      <div className="flex justify-center mt-6">
+                        <button
+                          className="flex items-center gap-2 px-6 py-3 bg-accent-blue text-white rounded-lg font-medium hover:bg-secondary-blue transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={loadingImages}
+                          onClick={async () => {
+                            if (!selectedDrone) return
+                            const nextPage = imagePage + 1
+                            const { images: nextImages, pagination } = await fetchDroneImages(selectedDrone, nextPage)
+                            setDroneImages((prev) => [...prev, ...nextImages])
+                            setImagePage(pagination.page)
+                            setImageTotalPages(pagination.pages)
+                          }}
+                        >
+                          Load More Images
+                          <FiChevronRight />
+                        </button>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="text-center py-12">
@@ -1107,16 +1238,12 @@ export default function DroneManagementPage() {
                   <div className="font-semibold">{detailsDrone.model}</div>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="text-sm text-gray-500">Company Location</div>
+                  <div className="text-sm text-gray-500">Operational Area</div>
                   <div className="font-semibold">{detailsDrone.companyLocation?.name || "No specific location"}</div>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="text-sm text-gray-500">Registration Date</div>
                   <div className="font-semibold">{detailsDrone.date}</div>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="text-sm text-gray-500">Operational Area</div>
-                  <div className="font-semibold">{detailsDrone.area}</div>
                 </div>
               </div>
 
@@ -1189,7 +1316,7 @@ export default function DroneManagementPage() {
                 </select>
               </div>
 
-              <div className="mb-4">
+              {/* <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Operational Area</label>
                 <input
                   value={editDroneForm.operationalArea}
@@ -1197,10 +1324,10 @@ export default function DroneManagementPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
                   placeholder="Enter operational area"
                 />
-              </div>
+              </div> */}
 
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Company Location</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Operational Area</label>
                 <select 
                   value={editDroneForm.companyLocationId}
                   onChange={(e) => setEditDroneForm(prev => ({ ...prev, companyLocationId: e.target.value }))}
@@ -1271,7 +1398,7 @@ export default function DroneManagementPage() {
                   e.preventDefault()
                   
                   // Validate required fields
-                  if (!droneFormData.name || !droneFormData.model || !droneFormData.serial || !droneFormData.operationalArea) {
+                  if (!droneFormData.name || !droneFormData.model || !droneFormData.serial) {
                     alert('Please fill in all required fields')
                     return
                   }
@@ -1331,19 +1458,13 @@ export default function DroneManagementPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Model</label>
-                    <select 
+                    <input
+                      type="text"
                       value={droneFormData.model}
                       onChange={(e) => setDroneFormData(prev => ({ ...prev, model: e.target.value }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
-                    >
-                      <option value="">Select Model</option>
-                      <option value="DJI Phantom 4 Pro">DJI Phantom 4 Pro</option>
-                      <option value="DJI Mavic Air 2">DJI Mavic Air 2</option>
-                      <option value="DJI Mini 3 Pro">DJI Mini 3 Pro</option>
-                      <option value="DJI Air 2S">DJI Air 2S</option>
-                      <option value="DJI Mavic 3">DJI Mavic 3</option>
-                      <option value="DJI Mini 2">DJI Mini 2</option>
-                    </select>
+                      placeholder="e.g., DJI Phantom 4 Pro"
+                    />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1372,21 +1493,11 @@ export default function DroneManagementPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Operational Area</label>
-                    <input
-                    type="text"
-                    value={droneFormData.operationalArea}
-                    onChange={(e) => setDroneFormData(prev => ({ ...prev, operationalArea: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
-                    placeholder="e.g., Kuala Lumpur City Center"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Company Location (Optional)</label>
                   <div className="flex gap-2">
                     <select 
                       value={droneFormData.companyLocationId}
                       onChange={(e) => setDroneFormData(prev => ({ ...prev, companyLocationId: e.target.value }))}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue max-w-full text-ellipsis"
                       disabled={loadingLocations}
                     >
                       <option value="">No specific location</option>
@@ -1396,8 +1507,12 @@ export default function DroneManagementPage() {
                         <option value="" disabled>No locations available</option>
                       ) : (
                         companyLocations.map((location) => (
-                          <option key={location.id} value={location.id}>
-                            {location.name} {location.address && `- ${location.address}`}
+                          <option
+                            key={location.id}
+                            value={location.id}
+                            title={location.address || location.name}
+                          >
+                            {location.name}
                           </option>
                         ))
                       )}
@@ -1672,8 +1787,10 @@ export default function DroneManagementPage() {
                             await uploadVideoFrames(frames, selectedDroneForImages.id)
                             
                             // Refresh images for the selected drone
-                            const updatedImages = await fetchDroneImages(selectedDroneForImages.id)
-                            setDroneImages(updatedImages)
+                            const { images, pagination } = await fetchDroneImages(selectedDroneForImages.id, 1)
+                            setDroneImages(images)
+                            setImagePage(pagination.page)
+                            setImageTotalPages(pagination.pages)
                             
                             alert(`Successfully processed ${frames.length} frames from video!`)
                             setUploadedFile(null)
@@ -1711,8 +1828,10 @@ export default function DroneManagementPage() {
                         await uploadImages([uploadedFile], selectedDroneForImages.id)
                         
                         // Refresh images for the selected drone
-                        const updatedImages = await fetchDroneImages(selectedDroneForImages.id)
-                        setDroneImages(updatedImages)
+                            const { images, pagination } = await fetchDroneImages(selectedDroneForImages.id, 1)
+                            setDroneImages(images)
+                            setImagePage(pagination.page)
+                            setImageTotalPages(pagination.pages)
                         
                         alert('Image uploaded successfully!')
                         setUploadedFile(null)
@@ -1794,7 +1913,7 @@ export default function DroneManagementPage() {
             className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4"
           >
             <div className="bg-accent-blue px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Add New Location</h2>
+              <h2 className="text-xl font-bold text-white">Add New Company Location</h2>
               <button
                 onClick={() => {
                   setShowNewLocationModal(false)
@@ -1808,7 +1927,7 @@ export default function DroneManagementPage() {
             <div className="p-6">
               <form className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Location Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Company Location Name</label>
                   <input
                     type="text"
                     value={newLocation.name}
@@ -1818,7 +1937,7 @@ export default function DroneManagementPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Address (Optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Company Location Address</label>
                   <input
                     type="text"
                     value={newLocation.address}
@@ -1827,29 +1946,43 @@ export default function DroneManagementPage() {
                     placeholder="e.g., Jalan Ampang, Kuala Lumpur"
                   />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Latitude</label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={newLocation.latitude}
-                      onChange={(e) => setNewLocation(prev => ({ ...prev, latitude: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
-                      placeholder="e.g., 3.1579"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Longitude</label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={newLocation.longitude}
-                      onChange={(e) => setNewLocation(prev => ({ ...prev, longitude: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
-                      placeholder="e.g., 101.7116"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Pin Exact Location on Map
+                  </label>
+                  <MapPicker
+                    value={(() => {
+                      const lat = parseFloat(newLocation.latitude as unknown as string)
+                      const lng = parseFloat(newLocation.longitude as unknown as string)
+                      return isNaN(lat) || isNaN(lng) ? null : { lat, lng }
+                    })()}
+                    onChange={async (coords) => {
+                      setNewLocation(prev => ({
+                        ...prev,
+                        latitude: coords.lat.toString(),
+                        longitude: coords.lng.toString(),
+                      }))
+
+                      try {
+                        const res = await fetch(`${API_URL}/geocode/reverse?lat=${coords.lat}&lon=${coords.lng}`, {
+                          headers: { Accept: "application/json" },
+                        })
+                        if (res.ok) {
+                          const data = await res.json()
+                          const display = data?.display_name || ""
+                          if (display) {
+                            setNewLocation(prev => ({ ...prev, address: display }))
+                          }
+                        }
+                      } catch {
+                        // ignore reverse geocode errors silently
+                      }
+                    }}
+                    height={360}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Selected: {newLocation.latitude || "-"}, {newLocation.longitude || "-"}
+                  </p>
                 </div>
                 <div className="flex justify-end gap-3 pt-4">
                   <button

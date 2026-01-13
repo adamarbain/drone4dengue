@@ -75,6 +75,15 @@ export default function SignUpPage() {
     return passwordRegex.test(password)
   }
 
+  // Normalize API error responses into a readable string
+  const extractErrorMessage = (err: any): string => {
+    const apiError = err?.response?.data?.error
+    if (typeof apiError === "string") return apiError
+    if (typeof apiError === "object" && apiError?.message) return apiError.message
+    if (err?.message) return err.message
+    return "Registration failed. Please try again."
+  }
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
@@ -132,7 +141,17 @@ export default function SignUpPage() {
       })
       router.push("/")
     } catch (err: any) {
-      setSubmitErrors([err?.response?.data?.error || "Registration failed. Please try again."])
+      const message = extractErrorMessage(err)
+      const status = err?.response?.status
+      if (status === 409) {
+        const lowerMsg = message.toLowerCase()
+        setFieldErrors((prev) => ({
+          ...prev,
+          ...(lowerMsg.includes("email") ? { email: message } : {}),
+          ...(lowerMsg.includes("phone") ? { phone: message } : {}),
+        }))
+      }
+      setSubmitErrors([message])
     } finally {
       setIsLoading(false)
     }
