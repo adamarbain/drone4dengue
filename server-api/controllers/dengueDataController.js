@@ -620,6 +620,237 @@ async function generateReport(req, res) {
   }
 }
 
+// Export report data in multiple formats (CSV, XLSX, PDF)
+async function exportReport(req, res) {
+  try {
+    const { startDate, endDate, format = 'csv', status } = req.query;
+    const companyId = req.companyId; // Get from auth middleware
+    
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'Missing required parameters: startDate, endDate' });
+    }
+
+    // Build date range filter
+    const dateFilter = {
+      gte: new Date(startDate),
+      lte: new Date(endDate + 'T23:59:59.999Z')
+    };
+
+    // Build where clause
+    const where = {
+      date: dateFilter
+    };
+
+    // Filter by status if provided
+    if (status) {
+      where.status = status;
+    }
+
+    // Fetch dengue data
+    const dengueData = await prisma.dengueData.findMany({
+      where,
+      orderBy: { date: 'asc' }
+    });
+
+    // Fetch company predictions if companyId is available
+    let predictions = [];
+    if (companyId) {
+      predictions = await prisma.companyPrediction.findMany({
+        where: {
+          companyId: companyId,
+          createdAt: dateFilter
+        },
+        include: {
+          companyLocation: {
+            select: {
+              id: true,
+              name: true,
+              address: true,
+              latitude: true,
+              longitude: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'asc' }
+      });
+    }
+
+    const exportFormat = (format || 'csv').toString().toLowerCase();
+    const safeDate = (value) => value ? new Date(value).toISOString().split('T')[0] : '';
+
+    // Prepare export data
+    const exportRows = [];
+    
+    // Add weekly summary data
+    const weeklyMap = {};
+    dengueData.forEach(record => {
+      const week = getWeekOfYear(record.date);
+      const weekKey = `${week.year}-W${week.week}`;
+      if (!weeklyMap[weekKey]) {
+        weeklyMap[weekKey] = { 
+          week: weekKey, 
+          value: 0, 
+          date: record.date,
+          activeCases: 0,
+          totalCases: 0
+        };
+      }
+      weeklyMap[weekKey].value += (status === 'Active Cases' ? (record.activeCases || 0) : (record.totalCases || 0));
+      weeklyMap[weekKey].activeCases += (record.activeCases || 0);
+      weeklyMap[weekKey].totalCases += (record.totalCases || 0);
+    });
+    
+    const weeklyData = Object.values(weeklyMap).sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    // Export as XLSX
+    if (exportFormat === 'xlsx') {
+      const workbook = new ExcelJS.Workbook();
+      
+      // Weekly Summary Sheet
+      const weeklySheet = workbook.addWorksheet('Weekly Summary');
+      weeklySheet.columns = [
+        { header: 'Week', key: 'week', width: 15 },
+        { header: 'Date', key: 'date', width: 18 },
+        { header: 'Active Cases', key: 'activeCases', width: 16 },
+        { header: 'Total Cases', key: 'totalCases', width: 16 },
+        { header: 'Value', key: 'value', width: 16 }
+      ];
+      weeklyData.forEach(entry => {
+        weeklySheet.addRow({
+          week: entry.week,
+          date: safeDate(entry.date),
+          activeCases: entry.activeCases,
+          totalCases: entry.totalCases,
+          value: entry.value
+        });
+      });
+
+      // Dengue Data Sheet
+      const dataSheet = workbook.addWorksheet('Dengue Data');
+      dataSheet.columns = [
+        { header: 'Date', key: 'date', width: 18 },
+        { header: 'Location', key: 'location', width: 24 },
+        { header: 'Status', key: 'status', width: 16 },
+        { header: 'Active Cases', key: 'activeCases', width: 16 },
+        { header: 'Total Cases', key: 'totalCases', width: 16 },
+        { header: 'Coverage Area', key: 'coverageArea', width: 22 },
+        { header: 'Source', key: 'source', width: 14 }
+      ];
+      dengueData.forEach(record => {
+        dataSheet.addRow({
+          date: safeDate(record.date),
+          location: record.location || '',
+          status: record.status || '',
+          activeCases: record.activeCases ?? '',
+          totalCases: record.totalCases ?? '',
+          coverageArea: record.coverageArea || '',
+          source: record.source || ''
+        });
+      });
+
+      // Predictions Sheet (if available)
+      if (predictions.length > 0) {
+        const predictionsSheet = workbook.addWorksheet('Predictions');
+        predictionsSheet.columns = [
+          { header: 'Date', key: 'date', width: 18 },
+          { header: 'Location', key: 'location', width: 30 },
+          { header: 'Risk Score', key: 'riskScore', width: 16 },
+          { header: 'Combined Score', key: 'combinedScore', width: 18 },
+          { header: 'Address', key: 'address', width: 40 }
+        ];
+        predictions.forEach(pred => {
+          predictionsSheet.addRow({
+            date: safeDate(pred.createdAt),
+            location: pred.companyLocation?.name || '',
+            riskScore: pred.riskScore ?? '',
+            combinedScore: pred.combinedScore ?? '',
+            address: pred.companyLocation?.address || ''
+          });
+        });
+      }
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="dengue_report_${startDate}_${endDate}.xlsx"`);
+      await workbook.xlsx.write(res);
+      res.end();
+      return;
+    }
+
+    // Export as PDF
+    if (exportFormat === 'pdf') {
+      const doc = new PDFDocument({ margin: 40, size: 'A4' });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="dengue_report_${startDate}_${endDate}.pdf"`);
+      doc.pipe(res);
+
+      doc.fontSize(18).text('Dengue Report Export', { align: 'center' });
+      doc.moveDown();
+      doc.fontSize(12).text(`Date Range: ${startDate} - ${endDate}`);
+      if (status) doc.text(`Status: ${status}`);
+      doc.text(`Total Records: ${dengueData.length}`);
+      doc.text(`Weekly Data Points: ${weeklyData.length}`);
+      if (predictions.length > 0) doc.text(`Predictions: ${predictions.length}`);
+      doc.moveDown();
+
+      // Weekly Summary Section
+      doc.fontSize(14).font('Helvetica-Bold').text('Weekly Summary', { underline: true });
+      doc.moveDown(0.5);
+      weeklyData.slice(0, 20).forEach(entry => {
+        doc.font('Helvetica-Bold').text(`${entry.week} (${safeDate(entry.date)})`);
+        doc.font('Helvetica').text(
+          `Active Cases: ${entry.activeCases} | Total Cases: ${entry.totalCases} | Value: ${entry.value}`
+        );
+        doc.moveDown(0.3);
+      });
+      if (weeklyData.length > 20) {
+        doc.font('Helvetica-Oblique').text(`+ ${weeklyData.length - 20} more weeks not shown.`);
+      }
+
+      doc.moveDown();
+
+      // Sample Data Section
+      doc.fontSize(14).font('Helvetica-Bold').text('Sample Dengue Data', { underline: true });
+      doc.moveDown(0.5);
+      dengueData.slice(0, 30).forEach(record => {
+        doc.font('Helvetica-Bold').text(`${safeDate(record.date)} • ${record.location || 'N/A'}`);
+        doc.font('Helvetica').text(
+          `Status: ${record.status || '-'} | Active: ${record.activeCases ?? 0} | Total: ${record.totalCases ?? 0}`
+        );
+        doc.moveDown(0.3);
+      });
+      if (dengueData.length > 30) {
+        doc.font('Helvetica-Oblique').text(`+ ${dengueData.length - 30} more records not shown.`);
+      }
+
+      doc.end();
+      return;
+    }
+
+    // Default CSV export
+    const fields = ['week', 'date', 'activeCases', 'totalCases', 'value'];
+    const parser = new Parser({ fields });
+    
+    // Prepare CSV data
+    const csvData = weeklyData.map(entry => ({
+      week: entry.week,
+      date: safeDate(entry.date),
+      activeCases: entry.activeCases,
+      totalCases: entry.totalCases,
+      value: entry.value
+    }));
+    
+    const csv = parser.parse(csvData);
+    res.header('Content-Type', 'text/csv');
+    res.attachment(`dengue_report_${startDate}_${endDate}.csv`);
+    res.send(csv);
+  } catch (err) {
+    logger.error('[EXPORT REPORT ERROR]', { error: err.message, stack: err.stack, format: req.query.format });
+    return sendInternalError(res, 'Failed to export report', err);
+  }
+}
+
 /**
  * Generate cache key for coordinates
  * @param {number} latitude - Latitude coordinate
@@ -853,5 +1084,6 @@ module.exports = {
   exportData,
   getLocations,
   generateReport,
+  exportReport,
   getNearbyCases,
 }; 

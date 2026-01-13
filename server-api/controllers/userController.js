@@ -676,11 +676,12 @@ If you did not expect this invitation, please ignore this email or contact your 
 
     // Notify admins of the organization about the new user
     try {
+      const currentUserId = req.user?.userId;
       const admins = await prisma.user.findMany({
         where: {
           companyId: company.id,
           role: 'admin',
-          id: { not: req.userId } // Exclude the admin who created the user
+          ...(currentUserId ? { id: { not: currentUserId } } : {}) // Exclude the admin who created the user if available
         },
         select: { id: true }
       });
@@ -696,7 +697,7 @@ If you did not expect this invitation, please ignore this email or contact your 
           metadata: {
             newUserEmail: email,
             newUserRole: role || 'user',
-            invitedBy: req.userId
+            invitedBy: currentUserId
           }
         });
         console.log(`[INVITE USER] Notification sent to ${adminIds.length} admin(s)`);
