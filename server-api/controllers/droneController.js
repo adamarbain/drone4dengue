@@ -298,9 +298,11 @@ exports.registerDrone = async (req, res) => {
   try {
     const { name, model, serial, operationalArea, status = 'Operational', companyLocationId } = req.body;
     
-    if (!name || !model || !serial || !operationalArea) {
-      return sendValidationError(res, ['Name, model, serial, and operational area are required']);
+    if (!name || !model || !serial) {
+      return sendValidationError(res, ['Name, model, and serial are required']);
     }
+
+    const normalizedArea = operationalArea && operationalArea.trim() ? operationalArea : 'Unspecified';
 
     // Check if serial already exists
     const existingDrone = await prisma.drone.findUnique({ 
@@ -317,7 +319,7 @@ exports.registerDrone = async (req, res) => {
         name,
         model,
         serial,
-        operationalArea,
+        operationalArea: normalizedArea,
         status,
         userId: req.user.userId,
         companyId: req.companyId,

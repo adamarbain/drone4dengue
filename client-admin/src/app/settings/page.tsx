@@ -7,7 +7,7 @@ import AdminHeader from "@/components/AdminHeader"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { FiSave, FiEdit2, FiLock, FiMail, FiUser, FiSettings, FiSliders, FiRefreshCw, FiMapPin, FiPlus, FiEdit3, FiTrash2, FiSend, FiBell, FiEye, FiEyeOff, FiCheckCircle, FiX } from "react-icons/fi"
+import { FiSave, FiEdit2, FiLock, FiMail, FiUser, FiSettings, FiSliders, FiRefreshCw, FiMapPin, FiPlus, FiTrash2, FiSend, FiBell, FiEye, FiEyeOff, FiCheckCircle, FiX } from "react-icons/fi"
 import MapPicker from "@/components/MapPicker"
 import { useAuth } from '@/context/AuthContext';
 
@@ -124,10 +124,10 @@ export default function SettingsPage() {
   const [locationsLoading, setLocationsLoading] = useState(true);
   const [locationsError, setLocationsError] = useState('');
   const [showAddLocation, setShowAddLocation] = useState(false);
-  const [editingLocation, setEditingLocation] = useState<any>(null);
   const [locationForm, setLocationForm] = useState({ name: '', address: '', latitude: '', longitude: '', isActive: true });
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState('');
+  const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
 
   // Broadcast notification state
   const [broadcastTitle, setBroadcastTitle] = useState('');
@@ -362,13 +362,8 @@ export default function SettingsPage() {
     }
     setLocationLoading(true);
     try {
-      const url = editingLocation 
-        ? `${API_URL}/company-locations/${editingLocation.id}`
-        : `${API_URL}/company-locations`;
-      const method = editingLocation ? 'PUT' : 'POST';
-      
-      const res = await fetch(url, {
-        method,
+      const res = await fetch(`${API_URL}/company-locations`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
@@ -383,16 +378,15 @@ export default function SettingsPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Failed to ${editingLocation ? 'update' : 'create'} location`);
+        throw new Error(data.error || 'Failed to create location');
       }
       
-      const successMsg = `Location ${editingLocation ? 'updated' : 'created'} successfully!`;
+      const successMsg = 'Location created successfully!';
       setSuccessDialogMessage(successMsg);
       setShowSuccessDialog(true);
       
       setLocationForm({ name: '', address: '', latitude: '', longitude: '', isActive: true });
       setShowAddLocation(false);
-      setEditingLocation(null);
       // Refresh locations
       const refreshRes = await fetch(`${API_URL}/company-locations`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -402,30 +396,56 @@ export default function SettingsPage() {
         setLocations(data);
       }
     } catch (err) {
-      setLocationError(err instanceof Error ? err.message : `Failed to ${editingLocation ? 'update' : 'create'} location`);
+      setLocationError(err instanceof Error ? err.message : 'Failed to create location');
     } finally {
       setLocationLoading(false);
     }
   }
 
-  // Handle edit location
-  function handleEditLocation(location: any) {
-    setEditingLocation(location);
-    setLocationForm({
-      name: location.name || '',
-      address: location.address || '',
-      latitude: location.latitude?.toString() || '',
-      longitude: location.longitude?.toString() || '',
-      isActive: location.isActive !== undefined ? location.isActive : true,
-    });
-    setShowAddLocation(true);
+  // Handle delete location
+  async function handleDeleteLocation(locationId: string) {
+    if (!token) {
+      setLocationError('No token found.');
+      return;
+    }
+    const confirmed = typeof window !== 'undefined'
+      ? window.confirm('Are you sure you want to delete this location? This cannot be undone.')
+      : true;
+    if (!confirmed) return;
+
+    setLocationError('');
+    setDeleteLoadingId(locationId);
+    try {
+      const res = await fetch(`${API_URL}/company-locations/${locationId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to delete location');
+      }
+
+      setSuccessDialogMessage('Location deleted successfully!');
+      setShowSuccessDialog(true);
+
+      const refreshRes = await fetch(`${API_URL}/company-locations`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (refreshRes.ok) {
+        const data = await refreshRes.json();
+        setLocations(data);
+      }
+    } catch (err) {
+      setLocationError(err instanceof Error ? err.message : 'Failed to delete location');
+    } finally {
+      setDeleteLoadingId(null);
+    }
   }
 
   // Handle cancel location form
   function handleCancelLocation() {
     setLocationForm({ name: '', address: '', latitude: '', longitude: '', isActive: true });
     setShowAddLocation(false);
-    setEditingLocation(null);
     setLocationError('');
   }
 
@@ -1117,32 +1137,32 @@ export default function SettingsPage() {
             </motion.div>
           </motion.div>
 
-          {/* Company Locations */}
+          {/* Operaional Areas */}
           <motion.div variants={item} className="mt-8">
             <Card className="bg-white shadow-md rounded-xl overflow-hidden">
               <div className="bg-light-bg px-6 py-4 border-b border-accent-blue">
                 <div className="flex justify-between items-center">
                   <h2 className="text-xl font-bold flex items-center gap-2">
                     <FiMapPin className="text-accent-blue" />
-                    Company Locations
+                    Operational Areas
                   </h2>
                   <button
                     onClick={() => setShowAddLocation(true)}
                     className="bg-accent-blue text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-secondary-blue flex items-center gap-2"
                   >
                     <FiPlus />
-                    Add Location
+                    Add Operational Area
                   </button>
                 </div>
               </div>
               <CardContent className="p-6">
                 {locationsLoading ? (
-                  <div className="text-gray-500 text-center py-8">Loading locations...</div>
+                  <div className="text-gray-500 text-center py-8">Loading operational areas...</div>
                 ) : locationsError ? (
                   <div className="text-red-600 text-center py-8">{locationsError}</div>
                 ) : locations.length === 0 ? (
                   <div className="text-gray-500 text-center py-8">
-                    No locations found. Add your first location to get started.
+                    No operational areas found. Add your first operational area to get started.
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -1174,11 +1194,16 @@ export default function SettingsPage() {
                           </div>
                           <div className="flex gap-2 ml-4">
                             <button
-                              onClick={() => handleEditLocation(location)}
-                              className="text-accent-blue hover:bg-light-bg/50 p-2 rounded-lg"
-                              title="Edit location"
+                              onClick={() => handleDeleteLocation(location.id)}
+                              className="text-red-600 hover:bg-red-50 p-2 rounded-lg disabled:opacity-60"
+                              title="Delete location"
+                              disabled={deleteLoadingId === location.id || locationLoading}
                             >
-                              <FiEdit3 />
+                              {deleteLoadingId === location.id ? (
+                                <FiRefreshCw className="animate-spin" />
+                              ) : (
+                                <FiTrash2 />
+                              )}
                             </button>
                           </div>
                         </div>
@@ -1187,135 +1212,6 @@ export default function SettingsPage() {
                   </div>
                 )}
 
-                {/* Add/Edit Location Form */}
-                {showAddLocation && (
-                  <div className="mt-6 border-t border-accent-blue pt-6">
-                    <h3 className="text-lg font-semibold mb-4">
-                      {editingLocation ? 'Edit Location' : 'Add New Location'}
-                    </h3>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="location-name">Location Name *</Label>
-                          <Input
-                            id="location-name"
-                            name="name"
-                            value={locationForm.name}
-                            onChange={handleLocationChange}
-                            placeholder="Enter location name"
-                            className="border-accent-blue focus:border-accent-blue"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="location-address">Address</Label>
-                          <Input
-                            id="location-address"
-                            name="address"
-                            value={locationForm.address}
-                            onChange={handleLocationChange}
-                            placeholder="Enter address (optional)"
-                            className="border-accent-blue focus:border-accent-blue"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="location-latitude">Latitude</Label>
-                          <Input
-                            id="location-latitude"
-                            name="latitude"
-                            type="number"
-                            step="any"
-                            value={locationForm.latitude}
-                            onChange={handleLocationChange}
-                            placeholder="Enter latitude (optional)"
-                            className="border-accent-blue focus:border-accent-blue"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="location-longitude">Longitude</Label>
-                          <Input
-                            id="location-longitude"
-                            name="longitude"
-                            type="number"
-                            step="any"
-                            value={locationForm.longitude}
-                            onChange={handleLocationChange}
-                            placeholder="Enter longitude (optional)"
-                            className="border-accent-blue focus:border-accent-blue"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="location-status">Status</Label>
-                          <select
-                            id="location-status"
-                            name="isActive"
-                            value={locationForm.isActive.toString()}
-                            onChange={(e) => setLocationForm({ ...locationForm, isActive: e.target.value === 'true' })}
-                            className="w-full rounded-md border border-accent-blue bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-blue"
-                          >
-                            <option value="true">Active</option>
-                            <option value="false">Inactive</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      {/* Map picker to select coordinates */}
-                      <div className="space-y-2">
-                        <Label>Pin Exact Location on Map</Label>
-                        <MapPicker
-                          value={(() => {
-                            const lat = parseFloat(locationForm.latitude as unknown as string)
-                            const lng = parseFloat(locationForm.longitude as unknown as string)
-                            return isNaN(lat) || isNaN(lng) ? null : { lat, lng }
-                          })()}
-                          onChange={async (coords) => {
-                            setLocationForm(prev => ({
-                              ...prev,
-                              latitude: coords.lat.toString(),
-                              longitude: coords.lng.toString(),
-                            }))
-                            try {
-                              const res = await fetch(`${API_URL}/geocode/reverse?lat=${coords.lat}&lon=${coords.lng}`, {
-                                headers: { 'Accept': 'application/json' }
-                              })
-                              if (res.ok) {
-                                const data = await res.json()
-                                const display = data?.display_name || ''
-                                if (display) {
-                                  setLocationForm(prev => ({ ...prev, address: display }))
-                                }
-                              }
-                            } catch {
-                              // ignore reverse geocode errors silently
-                            }
-                          }}
-                          height={360}
-                        />
-                        <p className="text-xs text-gray-500">
-                          Selected: {locationForm.latitude || '-'}, {locationForm.longitude || '-'}
-                        </p>
-                      </div>
-                      
-                      {locationError && <div className="text-red-600">{locationError}</div>}
-                      
-                      <div className="flex gap-3">
-                        <button
-                          onClick={handleLocationSave}
-                          disabled={locationLoading}
-                          className="bg-accent-blue text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-secondary-blue flex items-center gap-2 disabled:opacity-50"
-                        >
-                          <FiSave />
-                          {locationLoading ? 'Saving...' : (editingLocation ? 'Update Location' : 'Add Location')}
-                        </button>
-                        <button
-                          onClick={handleCancelLocation}
-                          className="bg-gray-500 text-white px-6 py-2 rounded-lg font-bold text-base hover:bg-gray-600"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -1466,6 +1362,136 @@ export default function SettingsPage() {
             </Card>
           </motion.div>
         </motion.section>
+
+        {/* Operational Area Modal */}
+        <AnimatePresence>
+          {showAddLocation && (
+            <motion.div
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[90] p-4"
+              variants={overlayVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              onClick={handleCancelLocation}
+            >
+              <motion.div
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden"
+                variants={modalVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="bg-light-bg px-6 py-4 border-b border-accent-blue flex items-center justify-between">
+                  <h2 className="text-xl font-bold flex items-center gap-2 text-primary-dark">
+                    <FiMapPin className="text-accent-blue" />
+                    Add New Operational Area
+                  </h2>
+                  <button
+                    onClick={handleCancelLocation}
+                    className="text-primary-dark hover:bg-white/40 p-2 rounded-full transition-colors"
+                  >
+                    <FiX size={20} />
+                  </button>
+                </div>
+                <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="location-name">Operational Area Name *</Label>
+                      <Input
+                        id="location-name"
+                        name="name"
+                        value={locationForm.name}
+                        onChange={handleLocationChange}
+                        placeholder="Enter operational area name"
+                        className="border-accent-blue focus:border-accent-blue"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="location-address">Operational Area Address</Label>
+                      <Input
+                        id="location-address"
+                        name="address"
+                        value={locationForm.address}
+                        onChange={handleLocationChange}
+                        placeholder="Enter operational area address (optional)"
+                        className="border-accent-blue focus:border-accent-blue"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="location-status">Status</Label>
+                      <select
+                        id="location-status"
+                        name="isActive"
+                        value={locationForm.isActive.toString()}
+                        onChange={(e) => setLocationForm({ ...locationForm, isActive: e.target.value === "true" })}
+                        className="w-full rounded-md border border-accent-blue bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-blue"
+                      >
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Pin Exact Location on Map</Label>
+                    <MapPicker
+                      value={(() => {
+                        const lat = parseFloat(locationForm.latitude as unknown as string)
+                        const lng = parseFloat(locationForm.longitude as unknown as string)
+                        return isNaN(lat) || isNaN(lng) ? null : { lat, lng }
+                      })()}
+                      onChange={async (coords) => {
+                        setLocationForm((prev) => ({
+                          ...prev,
+                          latitude: coords.lat.toString(),
+                          longitude: coords.lng.toString(),
+                        }))
+                        try {
+                          const res = await fetch(`${API_URL}/geocode/reverse?lat=${coords.lat}&lon=${coords.lng}`, {
+                            headers: { Accept: "application/json" },
+                          })
+                          if (res.ok) {
+                            const data = await res.json()
+                            const display = data?.display_name || ""
+                            if (display) {
+                              setLocationForm((prev) => ({ ...prev, address: display }))
+                            }
+                          }
+                        } catch {
+                          // ignore reverse geocode errors silently
+                        }
+                      }}
+                      height={360}
+                    />
+                    <p className="text-xs text-gray-500">
+                      Selected: {locationForm.latitude || "-"}, {locationForm.longitude || "-"}
+                    </p>
+                  </div>
+
+                  {locationError && <div className="text-red-600">{locationError}</div>}
+
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button
+                      onClick={handleCancelLocation}
+                      className="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleLocationSave}
+                      disabled={locationLoading}
+                      className="bg-accent-blue text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-secondary-blue transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
+                      <FiSave />
+                      {locationLoading ? "Saving..." : "Add Location"}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Success Dialog */}
         <AnimatePresence>
