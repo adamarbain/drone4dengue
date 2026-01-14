@@ -271,13 +271,6 @@ export default function DataManagementPage() {
     )
   }
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
-  }
-  if (error) {
-    return <div className="flex items-center justify-center h-screen text-red-600">Error: {error}</div>;
-  }
-
   return (
     <div className="min-h-screen bg-[#FFF7E3] flex flex-row  overflow-hidden">
       <AdminSidebar current="Data Management" />
@@ -295,24 +288,49 @@ export default function DataManagementPage() {
             </div>
           </motion.div>
 
+          {/* Inline error (non-blocking) */}
+          {error && (
+            <motion.div
+              variants={item}
+              className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+            >
+              Failed to load dengue data: {error}
+            </motion.div>
+          )}
+
           {/* Data Overview Cards */}
           <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              {summary && [
-              { label: "Total Records", value: summary.totalRecords, icon: <FiDatabase />, color: "bg-blue-500" },
-              { label: "Active Cases", value: summary.activeCases, icon: <FiActivity />, color: "bg-blue-600" },
-              { label: "Dengue Hotspots", value: summary.hotspotCount, icon: <FiTrendingUp />, color: "bg-purple-500" },
-              { label: "Locations Covered", value: summary.locationsCovered, icon: <FiMapPin />, color: "bg-green-500" },
-            ].map((stat) => (
-              <Card key={stat.label} className="border-accent-blue/30 bg-white">
-                <CardHeader className="flex-row items-center justify-between">
-                  <div className={`p-3 ${stat.color} rounded-lg text-white`}>{stat.icon}</div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold mb-1">{stat.value}</div>
-                  <CardTitle className="text-sm font-medium text-gray-500">{stat.label}</CardTitle>
-                </CardContent>
-              </Card>
-            ))}
+            {loading || !summary
+              ? Array.from({ length: 4 }).map((_, idx) => (
+                  <Card
+                    key={idx}
+                    className="border-accent-blue/30 bg-white animate-pulse"
+                  >
+                    <CardHeader className="flex-row items-center justify-between">
+                      <div className="p-3 rounded-lg bg-gray-200 w-10 h-10" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-8 bg-gray-200 rounded mb-2 w-1/2" />
+                      <div className="h-4 bg-gray-100 rounded w-2/3" />
+                    </CardContent>
+                  </Card>
+                ))
+              : [
+                  { label: "Total Records", value: summary.totalRecords, icon: <FiDatabase />, color: "bg-blue-500" },
+                  { label: "Active Cases", value: summary.activeCases, icon: <FiActivity />, color: "bg-blue-600" },
+                  { label: "Dengue Hotspots", value: summary.hotspotCount, icon: <FiTrendingUp />, color: "bg-purple-500" },
+                  { label: "Locations Covered", value: summary.locationsCovered, icon: <FiMapPin />, color: "bg-green-500" },
+                ].map((stat) => (
+                  <Card key={stat.label} className="border-accent-blue/30 bg-white">
+                    <CardHeader className="flex-row items-center justify-between">
+                      <div className={`p-3 ${stat.color} rounded-lg text-white`}>{stat.icon}</div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold mb-1">{stat.value}</div>
+                      <CardTitle className="text-sm font-medium text-gray-500">{stat.label}</CardTitle>
+                    </CardContent>
+                  </Card>
+                ))}
           </motion.div>
 
           {/* Upload Button */}
@@ -407,45 +425,80 @@ export default function DataManagementPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedData.map((row, idx) => (
-                      <motion.tr
-                        key={row.id || row.date + row.location}
-                        className={`border-b border-gray-100 last:border-0 hover:bg-light-bg/50 transition-colors ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}` }
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.1 }}
-                      >
-                        <td className="py-4 px-6 font-medium text-primary-dark flex items-center gap-2">
-                          <FiCalendar className="text-accent-blue" size={16} />
-                          {row.date ? new Date(row.date).toLocaleDateString("en-GB") : "-"}
-                        </td>
-                        <td className="py-4 px-6 text-primary-dark flex items-center gap-2">
-                          <FiMapPin className="text-accent-blue" size={16} />
-                          {row.location}
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                            <span className="text-red-600 font-bold text-sm">{row.activeCases}</span>
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          {row.status === 'Active Cases' ? (
-                            <span className="text-gray-500">N/A</span>
-                          ) : (
-                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                              <span className="text-blue-600 font-bold text-sm">{row.days_duration}</span>
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-4 px-6 text-primary-dark">{row.status || '-'}</td>
-                        <td className="py-4 px-6 text-primary-dark">
-                          <div className="flex flex-col">
-                            <span>{row.latitude !== null && row.latitude !== undefined ? row.latitude : '-'}</span>
-                            <span>{row.longitude !== null && row.longitude !== undefined ? row.longitude : '-'}</span>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    ))}
+                    {loading
+                      ? Array.from({ length: 8 }).map((_, idx) => (
+                          <tr
+                            key={idx}
+                            className={`border-b border-gray-100 last:border-0 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
+                          >
+                            <td className="py-4 px-6">
+                              <div className="flex items-center gap-2">
+                                <div className="h-4 w-4 rounded-full bg-gray-200" />
+                                <div className="h-4 bg-gray-200 rounded w-24" />
+                              </div>
+                            </td>
+                            <td className="py-4 px-6">
+                              <div className="flex items-center gap-2">
+                                <div className="h-4 w-4 rounded-full bg-gray-200" />
+                                <div className="h-4 bg-gray-200 rounded w-32" />
+                              </div>
+                            </td>
+                            <td className="py-4 px-6">
+                              <div className="w-8 h-8 bg-gray-200 rounded-full" />
+                            </td>
+                            <td className="py-4 px-6">
+                              <div className="w-8 h-8 bg-gray-200 rounded-full" />
+                            </td>
+                            <td className="py-4 px-6">
+                              <div className="h-4 bg-gray-200 rounded w-20" />
+                            </td>
+                            <td className="py-4 px-6">
+                              <div className="flex flex-col gap-1">
+                                <div className="h-3 bg-gray-200 rounded w-16" />
+                                <div className="h-3 bg-gray-100 rounded w-16" />
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      : paginatedData.map((row, idx) => (
+                          <motion.tr
+                            key={row.id || row.date + row.location}
+                            className={`border-b border-gray-100 last:border-0 hover:bg-light-bg/50 transition-colors ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}` }
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.1 }}
+                          >
+                            <td className="py-4 px-6 font-medium text-primary-dark flex items-center gap-2">
+                              <FiCalendar className="text-accent-blue" size={16} />
+                              {row.date ? new Date(row.date).toLocaleDateString("en-GB") : "-"}
+                            </td>
+                            <td className="py-4 px-6 text-primary-dark flex items-center gap-2">
+                              <FiMapPin className="text-accent-blue" size={16} />
+                              {row.location}
+                            </td>
+                            <td className="py-4 px-6">
+                              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                                <span className="text-red-600 font-bold text-sm">{row.activeCases}</span>
+                              </div>
+                            </td>
+                            <td className="py-4 px-6">
+                              {row.status === 'Active Cases' ? (
+                                <span className="text-gray-500">N/A</span>
+                              ) : (
+                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                  <span className="text-blue-600 font-bold text-sm">{row.days_duration}</span>
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-4 px-6 text-primary-dark">{row.status || '-'}</td>
+                            <td className="py-4 px-6 text-primary-dark">
+                              <div className="flex flex-col">
+                                <span>{row.latitude !== null && row.latitude !== undefined ? row.latitude : '-'}</span>
+                                <span>{row.longitude !== null && row.longitude !== undefined ? row.longitude : '-'}</span>
+                              </div>
+                            </td>
+                          </motion.tr>
+                        ))}
                   </tbody>
                 </table>
               </div>

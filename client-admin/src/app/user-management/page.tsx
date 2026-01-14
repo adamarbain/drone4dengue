@@ -101,6 +101,23 @@ export default function UserManagementPage() {
   const [openModalCreateUser, setOpenModalCreateUser] = useState(false)
   const [creating, setCreating] = useState(false)
 
+  // Bulk create users modal & state
+  type BulkUser = {
+    email: string
+    role: "user" | "admin"
+    status?: "pending" | "success" | "error"
+    errorMessage?: string
+  }
+  const [openModalBulkCreate, setOpenModalBulkCreate] = useState(false)
+  const [bulkUsers, setBulkUsers] = useState<BulkUser[]>([
+    { email: "", role: "user" },
+    { email: "", role: "user" },
+    { email: "", role: "user" },
+  ])
+  const [bulkCreating, setBulkCreating] = useState(false)
+  const [bulkProgress, setBulkProgress] = useState(0) // 0–1
+  const [bulkSummaryMessage, setBulkSummaryMessage] = useState<string | null>(null)
+
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successDialogMessage, setSuccessDialogMessage] = useState("");
 
@@ -110,6 +127,18 @@ export default function UserManagementPage() {
       role: "user",
       companyId: companyId ?? "",
     })
+    setError(null)
+  }
+
+  const resetBulkUsers = () => {
+    setBulkUsers([
+      { email: "", role: "user" },
+      { email: "", role: "user" },
+      { email: "", role: "user" },
+    ])
+    setBulkCreating(false)
+    setBulkProgress(0)
+    setBulkSummaryMessage(null)
     setError(null)
   }
 
@@ -410,6 +439,16 @@ export default function UserManagementPage() {
             >
               <FiPlus />
               Add New User
+            </button>
+            <button
+              className="bg-white text-accent-blue border border-accent-blue px-8 py-3 rounded-lg font-bold text-base hover:bg-accent-blue hover:text-white transition-all flex items-center gap-2 shadow-md"
+              onClick={() => {
+                resetBulkUsers()
+                setOpenModalBulkCreate(true)
+              }}
+            >
+              <FiUserPlus />
+              Bulk Add Users
             </button>
             <button
               className="bg-white text-accent-blue border border-accent-blue px-8 py-3 rounded-lg font-bold text-base hover:bg-accent-blue hover:text-white transition-all flex items-center gap-2"
@@ -743,6 +782,399 @@ export default function UserManagementPage() {
             </div>
           </motion.div>
         </motion.section>
+
+        {/* Bulk Create Users Modal */}
+        <AnimatePresence>
+          {openModalBulkCreate && (
+            <motion.div
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+              variants={overlayVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              onClick={() => {
+                if (bulkCreating) return
+                setOpenModalBulkCreate(false)
+                resetBulkUsers()
+              }}
+            >
+              <motion.div
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden max-h-[85vh] flex flex-col"
+                variants={modalVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Modal Header */}
+                <div className="bg-gradient-to-r from-accent-blue to-secondary-blue px-6 py-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                        <FiUserPlus className="text-white text-lg" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-white">Bulk Add Users</h2>
+                        <p className="text-white/80 text-sm">
+                          Invite many users at once and set their roles easily.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (bulkCreating) return
+                        setOpenModalBulkCreate(false)
+                        resetBulkUsers()
+                      }}
+                      className="text-white/80 hover:text-white hover:bg-white/20 p-2 rounded-lg transition-colors disabled:opacity-40"
+                      disabled={bulkCreating}
+                    >
+                      <FiX size={20} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6 space-y-4 overflow-y-auto flex-1">
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                      {error}
+                    </div>
+                  )}
+
+                  {/* Info Banner */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <FiMail className="text-blue-600 mt-0.5" size={18} />
+                      <div className="text-sm text-blue-800">
+                        <p className="font-medium mb-1">Bulk invite details:</p>
+                        <ul className="list-disc list-inside space-y-1 text-blue-700">
+                          <li>Each row represents one new user.</li>
+                          <li>Set the email and role (`user` or `admin`) for every user.</li>
+                          <li>
+                            Passwords are auto-generated and login credentials are emailed to the users. They must
+                            verify their email on first login.
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress bar when processing */}
+                  {bulkCreating && (
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-1 text-sm text-gray-600">
+                        <span>Inviting users...</span>
+                        <span>{Math.round(bulkProgress * 100)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="h-2 rounded-full bg-accent-blue transition-all"
+                          style={{ width: `${Math.round(bulkProgress * 100)}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Summary message */}
+                  {bulkSummaryMessage && (
+                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                      {bulkSummaryMessage}
+                    </div>
+                  )}
+
+                  {/* Bulk user rows */}
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-2 flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">
+                        Users to invite ({bulkUsers.length})
+                      </span>
+                      <button
+                        type="button"
+                        className="text-xs px-3 py-1 rounded-full bg-accent-blue text-white hover:bg-secondary-blue transition-colors disabled:opacity-50"
+                        onClick={() =>
+                          setBulkUsers((prev) => [...prev, { email: "", role: "user" }])
+                        }
+                        disabled={bulkCreating || bulkUsers.length >= 50}
+                      >
+                        + Add Row
+                      </button>
+                    </div>
+                    <div className="max-h-[40vh] overflow-y-auto">
+                      <table className="min-w-full text-sm">
+                        <thead className="bg-gray-100 border-b border-gray-200">
+                          <tr>
+                            <th className="px-4 py-2 text-left w-12">#</th>
+                            <th className="px-4 py-2 text-left">Email</th>
+                            <th className="px-4 py-2 text-left w-40">Role</th>
+                            <th className="px-4 py-2 text-left w-32">Status</th>
+                            <th className="px-4 py-2 text-right w-16">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bulkUsers.map((u, idx) => (
+                            <tr
+                              key={idx}
+                              className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                            >
+                              <td className="px-4 py-2 align-top text-gray-500">{idx + 1}</td>
+                              <td className="px-4 py-2 align-top">
+                                <input
+                                  type="email"
+                                  placeholder="user@example.com"
+                                  value={u.email}
+                                  onChange={(e) => {
+                                    const value = e.target.value
+                                    setBulkUsers((prev) =>
+                                      prev.map((row, i) =>
+                                        i === idx
+                                          ? {
+                                              ...row,
+                                              email: value,
+                                              status: undefined,
+                                              errorMessage: undefined,
+                                            }
+                                          : row,
+                                      ),
+                                    )
+                                  }}
+                                  disabled={bulkCreating}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent text-sm"
+                                />
+                                {u.email.trim() !== "" && !isEmailValid(u.email) && !u.errorMessage && (
+                                  <p className="mt-1 text-xs text-red-600">
+                                    Please enter a valid email address.
+                                  </p>
+                                )}
+                                {u.status === "error" && u.errorMessage && (
+                                  <p className="mt-1 text-xs text-red-600">{u.errorMessage}</p>
+                                )}
+                              </td>
+                              <td className="px-4 py-2 align-top">
+                                <select
+                                  value={u.role}
+                                  onChange={(e) => {
+                                    const value = e.target.value as "user" | "admin"
+                                    setBulkUsers((prev) =>
+                                      prev.map((row, i) =>
+                                        i === idx
+                                          ? { ...row, role: value, status: undefined }
+                                          : row,
+                                      ),
+                                    )
+                                  }}
+                                  disabled={bulkCreating}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent text-sm"
+                                >
+                                  <option value="user">User</option>
+                                  <option value="admin">Admin</option>
+                                </select>
+                              </td>
+                              <td className="px-4 py-2 align-top">
+                                {u.status === "success" && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full bg-green-50 text-green-700 text-xs border border-green-200">
+                                    <span className="w-2 h-2 rounded-full bg-green-500 mr-1.5"></span>
+                                    Success
+                                  </span>
+                                )}
+                                {u.status === "error" && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full bg-red-50 text-red-700 text-xs border border-red-200">
+                                    <span className="w-2 h-2 rounded-full bg-red-500 mr-1.5"></span>
+                                    Failed
+                                  </span>
+                                )}
+                                {u.status === "pending" && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full bg-yellow-50 text-yellow-700 text-xs border border-yellow-200">
+                                    <span className="w-2 h-2 rounded-full bg-yellow-500 mr-1.5 animate-pulse"></span>
+                                    Processing
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-4 py-2 align-top text-right">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setBulkUsers((prev) =>
+                                      prev.filter((_, i) => i !== idx),
+                                    )
+                                  }
+                                  disabled={bulkCreating || bulkUsers.length <= 1}
+                                  className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors disabled:opacity-40"
+                                >
+                                  <FiTrash2 size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="bg-gray-50 px-6 py-4 flex gap-3 items-center">
+                  <button
+                    onClick={() => {
+                      if (bulkCreating) return
+                      setOpenModalBulkCreate(false)
+                      resetBulkUsers()
+                    }}
+                    className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium disabled:opacity-50"
+                    disabled={bulkCreating}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setError(null)
+                      setBulkSummaryMessage(null)
+
+                      // Filter out completely empty rows
+                      const toInvite = bulkUsers.filter((u) => u.email.trim() !== "")
+
+                      if (!toInvite.length) {
+                        setError("Please provide at least one email to invite.")
+                        return
+                      }
+
+                      // Validate emails
+                      const invalidIndex = toInvite.findIndex(
+                        (u) => !isEmailValid(u.email),
+                      )
+                      if (invalidIndex !== -1) {
+                        setError(
+                          `Row ${invalidIndex + 1}: Please enter a valid email address.`,
+                        )
+                        return
+                      }
+
+                      setBulkCreating(true)
+                      setBulkProgress(0)
+
+                      // Mark all selected rows as pending
+                      setBulkUsers((prev) =>
+                        prev.map((row) =>
+                          row.email.trim() !== ""
+                            ? { ...row, status: "pending", errorMessage: undefined }
+                            : row,
+                        ),
+                      )
+
+                      const total = toInvite.length
+                      let successCount = 0
+                      let failCount = 0
+
+                      for (let i = 0; i < total; i++) {
+                        const u = toInvite[i]
+                        try {
+                          const res = await fetch(`${API_URL}/users/invite`, {
+                            method: "POST",
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify({
+                              email: u.email,
+                              role: u.role,
+                              companyId: companyId ?? "",
+                            }),
+                          })
+
+                          if (!res.ok) {
+                            const errData = await res.json().catch(() => ({}))
+                            let message =
+                              errData.error ||
+                              "Failed to invite user. Please try again."
+                            if (
+                              res.status === 400 &&
+                              typeof errData.error === "string" &&
+                              errData.error.includes("already registered")
+                            ) {
+                              message = "Email already registered."
+                            }
+                            if (res.status === 409) {
+                              message = "Email already registered."
+                            }
+
+                            failCount += 1
+                            setBulkUsers((prev) =>
+                              prev.map((row) =>
+                                row.email === u.email
+                                  ? {
+                                      ...row,
+                                      status: "error",
+                                      errorMessage: message,
+                                    }
+                                  : row,
+                              ),
+                            )
+                          } else {
+                            successCount += 1
+                            setBulkUsers((prev) =>
+                              prev.map((row) =>
+                                row.email === u.email
+                                  ? { ...row, status: "success" }
+                                  : row,
+                              ),
+                            )
+                          }
+                        } catch (err: any) {
+                          failCount += 1
+                          setBulkUsers((prev) =>
+                            prev.map((row) =>
+                              row.email === u.email
+                                ? {
+                                    ...row,
+                                    status: "error",
+                                    errorMessage:
+                                      err?.message ||
+                                      "Unexpected error inviting user.",
+                                  }
+                                : row,
+                            ),
+                          )
+                        } finally {
+                          setBulkProgress((i + 1) / total)
+                        }
+                      }
+
+                      if (successCount > 0) {
+                        fetchUsers()
+                        fetchSummary()
+                      }
+
+                      const parts = []
+                      if (successCount) parts.push(`${successCount} succeeded`)
+                      if (failCount) parts.push(`${failCount} failed`)
+                      setBulkSummaryMessage(
+                        parts.length
+                          ? `Bulk invite completed: ${parts.join(", ")}.`
+                          : "No users were invited.",
+                      )
+
+                      setBulkCreating(false)
+                    }}
+                    disabled={
+                      bulkCreating ||
+                      bulkUsers.every((u) => u.email.trim() === "")
+                    }
+                    className="flex-1 px-4 py-3 bg-accent-blue text-white rounded-lg hover:bg-secondary-blue transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {bulkCreating ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        Inviting Users...
+                      </>
+                    ) : (
+                      <>
+                        <FiSave size={16} />
+                        Invite All Users
+                      </>
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Enhanced Create User Modal */}
         <AnimatePresence>

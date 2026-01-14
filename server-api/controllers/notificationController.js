@@ -239,7 +239,9 @@ async function deleteNotification(req, res) {
 }
 
 /**
- * Send broadcast push notification to all mobile app users
+ * Send broadcast push notification to ALL mobile app users **within the same company**
+ * as the authenticated admin.
+ *
  * POST /api/notifications/broadcast
  * Requires admin role
  */
@@ -252,10 +254,18 @@ async function sendBroadcastNotification(req, res) {
       return sendValidationError(res, ['Title and message are required']);
     }
 
-    // Get all active device tokens from all users
+    const companyId = req.companyId || req.user?.companyId;
+    if (!companyId) {
+      return sendValidationError(res, ['Company context is missing for this user']);
+    }
+
+    // Get all active device tokens for users in the same company only
     const deviceTokens = await prisma.deviceToken.findMany({
       where: {
-        isActive: true
+        isActive: true,
+        user: {
+          companyId
+        }
       },
       select: {
         pushToken: true,
@@ -264,13 +274,19 @@ async function sendBroadcastNotification(req, res) {
     });
 
     if (deviceTokens.length === 0) {
-      return sendErrorResponse(res, 404, 'No active device tokens found', 'NO_DEVICE_TOKENS', { sent: 0, total: 0 });
+      return sendErrorResponse(
+        res,
+        404,
+        'No active device tokens found for this company',
+        'NO_DEVICE_TOKENS',
+        { sent: 0, total: 0, companyId }
+      );
     }
 
     // Extract push tokens
     const pushTokens = deviceTokens.map(dt => dt.pushToken);
 
-    // Send push notifications to all tokens
+    // Send push notifications to all tokens **in this company only**
     await sendPushNotification(pushTokens, {
       title,
       message,
@@ -278,52 +294,27 @@ async function sendBroadcastNotification(req, res) {
       metadata
     });
 
-    // Get unique user IDs and company IDs to create notification records
-    const userIds = [...new Set(deviceTokens.map(dt => dt.userId))];
-    const users = await prisma.user.findMany({
-      where: {
-        id: { in: userIds }
-      },
-      select: {
-        id: true,
-        companyId: true
-      }
+    // Create a single company-wide notification for this company
+    await createNotification({
+      title,
+      message,
+      type,
+      companyId,
+      userIds: null, // Company-wide notification
+      metadata
     });
 
-    // Group users by company
-    const companyUserMap = {};
-    users.forEach(user => {
-      if (!companyUserMap[user.companyId]) {
-        companyUserMap[user.companyId] = [];
-      }
-      companyUserMap[user.companyId].push(user.id);
-    });
-
-    // Create company-wide notifications for each company
-    const notificationPromises = Object.entries(companyUserMap).map(([companyId, userIds]) =>
-      createNotification({
-        title,
-        message,
-        type,
-        companyId,
-        userIds: null, // Company-wide notification
-        metadata
-      })
-    );
-
-    await Promise.all(notificationPromises);
-
-    logger.info('[BROADCAST NOTIFICATION] Sent', { 
-      tokensSent: pushTokens.length, 
-      companies: Object.keys(companyUserMap).length 
+    logger.info('[BROADCAST NOTIFICATION] Sent', {
+      tokensSent: pushTokens.length,
+      companyId
     });
 
     res.json({
       success: true,
       sent: pushTokens.length,
       total: pushTokens.length,
-      companies: Object.keys(companyUserMap).length,
-      message: `Broadcast notification sent to ${pushTokens.length} devices`
+      companyId,
+      message: `Broadcast notification sent to ${pushTokens.length} devices in this company`
     });
   } catch (error) {
     logger.error('[BROADCAST NOTIFICATION ERROR]', { error: error.message, stack: error.stack });

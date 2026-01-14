@@ -199,6 +199,22 @@ export default function NotificationPage() {
     }
   };
 
+  const isToday = (date: Date): boolean => {
+    const today = new Date();
+    return (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    );
+  };
+
+  const formatDate = (date: Date): string => {
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   const formatTime = (date: Date): string => {
     const hours = date.getHours();
     const minutes = date.getMinutes();
@@ -272,9 +288,9 @@ export default function NotificationPage() {
           </View>
 
           {/* Filters */}
-          <View className="mb-4">
+          <View className="mb-4 flex-row">
             {/* Read Status Filter */}
-            <View className="mb-3">
+            <View className="flex-1 mr-3">
               <Text className="font-semibold mb-2" style={{ color: '#0F2854', fontSize: tablet ? 16 : 14 }}>Notification Status</Text>
             {Platform.OS === 'ios' ? (
               <>
@@ -349,7 +365,7 @@ export default function NotificationPage() {
           </View>
 
           {/* Type Filter */}
-          <View>
+          <View className="flex-1">
             <Text className="font-semibold mb-2" style={{ color: '#0F2854', fontSize: tablet ? 16 : 14 }}>Notification Type</Text>
             {Platform.OS === 'ios' ? (
               <>
@@ -521,10 +537,15 @@ export default function NotificationPage() {
                       )}
                     </View>
 
-                    {/* Time */}
+                    {/* Time / Date */}
                     <View className="ml-2">
                       <Text style={{ color: 'rgba(15, 40, 84, 0.5)', fontSize: tablet ? 14 : 12 }}>
-                        {formatTime(new Date(notification.createdAt))}
+                        {(() => {
+                          const createdDate = new Date(notification.createdAt);
+                          return isToday(createdDate)
+                            ? formatTime(createdDate)
+                            : formatDate(createdDate);
+                        })()}
                       </Text>
                       {!notification.isRead && (
                         <View 
