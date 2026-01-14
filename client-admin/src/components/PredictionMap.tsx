@@ -1,10 +1,20 @@
 "use client"
 
 import { useState, useEffect, useRef } from 'react'
+import maplibregl from 'maplibre-gl'
 import { predictCompany, getCompanyPredictions, getCompanyLocations, checkPredictionHealth, PredictionResponse, CompanyLocation, reverseGeocode, predictCompanyThreeModels, getLocationImages } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { FiRefreshCw, FiAlertTriangle, FiCheckCircle, FiClock, FiMapPin, FiTarget } from 'react-icons/fi'
 import { ProgressModal } from '@/components/ui/progress-modal'
+import {
+  Map as MapcnMap,
+  MapControls,
+  MapMarker,
+  MarkerContent,
+  MarkerLabel,
+  MarkerPopup,
+  useMap,
+} from '@/components/ui/map'
 
 interface PredictionData {
   id: string
@@ -22,6 +32,43 @@ interface PredictionData {
 
 interface PredictionMapProps {
   onPredictionUpdate: (predictions: PredictionData[]) => void
+}
+
+// Helper component that runs inside the Map context to auto-fit bounds
+function AutoFitBounds({ companyLocations }: { companyLocations: CompanyLocation[] }) {
+  const { map, isLoaded } = useMap()
+
+  useEffect(() => {
+    if (!map || !isLoaded) return
+
+    const locationsWithCoords = companyLocations.filter(
+      (loc) => typeof loc.latitude === 'number' && typeof loc.longitude === 'number'
+    )
+
+    if (locationsWithCoords.length === 0) {
+      // Nothing to fit; keep whatever default the map has
+      return
+    }
+
+    if (locationsWithCoords.length === 1) {
+      const only = locationsWithCoords[0]
+      map.setCenter([only.longitude as number, only.latitude as number])
+      map.setZoom(13)
+      return
+    }
+
+    const bounds = new maplibregl.LngLatBounds()
+    locationsWithCoords.forEach((loc) => {
+      bounds.extend([loc.longitude as number, loc.latitude as number])
+    })
+
+    map.fitBounds(bounds, {
+      padding: 40,
+      animate: true,
+    })
+  }, [map, isLoaded, companyLocations])
+
+  return null
 }
 
 export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps) {
@@ -463,6 +510,28 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
     }
   }
 
+  // Compute a sensible map center based on available company locations (fallback)
+  const getMapCenter = (): [number, number] => {
+    const locationsWithCoords = companyLocations.filter(
+      (loc) => typeof loc.latitude === 'number' && typeof loc.longitude === 'number'
+    )
+
+    if (locationsWithCoords.length === 0) {
+      // Fallback center (0,0) if no coordinates are available
+      return [0, 0]
+    }
+
+    const avgLat =
+      locationsWithCoords.reduce((sum, loc) => sum + (loc.latitude as number), 0) /
+      locationsWithCoords.length
+    const avgLon =
+      locationsWithCoords.reduce((sum, loc) => sum + (loc.longitude as number), 0) /
+      locationsWithCoords.length
+
+    // Map expects [longitude, latitude]
+    return [avgLon, avgLat]
+  }
+
   return (
     <div className="space-y-6">
       {/* Service Status */}
@@ -505,164 +574,150 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
         </div>
         
         <div className="p-6">
-          {/* Company Locations Section */}
-          {companyLocations.length > 0 && (
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-semibold text-black">Company Locations</h4>
+          {/* Interactive Map with Company Location Markers */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-semibold text-black">Operational Areas</h4>
+              <button
+                onClick={createPredictionsForAllLocations}
+                disabled={autoPredicting || !isServiceHealthy}
+                className="bg-accent-blue text-white px-4 py-2 rounded-lg font-semibold hover:bg-secondary-blue disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <FiTarget className={autoPredicting ? 'animate-spin' : ''} />
+                {autoPredicting 
+                  ? `Processing ${currentProgressIndex + 1}/${progressItems.length}...` 
+                  : `Predict All Locations (${companyLocations.filter(loc => loc.latitude && loc.longitude && loc.isActive && !hasPredictionToday(loc.id)).length})`
+                }
+              </button>
+            </div>
+
+            <div className="h-80 w-full rounded-lg overflow-hidden bg-gray-100">
+              <MapcnMap center={getMapCenter()} zoom={11}>
+                <MapControls />
+                <AutoFitBounds companyLocations={companyLocations} />
+                {companyLocations
+                  .filter(
+                    (location) =>
+                      typeof location.latitude === 'number' &&
+                      typeof location.longitude === 'number'
+                  )
+                  .map((location) => {
+                    const todayPrediction = getTodayPrediction(location.id)
+                    const hasTodayPrediction = !!todayPrediction
+
+                    return (
+                      <MapMarker
+                        key={location.id}
+                        longitude={location.longitude as number}
+                        latitude={location.latitude as number}
+                      >
+                        <MarkerContent>
+                          <div className="size-5 rounded-full bg-rose-500 border-2 border-white shadow-lg cursor-pointer hover:scale-110 transition-transform" />
+                          <MarkerLabel position="bottom">
+                            {location.name || 'Location'}
+                          </MarkerLabel>
+                        </MarkerContent>
+                        <MarkerPopup className="p-3 w-64">
+                          <div className="space-y-2">
+                            <div>
+                              <h3 className="font-semibold text-foreground leading-tight">
+                                {location.name || 'Operational Area'}
+                              </h3>
+                              {location.address && (
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {location.address}
+                                </p>
+                              )}
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {(location.latitude as number).toFixed(4)},{' '}
+                                {(location.longitude as number).toFixed(4)}
+                              </p>
+                            </div>
+
+                            {hasTodayPrediction && todayPrediction && (
+                              <div className="text-xs">
+                                <span className="font-medium">
+                                  Today:&nbsp;
+                                  {todayPrediction.riskLevel.toUpperCase()}
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {' '}
+                                  ({todayPrediction.riskScore.toFixed(3)})
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </MarkerPopup>
+                      </MapMarker>
+                    )
+                  })}
+              </MapcnMap>
+            </div>
+
+            <p className="text-gray-600 text-sm">
+              {companyLocations.length > 0 
+                ? (() => {
+                    const availableForPrediction = companyLocations.filter(loc => 
+                      loc.latitude && loc.longitude && loc.isActive && !hasPredictionToday(loc.id)
+                    ).length
+                    const withTodayPrediction = companyLocations.filter(loc => 
+                      loc.latitude && loc.longitude && loc.isActive && hasPredictionToday(loc.id)
+                    ).length
+                    
+                    if (availableForPrediction > 0) {
+                      return `Operational Areas loaded. ${availableForPrediction} available for prediction, ${withTodayPrediction} already predicted today.`
+                    } else if (withTodayPrediction > 0) {
+                      return `All active locations with coordinates already have predictions for today.`
+                    } else {
+                      return "Operational Areas loaded. Click 'Predict All Locations' to create predictions."
+                    }
+                  })()
+                : "No Operational Areas found. Add Operational Areas to create predictions."
+              }
+            </p>
+
+            {selectedLocation && (
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">
+                  Selected Branch: {selectedLocation.locationId ? companyLocations.find(loc => loc.id === selectedLocation.locationId)?.name || 'Unknown Location' : 'Custom Location'}
+                </p>
+                {selectedLocation.locationId && predictionStatuses.get(selectedLocation.locationId) === 'processing' && (
+                  <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <FiRefreshCw className="animate-spin" />
+                      <span>Processing with AI detection... This may take several minutes</span>
+                    </div>
+                  </div>
+                )}
+                {selectedLocation.locationId && predictionStatuses.get(selectedLocation.locationId) === 'error' && (
+                  <div className="text-sm text-red-600 bg-red-50 p-2 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <FiAlertTriangle />
+                      <span>Error: {predictionErrors.get(selectedLocation.locationId) || 'Unknown error'}</span>
+                    </div>
+                  </div>
+                )}
                 <button
-                  onClick={createPredictionsForAllLocations}
-                  disabled={autoPredicting || !isServiceHealthy}
-                  className="bg-accent-blue text-white px-4 py-2 rounded-lg font-semibold hover:bg-secondary-blue disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  onClick={() => predictLocation(selectedLocation.lat, selectedLocation.lon, selectedLocation.locationId)}
+                  disabled={loading || !isServiceHealthy || (selectedLocation.locationId ? hasPredictionToday(selectedLocation.locationId) || predictionStatuses.get(selectedLocation.locationId) === 'processing' : false)}
+                  className={`px-4 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto ${
+                    selectedLocation.locationId && (hasPredictionToday(selectedLocation.locationId) || predictionStatuses.get(selectedLocation.locationId) === 'processing')
+                      ? 'bg-gray-500 text-white cursor-not-allowed'
+                      : 'bg-accent-blue text-white hover:bg-secondary-blue'
+                  }`}
                 >
-                  <FiTarget className={autoPredicting ? 'animate-spin' : ''} />
-                  {autoPredicting 
-                    ? `Processing ${currentProgressIndex + 1}/${progressItems.length}...` 
-                    : `Predict All Locations (${companyLocations.filter(loc => loc.latitude && loc.longitude && loc.isActive && !hasPredictionToday(loc.id)).length})`
+                  <FiRefreshCw className={loading ? 'animate-spin' : ''} />
+                  {selectedLocation.locationId && hasPredictionToday(selectedLocation.locationId)
+                    ? 'Already Predicted Today'
+                    : selectedLocation.locationId && predictionStatuses.get(selectedLocation.locationId) === 'processing'
+                    ? 'Processing...'
+                    : loading 
+                    ? 'Predicting...' 
+                    : 'Predict Risk'
                   }
                 </button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {companyLocations.map((location) => {
-                  const hasTodayPrediction = hasPredictionToday(location.id)
-                  const todayPrediction = getTodayPrediction(location.id)
-                  const canPredict = location.latitude && location.longitude && location.isActive && !hasTodayPrediction
-                  const predictionStatus = predictionStatuses.get(location.id)
-                  const predictionError = predictionErrors.get(location.id)
-                  
-                  return (
-                    <div 
-                      key={location.id} 
-                      className={`rounded-lg p-3 border transition-colors ${
-                        hasTodayPrediction 
-                          ? 'bg-green-50 border-green-200 cursor-default' 
-                          : predictionStatus === 'processing'
-                          ? 'bg-blue-50 border-blue-200 cursor-default'
-                          : predictionStatus === 'error'
-                          ? 'bg-red-50 border-red-200 cursor-pointer hover:bg-red-100'
-                          : canPredict
-                          ? 'bg-gray-50 border-gray-200 cursor-pointer hover:bg-gray-100'
-                          : 'bg-gray-50 border-gray-200 cursor-not-allowed opacity-60'
-                      }`}
-                      onClick={() => canPredict && !predictionStatus && handleLocationClick(location.latitude!, location.longitude!, location.id)}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <FiMapPin className={hasTodayPrediction ? "text-green-500" : "text-gray-400"} />
-                        <span className="font-medium text-sm">{location.name}</span>
-                        {hasTodayPrediction && (
-                          <FiCheckCircle className="w-4 h-4 text-green-500" />
-                        )}
-                        {predictionStatus === 'processing' && (
-                          <FiRefreshCw className="w-4 h-4 text-blue-500 animate-spin" />
-                        )}
-                        {predictionStatus === 'error' && (
-                          <FiAlertTriangle className="w-4 h-4 text-red-500" />
-                        )}
-                      </div>
-                      {location.latitude && location.longitude ? (
-                        <div className="text-xs text-gray-600">
-                          {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
-                        </div>
-                      ) : (
-                        <div className="text-xs text-red-600">No coordinates</div>
-                      )}
-                      {location.address && (
-                        <div className="text-xs text-gray-500 mt-1">{location.address}</div>
-                      )}
-                      {hasTodayPrediction && todayPrediction ? (
-                        <div className="text-xs text-green-600 mt-1 font-medium">
-                          Today: {todayPrediction.riskLevel.toUpperCase()} Risk ({todayPrediction.riskScore.toFixed(3)})
-                        </div>
-                      ) : predictionStatus === 'processing' ? (
-                        <div className="text-xs text-blue-600 mt-1 font-medium">
-                          Processing with AI detection... (This may take several minutes)
-                        </div>
-                      ) : predictionStatus === 'error' ? (
-                        <div className="text-xs text-red-600 mt-1">
-                          Error: {predictionError || 'Unknown error'}
-                        </div>
-                      ) : canPredict ? (
-                        <div className="text-xs text-blue-600 mt-1">Click to predict</div>
-                      ) : !location.isActive ? (
-                        <div className="text-xs text-gray-500 mt-1">Inactive</div>
-                      ) : (
-                        <div className="text-xs text-gray-500 mt-1">No coordinates</div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Map Visualization */}
-          <div className="bg-gray-100 rounded-lg h-64 flex items-center justify-center">
-            <div className="text-center">
-              <FiMapPin className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-              <p className="text-gray-600 mb-4">
-                {companyLocations.length > 0 
-                  ? (() => {
-                      const availableForPrediction = companyLocations.filter(loc => 
-                        loc.latitude && loc.longitude && loc.isActive && !hasPredictionToday(loc.id)
-                      ).length
-                      const withTodayPrediction = companyLocations.filter(loc => 
-                        loc.latitude && loc.longitude && loc.isActive && hasPredictionToday(loc.id)
-                      ).length
-                      
-                      if (availableForPrediction > 0) {
-                        return `Company locations loaded. ${availableForPrediction} available for prediction, ${withTodayPrediction} already predicted today.`
-                      } else if (withTodayPrediction > 0) {
-                        return `All active locations with coordinates already have predictions for today.`
-                      } else {
-                        return "Company locations loaded. Click 'Predict All Locations' to create predictions."
-                      }
-                    })()
-                  : "No company locations found. Add locations to create predictions."
-                }
-              </p>
-              {selectedLocation && (
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-600">
-                    Selected Branch: {selectedLocation.locationId ? companyLocations.find(loc => loc.id === selectedLocation.locationId)?.name || 'Unknown Location' : 'Custom Location'}
-                  </p>
-                  {selectedLocation.locationId && predictionStatuses.get(selectedLocation.locationId) === 'processing' && (
-                    <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <FiRefreshCw className="animate-spin" />
-                        <span>Processing with AI detection... This may take several minutes</span>
-                      </div>
-                    </div>
-                  )}
-                  {selectedLocation.locationId && predictionStatuses.get(selectedLocation.locationId) === 'error' && (
-                    <div className="text-sm text-red-600 bg-red-50 p-2 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <FiAlertTriangle />
-                        <span>Error: {predictionErrors.get(selectedLocation.locationId) || 'Unknown error'}</span>
-                      </div>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => predictLocation(selectedLocation.lat, selectedLocation.lon, selectedLocation.locationId)}
-                    disabled={loading || !isServiceHealthy || (selectedLocation.locationId ? hasPredictionToday(selectedLocation.locationId) || predictionStatuses.get(selectedLocation.locationId) === 'processing' : false)}
-                    className={`px-4 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto ${
-                      selectedLocation.locationId && (hasPredictionToday(selectedLocation.locationId) || predictionStatuses.get(selectedLocation.locationId) === 'processing')
-                        ? 'bg-gray-500 text-white cursor-not-allowed'
-                        : 'bg-accent-blue text-white hover:bg-secondary-blue'
-                    }`}
-                  >
-                    <FiRefreshCw className={loading ? 'animate-spin' : ''} />
-                    {selectedLocation.locationId && hasPredictionToday(selectedLocation.locationId)
-                      ? 'Already Predicted Today'
-                      : selectedLocation.locationId && predictionStatuses.get(selectedLocation.locationId) === 'processing'
-                      ? 'Processing...'
-                      : loading 
-                      ? 'Predicting...' 
-                      : 'Predict Risk'
-                    }
-                  </button>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -715,7 +770,13 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
                         {prediction.latitude.toFixed(4)}, {prediction.longitude.toFixed(4)}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {new Date(prediction.createdAt).toLocaleDateString()}
+                        {(() => {
+                          const d = new Date(prediction.createdAt);
+                          const day = d.getDate().toString().padStart(2, '0');
+                          const month = (d.getMonth() + 1).toString().padStart(2, '0');
+                          const year = d.getFullYear();
+                          return `${day}/${month}/${year}`;
+                        })()}
                       </p>
                     </div>
                   </div>

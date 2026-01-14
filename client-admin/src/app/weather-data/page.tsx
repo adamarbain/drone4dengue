@@ -1020,7 +1020,7 @@ export default function WeatherDataPage() {
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.6 }}
                         >
-                          <Label htmlFor="companyLocationId">Company Location</Label>
+                          <Label htmlFor="companyLocationId">Operational Area</Label>
                           <select
                             id="companyLocationId"
                             value={formData.companyLocationId}
@@ -1028,7 +1028,7 @@ export default function WeatherDataPage() {
                             className="mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
                             required
                           >
-                            <option value="">Select a company location</option>
+                            <option value="">Select a Operational Area</option>
                             {companyLocations.map((location) => (
                               <option key={location.id} value={location.id}>
                                 {location.name} - {location.address}
@@ -1098,14 +1098,14 @@ export default function WeatherDataPage() {
                       Weather Location
                     </CardTitle>
                     <CardDescription>
-                      Select a company location to fetch weather data for dengue prediction analysis
+                      Select a operational area to fetch weather data for dengue prediction analysis
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="locationSelect" className="text-purple-700 font-medium">
-                          Company Location
+                          Operational Area
                         </Label>
                         <select
                           id="locationSelect"
@@ -1293,8 +1293,8 @@ export default function WeatherDataPage() {
                             <th className="text-left py-3 px-4 font-medium text-primary-dark">Temperature</th>
                             <th className="text-left py-3 px-4 font-medium text-primary-dark">Humidity</th>
                             <th className="text-left py-3 px-4 font-medium text-primary-dark">Rainfall</th>
-                            <th className="text-left py-3 px-4 font-medium text-primary-dark">Location</th>
-                            <th className="text-left py-3 px-4 font-medium text-primary-dark">Company Location</th>
+                            {/* <th className="text-left py-3 px-4 font-medium text-primary-dark">Address</th> */}
+                            <th className="text-left py-3 px-4 font-medium text-primary-dark">Operational Area</th>
                             <th className="text-left py-3 px-4 font-medium text-primary-dark">Actions</th>
                           </tr>
                         </thead>
@@ -1336,7 +1336,7 @@ export default function WeatherDataPage() {
                                   <span className="font-medium">{record.rainfall}mm</span>
                                 </div>
                               </td>
-                              <td className="py-3 px-4 text-primary-dark">{record.location}</td>
+                              {/* <td className="py-3 px-4 text-primary-dark">{record.location}</td> */}
                               <td className="py-3 px-4 text-primary-dark">
                                 {record.companyLocation ? (
                                   <div>
@@ -1521,7 +1521,7 @@ export default function WeatherDataPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.6 }}
                   >
-                    <Label htmlFor="modal-companyLocationId">Company Location</Label>
+                    <Label htmlFor="modal-companyLocationId">Operational Area</Label>
                     <select
                       id="modal-companyLocationId"
                       value={formData.companyLocationId}
@@ -1529,7 +1529,7 @@ export default function WeatherDataPage() {
                       className="mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
                       required
                     >
-                      <option value="">Select a company location</option>
+                      <option value="">Select a Operational Area</option>
                       {companyLocations.map((location) => (
                         <option key={location.id} value={location.id}>
                           {location.name} - {location.address}

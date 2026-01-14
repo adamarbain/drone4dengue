@@ -215,7 +215,7 @@ export default function PredictionAlertPage() {
     
     // Create CSV data
     const csvData = filteredPredictions.map(prediction => ({
-      'Company Location': prediction.companyLocation?.name || 'Unknown Location',
+      'Operational Area': prediction.companyLocation?.name || 'Unknown Location',
       'Location Address': prediction.companyLocation?.address || 'N/A',
       'Latitude': prediction.latitude,
       'Longitude': prediction.longitude,
@@ -431,21 +431,20 @@ export default function PredictionAlertPage() {
               <table className="min-w-full bg-white rounded-xl">
                 <thead>
                   <tr className="text-left text-primary-dark font-semibold text-base bg-light-bg">
-                    <th className="py-3 px-6">Company Location</th>
-                    <th className="py-3 px-6">Coordinates</th>
+                    <th className="py-3 px-6">Operational Area</th>
+                    {/* <th className="py-3 px-6">Coordinates</th> */}
                     <th className="py-3 px-6">Risk Level</th>
                     <th className="py-3 px-6">Risk Score</th>
                     <th className="py-3 px-6">Model Scores</th>
                     {/* <th className="py-3 px-6">Enhanced Features</th> */}
                     <th className="py-3 px-6">Status</th>
-                    <th className="py-3 px-6">Prediction Date</th>
                     <th className="py-3 px-6">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredPredictions.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="text-center py-8 text-gray-500">
+                      <td colSpan={6} className="text-center py-8 text-gray-500">
                         {predictions.length === 0 ? "No predictions yet. Use the map above to create predictions." : "No predictions match the selected filters."}
                       </td>
                     </tr>
@@ -468,17 +467,26 @@ export default function PredictionAlertPage() {
                                   {prediction.companyLocation.address}
                                 </div>
                               )}
+                              <div className="text-xs text-gray-500 mt-1">
+                                {(() => {
+                                  const d = new Date(prediction.createdAt)
+                                  const day = d.getDate().toString().padStart(2, '0')
+                                  const month = (d.getMonth() + 1).toString().padStart(2, '0')
+                                  const year = d.getFullYear()
+                                  return `${day}/${month}/${year}`
+                                })()}
+                              </div>
                             </div>
                           </div>
                         </td>
-                        <td className="py-3 px-6 font-medium text-primary-dark">
+                        {/* <td className="py-3 px-6 font-medium text-primary-dark">
                           <div className="flex items-center gap-2">
                             <FiMapPin className="text-gray-400" />
                             <div>
                               <div className="text-sm">{prediction.latitude.toFixed(4)}, {prediction.longitude.toFixed(4)}</div>
                             </div>
                           </div>
-                        </td>
+                        </td> */}
                         <td className="py-3 px-6">
                           <span
                             className={`px-3 py-1 rounded-full text-sm font-semibold ${riskLevelStyles[prediction.riskLevel]} flex items-center gap-2 w-fit`}
@@ -506,10 +514,10 @@ export default function PredictionAlertPage() {
                         </td>
                         <td className="py-3 px-6 text-sm">
                           <div className="space-y-1">
-                            <div>Model 1: {prediction.model1Score ? prediction.model1Score.toFixed(3) : 'N/A'}</div>
-                            <div>Model 2: {prediction.model2Score ? prediction.model2Score.toFixed(3) : 'N/A'}</div>
-                            {prediction.model3Score != null && (
-                              <div>Model 3: {prediction.model3Score.toFixed(3)}</div>
+                            <div>Historical Cases Model: {prediction.model1Score ? prediction.model1Score.toFixed(3) : 'N/A'}</div>
+                            <div>Weather-Based Model: {prediction.model2Score ? prediction.model2Score.toFixed(3) : 'N/A'}</div>
+                            {(prediction.model3Score != null && prediction.model3Score !== 0) && (
+                              <div>Breeding Area Detection Model: {prediction.model3Score.toFixed(3)}</div>
                             )}
                             {prediction.combinedScore !== undefined && (
                               <div className="font-semibold text-blue-600">Combined: {prediction.combinedScore.toFixed(3)}</div>
@@ -539,7 +547,6 @@ export default function PredictionAlertPage() {
                             </div>
                           )}
                         </td>
-                        <td className="py-3 px-6 text-primary-dark">{new Date(prediction.createdAt).toLocaleDateString()}</td>
                         <td className="py-3 px-6">
                           <div className="flex gap-2">
                             <button className="text-accent-blue hover:bg-light-bg/50 p-2 rounded-lg" onClick={() => setShowDetails(prediction)}>
@@ -570,7 +577,7 @@ export default function PredictionAlertPage() {
                     <div className="flex items-center gap-2">
                       <FiMapPin className="text-gray-400" />
                       <div>
-                        <span className="font-semibold">Company Location:</span>
+                        <span className="font-semibold">Operational Area:</span>
                         <div className="text-sm font-semibold">{showDetails.companyLocation.name}</div>
                         {showDetails.companyLocation.address && (
                           <div className="text-xs text-gray-500">{showDetails.companyLocation.address}</div>

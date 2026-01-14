@@ -1375,19 +1375,44 @@ export default function DroneManagementPage() {
 
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Operational Area</label>
-                <select 
-                  value={editDroneForm.companyLocationId}
-                  onChange={(e) => setEditDroneForm(prev => ({ ...prev, companyLocationId: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
-                  disabled={loadingLocations}
-                >
-                  <option value="">No specific location</option>
-                  {companyLocations.map((location) => (
-                    <option key={location.id} value={location.id}>
-                      {location.name} {location.address && `- ${location.address}`}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex gap-2">
+                  <select 
+                    value={editDroneForm.companyLocationId}
+                    onChange={(e) => setEditDroneForm(prev => ({ ...prev, companyLocationId: e.target.value }))}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue max-w-full text-ellipsis"
+                    disabled={loadingLocations}
+                  >
+                    <option value="">No specific location</option>
+                    {loadingLocations ? (
+                      <option value="" disabled>Loading locations...</option>
+                    ) : companyLocations.length === 0 ? (
+                      <option value="" disabled>No locations available</option>
+                    ) : (
+                      companyLocations.map((location) => (
+                        <option
+                          key={location.id}
+                          value={location.id}
+                          title={location.address || location.name}
+                        >
+                          {location.name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewLocationModal(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    disabled={loadingLocations}
+                  >
+                    <FiPlus size={16} />
+                  </button>
+                </div>
+                {companyLocations.length === 0 && !loadingLocations && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    No company locations found. Click the + button to create one.
+                  </p>
+                )}
               </div>
 
               <div className="flex justify-end gap-3">
@@ -2009,7 +2034,7 @@ export default function DroneManagementPage() {
             className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4"
           >
             <div className="bg-accent-blue px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Add New Company Location</h2>
+              <h2 className="text-xl font-bold text-white">Add New Operational Area</h2>
               <button
                 onClick={() => {
                   setShowNewLocationModal(false)
@@ -2023,7 +2048,7 @@ export default function DroneManagementPage() {
             <div className="p-6">
               <form className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Company Location Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Operational Area Name</label>
                   <input
                     type="text"
                     value={newLocation.name}
@@ -2033,7 +2058,7 @@ export default function DroneManagementPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Company Location Address</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Operational Area Address</label>
                   <input
                     type="text"
                     value={newLocation.address}
@@ -2112,7 +2137,7 @@ export default function DroneManagementPage() {
                   className="flex items-center gap-2 px-6 py-2 bg-accent-blue text-white rounded-lg hover:bg-secondary-blue transition-colors"
                   >
                     <FiSave size={18} />
-                    Create Location
+                    Create Operational Area
                   </button>
                 </div>
               </form>
