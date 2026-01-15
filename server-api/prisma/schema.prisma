@@ -39,16 +39,16 @@ model Company {
 }
 
 model CompanyLocation {
-  id        String   @id @default(uuid())
-  name      String
-  address   String?
-  latitude  Float?
-  longitude Float?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  companyId String
-  company   Company  @relation(fields: [companyId], references: [id])
+  id                     String                  @id @default(uuid())
+  name                   String
+  address                String?
+  latitude               Float?
+  longitude              Float?
+  isActive               Boolean                 @default(true)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  companyId              String
+  company                Company                 @relation(fields: [companyId], references: [id])
   weather                Weather[]
   predictions            CompanyPrediction[]
   drones                 Drone[]
@@ -59,29 +59,29 @@ model CompanyLocation {
 }
 
 model User {
-  id              String    @id @default(uuid())
-  userId          String    @unique // for display e.g. U-001
-  email           String    @unique
-  password        String?   // Nullable for OAuth users (Google Sign-In)
+  id              String              @id @default(uuid())
+  userId          String              @unique // for display e.g. U-001
+  email           String              @unique
+  password        String? // Nullable for OAuth users (Google Sign-In)
   name            String
   role            String // 'admin' or 'user'
   status          String // e.g. "Verified", "Pending"
   username        String?
-  phone           String?   @unique
+  phone           String?             @unique
   address         String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
   organization    String?
   resetCode       String? // for password reset
   resetCodeExpiry DateTime? // for password reset
   otpCode         String? // for OTP verification
   otpExpiry       DateTime? // for OTP verification
   // OAuth fields
-  authProvider    String    @default("email") // "email" or "google"
-  googleId        String?   @unique           // Firebase UID for Google users
-  profilePicture  String?                     // Google profile picture URL
+  authProvider    String              @default("email") // "email" or "google"
+  googleId        String?             @unique // Firebase UID for Google users
+  profilePicture  String? // Google profile picture URL
   companyId       String
-  company         Company   @relation(fields: [companyId], references: [id])
+  company         Company             @relation(fields: [companyId], references: [id])
   drones          Drone[]
   reports         Report[]
   alerts          Alert[]
@@ -116,24 +116,24 @@ model Drone {
 }
 
 model Image {
-  id                String           @id @default(uuid())
-  url               String
-  filename          String // Original filename
-  fileSize          Int // File size in bytes
-  mimeType          String // MIME type (image/jpeg, image/png, etc.)
-  width             Int? // Image width in pixels
-  height            Int? // Image height in pixels
-  description       String? // Optional description
-  isProcessed       Boolean          @default(false) // Whether image has been processed for analysis
-  sourceType        String           @default("upload") // "upload" or "video_frame"
-  droneId           String
-  drone             Drone            @relation(fields: [droneId], references: [id])
-  companyId         String
-  company           Company          @relation(fields: [companyId], references: [id])
-  companyLocationId String?
-  companyLocation   CompanyLocation? @relation(fields: [companyLocationId], references: [id])
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  id                     String                  @id @default(uuid())
+  url                    String
+  filename               String // Original filename
+  fileSize               Int // File size in bytes
+  mimeType               String // MIME type (image/jpeg, image/png, etc.)
+  width                  Int? // Image width in pixels
+  height                 Int? // Image height in pixels
+  description            String? // Optional description
+  isProcessed            Boolean                 @default(false) // Whether image has been processed for analysis
+  sourceType             String                  @default("upload") // "upload" or "video_frame"
+  droneId                String
+  drone                  Drone                   @relation(fields: [droneId], references: [id])
+  companyId              String
+  company                Company                 @relation(fields: [companyId], references: [id])
+  companyLocationId      String?
+  companyLocation        CompanyLocation?        @relation(fields: [companyLocationId], references: [id])
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
   breedingAreaDetections BreedingAreaDetection[]
 
   @@index([droneId])
@@ -159,7 +159,7 @@ model Weather {
 }
 
 model DengueData {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   location      String
   date          DateTime
   activeCases   Int?
@@ -170,8 +170,27 @@ model DengueData {
   source        String?
   latitude      Float?
   longitude     Float?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  country       String? // Detailed address components from reverse geocoding // Malaysia 
+  state         String? // Selangor, Kuala Lumpur, etc.
+  district      String? // More granular than state
+  city          String? // City name
+  suburb        String? // Suburb/neighborhood
+  postcode      String? // Postal code
+  road          String? // Street name
+  houseNumber   String? // House/building number
+  boundingBox   Json? // Geographic and address metadata // [south, north, west, east] coordinates
+  displayName   String? // Full formatted address from Nominatim
+  isGeocoded    Boolean   @default(false) // Reverse geocoding status tracking
+  geocodedAt    DateTime?
+  geocodeError  String? // Store any geocoding errors
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([isGeocoded])
+  @@index([country])
+  @@index([state])
+  @@index([city])
+  @@index([postcode])
 }
 
 model Alert {
@@ -246,11 +265,11 @@ model BreedingAreaDetection {
   detectedObjects   Json? // Full detection results from Roboflow API
   boundingBoxes     Json? // Bounding boxes of detected breeding areas
   riskLevel         String // "high", "medium", "low" based on detection score
-  processingStatus String    @default("pending") // "pending", "processing", "completed", "failed"
-  errorMessage     String?
-  processedAt      DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  processingStatus  String           @default("pending") // "pending", "processing", "completed", "failed"
+  errorMessage      String?
+  processedAt       DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   @@index([imageId])
   @@index([companyId])
@@ -299,11 +318,11 @@ model UserLocationAlert {
   id          String   @id @default(uuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String   // User-defined name for the alert location
+  name        String // User-defined name for the alert location
   latitude    Float
   longitude   Float
-  boundingBox Json     // [minLat, maxLat, minLon, maxLon] from Nominatim
-  address     String?  // Display name from Nominatim reverse geocoding
+  boundingBox Json // [minLat, maxLat, minLon, maxLon] from Nominatim
+  address     String? // Display name from Nominatim reverse geocoding
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
