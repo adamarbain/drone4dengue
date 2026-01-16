@@ -63,7 +63,10 @@ try {
 // Get all dengue data (with filters and pagination)
 async function getAll(req, res) {
   try {
-    const { location, date, status, startDate, endDate, page = 1, limit = 20, search } = req.query;
+    const { 
+      location, date, status, startDate, endDate, page = 1, limit = 20, search,
+      country, state, district, city, suburb, postcode, road, houseNumber
+    } = req.query;
     
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
@@ -74,10 +77,24 @@ async function getAll(req, res) {
     if (status) where.status = status;
     if (date) where.date = new Date(date);
     
+    // New location-based filters
+    if (country) where.country = { contains: country, mode: 'insensitive' };
+    if (state) where.state = { contains: state, mode: 'insensitive' };
+    if (district) where.district = { contains: district, mode: 'insensitive' };
+    if (city) where.city = { contains: city, mode: 'insensitive' };
+    if (suburb) where.suburb = { contains: suburb, mode: 'insensitive' };
+    if (postcode) where.postcode = { contains: postcode, mode: 'insensitive' };
+    if (road) where.road = { contains: road, mode: 'insensitive' };
+    if (houseNumber) where.houseNumber = { contains: houseNumber, mode: 'insensitive' };
+    
     if (search) {
       where.OR = [
         { location: { contains: search, mode: 'insensitive' } },
-        { status: { contains: search, mode: 'insensitive' } }
+        { status: { contains: search, mode: 'insensitive' } },
+        { displayName: { contains: search, mode: 'insensitive' } },
+        { state: { contains: search, mode: 'insensitive' } },
+        { city: { contains: search, mode: 'insensitive' } },
+        { suburb: { contains: search, mode: 'insensitive' } }
       ];
     }
 
@@ -340,17 +357,34 @@ async function getMapData(req, res) {
 // Export data in multiple formats
 async function exportData(req, res) {
   try {
-    const { location, date, status, startDate, endDate, format = 'csv', search } = req.query;
+    const { 
+      location, date, status, startDate, endDate, format = 'csv', search,
+      country, state, district, city, suburb, postcode, road, houseNumber
+    } = req.query;
     
     const where = { };
     if (location) where.location = location;
     if (status) where.status = status;
     if (date) where.date = new Date(date);
     
+    // New location-based filters
+    if (country) where.country = { contains: country, mode: 'insensitive' };
+    if (state) where.state = { contains: state, mode: 'insensitive' };
+    if (district) where.district = { contains: district, mode: 'insensitive' };
+    if (city) where.city = { contains: city, mode: 'insensitive' };
+    if (suburb) where.suburb = { contains: suburb, mode: 'insensitive' };
+    if (postcode) where.postcode = { contains: postcode, mode: 'insensitive' };
+    if (road) where.road = { contains: road, mode: 'insensitive' };
+    if (houseNumber) where.houseNumber = { contains: houseNumber, mode: 'insensitive' };
+    
     if (search) {
       where.OR = [
         { location: { contains: search, mode: 'insensitive' } },
-        { status: { contains: search, mode: 'insensitive' } }
+        { status: { contains: search, mode: 'insensitive' } },
+        { displayName: { contains: search, mode: 'insensitive' } },
+        { state: { contains: search, mode: 'insensitive' } },
+        { city: { contains: search, mode: 'insensitive' } },
+        { suburb: { contains: search, mode: 'insensitive' } }
       ];
     }
 
@@ -468,6 +502,99 @@ async function getLocations(req, res) {
   } catch (err) {
     logger.error('[GET LOCATIONS ERROR]', { error: err.message, stack: err.stack });
     return sendInternalError(res, 'Failed to fetch locations', err);
+  }
+}
+
+// Get filter options for all location fields (country, state, district, city, suburb, postcode, road, houseNumber)
+async function getFilterOptions(req, res) {
+  try {
+    const allData = await prisma.dengueData.findMany({
+      select: { 
+        country: true,
+        state: true,
+        district: true,
+        city: true,
+        suburb: true,
+        postcode: true,
+        road: true,
+        houseNumber: true
+      }
+    });
+    
+    // Helper function to get unique non-empty values
+    const getUniqueValues = (field) => {
+      const values = [...new Set(allData.map(item => item[field]).filter(val => val && val.trim() !== ''))];
+      values.sort();
+      return values;
+    };
+    
+    const filterOptions = {
+      countries: getUniqueValues('country'),
+      states: getUniqueValues('state'),
+      districts: getUniqueValues('district'),
+      cities: getUniqueValues('city'),
+      suburbs: getUniqueValues('suburb'),
+      postcodes: getUniqueValues('postcode'),
+      roads: getUniqueValues('road'),
+      houseNumbers: getUniqueValues('houseNumber')
+    };
+    
+    res.json(filterOptions);
+  } catch (err) {
+    logger.error('[GET FILTER OPTIONS ERROR]', { error: err.message, stack: err.stack });
+    return sendInternalError(res, 'Failed to fetch filter options', err);
+  }
+}
+
+// Get filtered options based on selected filters (cascading filter)
+async function getFilteredOptions(req, res) {
+  try {
+    const { country, state, district, city, suburb, postcode } = req.query;
+    
+    const where = {};
+    if (country) where.country = country;
+    if (state) where.state = state;
+    if (district) where.district = district;
+    if (city) where.city = city;
+    if (suburb) where.suburb = suburb;
+    if (postcode) where.postcode = postcode;
+    
+    const allData = await prisma.dengueData.findMany({
+      where,
+      select: { 
+        country: true,
+        state: true,
+        district: true,
+        city: true,
+        suburb: true,
+        postcode: true,
+        road: true,
+        houseNumber: true
+      }
+    });
+    
+    // Helper function to get unique non-empty values
+    const getUniqueValues = (field) => {
+      const values = [...new Set(allData.map(item => item[field]).filter(val => val && val.trim() !== ''))];
+      values.sort();
+      return values;
+    };
+    
+    const filterOptions = {
+      countries: getUniqueValues('country'),
+      states: getUniqueValues('state'),
+      districts: getUniqueValues('district'),
+      cities: getUniqueValues('city'),
+      suburbs: getUniqueValues('suburb'),
+      postcodes: getUniqueValues('postcode'),
+      roads: getUniqueValues('road'),
+      houseNumbers: getUniqueValues('houseNumber')
+    };
+    
+    res.json(filterOptions);
+  } catch (err) {
+    logger.error('[GET FILTERED OPTIONS ERROR]', { error: err.message, stack: err.stack });
+    return sendInternalError(res, 'Failed to fetch filtered options', err);
   }
 }
 
@@ -1083,6 +1210,8 @@ module.exports = {
   getMapData,
   exportData,
   getLocations,
+  getFilterOptions,
+  getFilteredOptions,
   generateReport,
   exportReport,
   getNearbyCases,

@@ -69,13 +69,10 @@ const CoverageMap = dynamic(() => import('./CoverageMap'), { ssr: false });
 
 export default function DataManagementPage() {
   const { companyId } = useAuth()
-  const [searchTerm, setSearchTerm] = useState("")
   const [dataRows, setDataRows] = useState<any[]>([])
   const [summary, setSummary] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false) // Changed to false - don't load on initial
   const [error, setError] = useState<string | null>(null)
-  const [selectedLocation, setSelectedLocation] = useState<string>("All Locations")
-  const [selectedStatus, setSelectedStatus] = useState<string>("All Status")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState<string | null>(null)
@@ -85,38 +82,63 @@ export default function DataManagementPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalRows, setTotalRows] = useState(0);
   const rowsPerPage = 20;
+  
+  // Simplified filter state
+  const [startDate, setStartDate] = useState<string>("")
+  const [endDate, setEndDate] = useState<string>("")
+  const [selectedStatus, setSelectedStatus] = useState<string>("")
+  const [locationSearch, setLocationSearch] = useState<string>("")
+  
+  // Track if filters have been applied (to show data)
+  const [hasAppliedFilters, setHasAppliedFilters] = useState(false)
 
-  // Extract unique locations and statuses from dataRows (now used for filters dropdown)
-  // We'll also fetch these separately or keep them updated
-  const [uniqueLocations, setUniqueLocations] = useState<string[]>(["All Locations"])
-  const uniqueStatuses = ["All Type", "Active Cases", "Hotspot", "Completed", "Processing"];
+  // For locations covered count
+  const [uniqueLocations, setUniqueLocations] = useState<string[]>([])
 
-  // Fetch unique locations for filter
+  // Fetch locations count on mount
   useEffect(() => {
-    async function fetchFilterOptions() {
+    async function fetchLocations() {
       try {
         const res = await fetch(`${API_URL}/dengue-data/locations`);
         if (res.ok) {
           const locations = await res.json();
-          setUniqueLocations(["All Locations", ...locations]);
+          setUniqueLocations(locations);
         }
       } catch (err) {
-        console.error("Failed to fetch locations for filter:", err);
+        console.error("Failed to fetch locations:", err);
       }
     }
-    fetchFilterOptions();
+    fetchLocations();
   }, []);
 
-  // Fetch data with filters and pagination
+  // Track search trigger - increments when Search button is clicked
+  const [searchTrigger, setSearchTrigger] = useState(0)
+
+  // Fetch data only when Search button is clicked or pagination changes
   useEffect(() => {
     async function fetchData() {
+      // Don't fetch if search hasn't been triggered yet
+      if (!hasAppliedFilters) {
+        setDataRows([]);
+        setTotalRows(0);
+        setTotalPages(1);
+        return;
+      }
+      
       setLoading(true)
       setError(null)
       try {
         let url = `${API_URL}/dengue-data?page=${currentPage}&limit=${rowsPerPage}`;
-        if (selectedLocation && selectedLocation !== "All Locations") url += `&location=${encodeURIComponent(selectedLocation)}`;
-        if (selectedStatus && selectedStatus !== "All Status" && selectedStatus !== "All Type") url += `&status=${encodeURIComponent(selectedStatus)}`;
-        if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`; // If backend supports search
+        
+        // Add date range filters
+        if (startDate) url += `&startDate=${encodeURIComponent(startDate)}`;
+        if (endDate) url += `&endDate=${encodeURIComponent(endDate)}`;
+        
+        // Add status filter
+        if (selectedStatus) url += `&status=${encodeURIComponent(selectedStatus)}`;
+        
+        // Add location search filter
+        if (locationSearch) url += `&search=${encodeURIComponent(locationSearch)}`;
 
         const [recordsRes, summaryRes] = await Promise.all([
           fetch(url, {
@@ -146,7 +168,8 @@ export default function DataManagementPage() {
       }
     }
     fetchData()
-  }, [selectedLocation, selectedStatus, currentPage, searchTerm])
+    // Only trigger on searchTrigger (button click) or currentPage (pagination)
+  }, [searchTrigger, currentPage])
 
   useEffect(() => {
     async function fetchMapData() {
@@ -178,8 +201,24 @@ export default function DataManagementPage() {
     fetchHistorical()
   }, [])
 
-  // When filters/search change, reset currentPage to 1
-  useEffect(() => { setCurrentPage(1); }, [selectedLocation, selectedStatus, searchTerm]);
+  // Handle search/filter button click - only fetch data when this is clicked
+  const handleSearch = () => {
+    setHasAppliedFilters(true);
+    setCurrentPage(1);
+    setSearchTrigger(prev => prev + 1); // Trigger the data fetch
+  };
+
+  // Handle clear filters
+  const handleClearFilters = () => {
+    setStartDate("");
+    setEndDate("");
+    setSelectedStatus("");
+    setLocationSearch("");
+    setHasAppliedFilters(false);
+    setDataRows([]);
+    setTotalRows(0);
+    setTotalPages(1);
+  };
 
   const paginatedData = dataRows;
 
@@ -187,9 +226,10 @@ export default function DataManagementPage() {
   const onExport = () => {
     let url = `${API_URL}/dengue-data/export`;
     const params = [];
-    if (selectedLocation && selectedLocation !== "All Locations") params.push(`location=${encodeURIComponent(selectedLocation)}`);
-    if (selectedStatus && selectedStatus !== "All Status" && selectedStatus !== "All Type") params.push(`status=${encodeURIComponent(selectedStatus)}`);
-    if (searchTerm) params.push(`search=${encodeURIComponent(searchTerm)}`);
+    if (startDate) params.push(`startDate=${encodeURIComponent(startDate)}`);
+    if (endDate) params.push(`endDate=${encodeURIComponent(endDate)}`);
+    if (selectedStatus) params.push(`status=${encodeURIComponent(selectedStatus)}`);
+    if (locationSearch) params.push(`search=${encodeURIComponent(locationSearch)}`);
     if (params.length) url += `?${params.join("&")}`;
     // Trigger download
     const link = document.createElement('a');
@@ -226,8 +266,10 @@ export default function DataManagementPage() {
       // Refetch data
       let url = `${API_URL}/dengue-data`;
       const params = [];
-      if (selectedLocation && selectedLocation !== "All Locations") params.push(`location=${encodeURIComponent(selectedLocation)}`);
-      if (selectedStatus && selectedStatus !== "All Status") params.push(`status=${encodeURIComponent(selectedStatus)}`);
+      if (startDate) params.push(`startDate=${encodeURIComponent(startDate)}`);
+      if (endDate) params.push(`endDate=${encodeURIComponent(endDate)}`);
+      if (selectedStatus) params.push(`status=${encodeURIComponent(selectedStatus)}`);
+      if (locationSearch) params.push(`search=${encodeURIComponent(locationSearch)}`);
       if (params.length) url += `?${params.join("&")}`;
       const [recordsRes, summaryRes] = await Promise.all([
         fetch(url, {
@@ -362,39 +404,77 @@ export default function DataManagementPage() {
                 <FiFilter className="text-accent-blue" />
                 Data Filters
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="relative">
-                  <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              
+              {/* Filter Inputs */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                {/* Date Start */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-2">Date Start</label>
                   <Input
-                    type="text"
-                    placeholder="Search by location or date"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full"
                   />
                 </div>
-                <select
-                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
-                  value={selectedLocation}
-                  onChange={(e) => setSelectedLocation(e.target.value)}
+                
+                {/* Date End */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-2">Date End</label>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                
+                {/* Cases Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-2">Cases Type</label>
+                  <select
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                  >
+                    <option value="">All Types</option>
+                    <option value="Hotspot">Hotspot</option>
+                    <option value="Active Cases">Active Cases</option>
+                  </select>
+                </div>
+                
+                {/* Location */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-2">Location</label>
+                  <div className="relative">
+                    <FiMapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="Enter Country, State, District, City, Suburb, Postcode"
+                      value={locationSearch}
+                      onChange={(e) => setLocationSearch(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex gap-3 mt-4 pt-4 border-t border-gray-200">
+                <Button
+                  onClick={handleSearch}
+                  className="bg-accent-blue text-white hover:bg-secondary-blue flex items-center gap-2"
                 >
-                  {uniqueLocations.map((location) => (
-                    <option key={location} value={location}>
-                      {location}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  <FiSearch size={16} />
+                  Search Data
+                </Button>
+                <Button
+                  onClick={handleClearFilters}
+                  variant="outline"
+                  className="border-gray-300 text-gray-600 hover:bg-gray-50"
                 >
-                  {uniqueStatuses.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </select>
+                  Clear Filters
+                </Button>
               </div>
             </div>
           </motion.div>
@@ -417,96 +497,125 @@ export default function DataManagementPage() {
                 <table className="min-w-full">
                   <thead>
                     <tr className="text-left text-primary-dark font-semibold text-base bg-gray-50 border-b border-gray-200">
-                      <th className="py-4 px-6">Date & Location</th>
+                      <th className="py-4 px-6">Date</th>
+                      <th className="py-4 px-6">Location</th>
                       <th className="py-4 px-6">Active/Total Cases</th>
                       <th className="py-4 px-6">Cumulative Duration</th>
                       <th className="py-4 px-6">Type</th>
-                      <th className="py-4 px-6">Latitude & Longtitude</th>
+                      <th className="py-4 px-6">State</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {loading
-                      ? Array.from({ length: 8 }).map((_, idx) => (
-                          <tr
-                            key={idx}
-                            className={`border-b border-gray-100 last:border-0 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
-                          >
-                            <td className="py-4 px-6">
-                              <div className="flex items-center gap-2">
-                                <div className="h-4 w-4 rounded-full bg-gray-200" />
-                                <div className="h-4 bg-gray-200 rounded w-24" />
-                              </div>
-                            </td>
-                            <td className="py-4 px-6">
-                              <div className="flex items-center gap-2">
-                                <div className="h-4 w-4 rounded-full bg-gray-200" />
-                                <div className="h-4 bg-gray-200 rounded w-32" />
-                              </div>
-                            </td>
-                            <td className="py-4 px-6">
-                              <div className="w-8 h-8 bg-gray-200 rounded-full" />
-                            </td>
-                            <td className="py-4 px-6">
-                              <div className="w-8 h-8 bg-gray-200 rounded-full" />
-                            </td>
-                            <td className="py-4 px-6">
-                              <div className="h-4 bg-gray-200 rounded w-20" />
-                            </td>
-                            <td className="py-4 px-6">
-                              <div className="flex flex-col gap-1">
-                                <div className="h-3 bg-gray-200 rounded w-16" />
-                                <div className="h-3 bg-gray-100 rounded w-16" />
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      : paginatedData.map((row, idx) => (
-                          <motion.tr
-                            key={row.id || row.date + row.location}
-                            className={`border-b border-gray-100 last:border-0 hover:bg-light-bg/50 transition-colors ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}` }
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.1 }}
-                          >
-                            <td className="py-4 px-6 font-medium text-primary-dark flex items-center gap-2">
+                    {!hasAppliedFilters ? (
+                      <tr>
+                        <td colSpan={6} className="py-16 px-6 text-center">
+                          <div className="flex flex-col items-center justify-center text-gray-500">
+                            <FiFilter className="text-gray-300 mb-4" size={48} />
+                            <p className="text-lg font-medium mb-2">No Data Displayed</p>
+                            <p className="text-sm">Please apply filters above and click &quot;Search Data&quot; to view dengue records.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : loading ? (
+                      Array.from({ length: 8 }).map((_, idx) => (
+                        <tr
+                          key={idx}
+                          className={`border-b border-gray-100 last:border-0 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
+                        >
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-2">
+                              <div className="h-4 w-4 rounded-full bg-gray-200" />
+                              <div className="h-4 bg-gray-200 rounded w-24" />
+                            </div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-2">
+                              <div className="h-4 w-4 rounded-full bg-gray-200" />
+                              <div className="h-4 bg-gray-200 rounded w-48" />
+                            </div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="w-8 h-8 bg-gray-200 rounded-full" />
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="w-8 h-8 bg-gray-200 rounded-full" />
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="h-4 bg-gray-200 rounded w-20" />
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="h-4 bg-gray-200 rounded w-24" />
+                          </td>
+                        </tr>
+                      ))
+                    ) : paginatedData.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-16 px-6 text-center">
+                          <div className="flex flex-col items-center justify-center text-gray-500">
+                            <FiDatabase className="text-gray-300 mb-4" size={48} />
+                            <p className="text-lg font-medium mb-2">No Records Found</p>
+                            <p className="text-sm">No dengue data matches your current filters. Try adjusting your search criteria.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedData.map((row, idx) => (
+                        <motion.tr
+                          key={row.id || row.date + row.location}
+                          className={`border-b border-gray-100 last:border-0 hover:bg-light-bg/50 transition-colors ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: idx * 0.03 }}
+                        >
+                          <td className="py-4 px-6 font-medium text-primary-dark">
+                            <div className="flex items-center gap-2">
                               <FiCalendar className="text-accent-blue" size={16} />
                               {row.date ? new Date(row.date).toLocaleDateString("en-GB") : "-"}
-                            </td>
-                            <td className="py-4 px-6 text-primary-dark flex items-center gap-2">
-                              <FiMapPin className="text-accent-blue" size={16} />
-                              {row.location}
-                            </td>
-                            <td className="py-4 px-6">
-                              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                                <span className="text-red-600 font-bold text-sm">{row.activeCases}</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-6 text-primary-dark">
+                            <div className="flex items-start gap-2">
+                              <FiMapPin className="text-accent-blue mt-1 flex-shrink-0" size={16} />
+                              <span className="text-sm" title={row.displayName || row.location}>
+                                {row.displayName || row.location || '-'}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                              <span className="text-red-600 font-bold text-sm">{row.activeCases ?? '-'}</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-6">
+                            {row.status === 'Active Cases' ? (
+                              <span className="text-gray-500">N/A</span>
+                            ) : (
+                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-blue-600 font-bold text-sm">{row.days_duration ?? '-'}</span>
                               </div>
-                            </td>
-                            <td className="py-4 px-6">
-                              {row.status === 'Active Cases' ? (
-                                <span className="text-gray-500">N/A</span>
-                              ) : (
-                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                  <span className="text-blue-600 font-bold text-sm">{row.days_duration}</span>
-                                </div>
-                              )}
-                            </td>
-                            <td className="py-4 px-6 text-primary-dark">{row.status || '-'}</td>
-                            <td className="py-4 px-6 text-primary-dark">
-                              <div className="flex flex-col">
-                                <span>{row.latitude !== null && row.latitude !== undefined ? row.latitude : '-'}</span>
-                                <span>{row.longitude !== null && row.longitude !== undefined ? row.longitude : '-'}</span>
-                              </div>
-                            </td>
-                          </motion.tr>
-                        ))}
+                            )}
+                          </td>
+                          <td className="py-4 px-6 text-primary-dark">{row.status || '-'}</td>
+                          <td className="py-4 px-6 text-primary-dark">
+                            {row.state || '-'}
+                          </td>
+                        </motion.tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
               <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="text-sm text-gray-600">
-                  Showing <span className="font-semibold">{Math.min(totalRows, (currentPage - 1) * rowsPerPage + 1)}</span> to{" "}
-                  <span className="font-semibold">{Math.min(totalRows, currentPage * rowsPerPage)}</span> of{" "}
-                  <span className="font-semibold">{totalRows}</span> records
+                  {hasAppliedFilters && totalRows > 0 ? (
+                    <>
+                      Showing <span className="font-semibold">{Math.min(totalRows, (currentPage - 1) * rowsPerPage + 1)}</span> to{" "}
+                      <span className="font-semibold">{Math.min(totalRows, currentPage * rowsPerPage)}</span> of{" "}
+                      <span className="font-semibold">{totalRows}</span> records
+                    </>
+                  ) : (
+                    <span>Apply filters to view records</span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <button
