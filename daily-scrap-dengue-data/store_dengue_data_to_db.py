@@ -14,6 +14,7 @@ from psycopg2.extras import execute_values
 from datetime import datetime
 from urllib.parse import urlparse
 import logging
+import time
 
 # Setup logging
 logging.basicConfig(
@@ -36,21 +37,30 @@ def parse_database_url(db_url):
         'password': parsed.password
     }
 
-def get_db_connection():
-    """Get database connection from DATABASE_URL environment variable or default URL."""
+def get_db_connection(max_retries=3, retry_delay=2):
+    """
+    Get database connection from DATABASE_URL environment variable or default URL.
+    Includes retry logic to handle Neon's pause/resume behavior.
+    """
     db_url = os.getenv('DATABASE_URL') or DEFAULT_DATABASE_URL
     
     if not db_url or db_url == "postgresql://user:password@host:port/database":
         raise ValueError("DATABASE_URL environment variable is not set and default URL is not configured. Please set DEFAULT_DATABASE_URL in the script or set DATABASE_URL environment variable.")
     
-    try:
-        conn_params = parse_database_url(db_url)
-        conn = psycopg2.connect(**conn_params)
-        logger.info("Successfully connected to database")
-        return conn
-    except Exception as e:
-        logger.error(f"Failed to connect to database: {e}")
-        raise
+    for attempt in range(max_retries):
+        try:
+            conn_params = parse_database_url(db_url)
+            conn = psycopg2.connect(**conn_params)
+            logger.info("Successfully connected to database")
+            return conn
+        except Exception as e:
+            if attempt < max_retries - 1:
+                wait_time = retry_delay * (2 ** attempt)  # Exponential backoff
+                logger.warning(f"Failed to connect to database (attempt {attempt + 1}/{max_retries}): {e}. Retrying in {wait_time}s...")
+                time.sleep(wait_time)
+            else:
+                logger.error(f"Failed to connect to database after {max_retries} attempts: {e}")
+                raise
 
 def parse_date(date_str):
     """Parse date from DD/MM/YYYY format to datetime."""
@@ -61,7 +71,7 @@ def parse_date(date_str):
         logger.warning(f"Failed to parse date '{date_str}': {e}")
         return None
 
-def process_active_dengue_csv(csv_path, conn):
+def process_active_dengue_csv(csv_path):
     """Process active_dengue.csv and prepare data for insertion."""
     logger.info(f"Reading {csv_path}...")
     
@@ -100,7 +110,7 @@ def process_active_dengue_csv(csv_path, conn):
         logger.error(f"Error reading active_dengue.csv: {e}")
         raise
 
-def process_hotspot_csv(csv_path, conn):
+def process_hotspot_csv(csv_path):
     """Process dengue_hotspot.csv and prepare data for insertion."""
     logger.info(f"Reading {csv_path}...")
     
@@ -216,6 +226,32 @@ def upsert_dengue_data(records, conn):
     finally:
         cur.close()
 
+def process_and_store_csv(csv_path, process_func, description):
+    """
+    Process a CSV file and store it in the database using a fresh connection.
+    This prevents idle connection timeouts with Neon's free tier.
+    """
+    try:
+        # Process CSV file (no database connection needed)
+        records = process_func(csv_path)
+        
+        if not records:
+            logger.info(f"No records to process from {description}")
+            return
+        
+        # Open a fresh connection for database operations
+        conn = get_db_connection()
+        try:
+            upsert_dengue_data(records, conn)
+            logger.info(f"Successfully stored {description} to database")
+        finally:
+            conn.close()
+            logger.info(f"Database connection closed after processing {description}")
+            
+    except Exception as e:
+        logger.error(f"Error processing {description}: {e}")
+        raise
+
 def main():
     """Main function to process CSV files and store data in database."""
     try:
@@ -233,23 +269,15 @@ def main():
             logger.error(f"File not found: {hotspot_csv}")
             sys.exit(1)
         
-        # Connect to database
-        conn = get_db_connection()
+        # Process each CSV file with its own database connection
+        # This prevents idle connection timeouts with Neon's free tier
+        process_and_store_csv(active_dengue_csv, process_active_dengue_csv, "active_dengue.csv")
         
-        try:
-            # Process active_dengue.csv (using upsert to update existing or insert new)
-            active_records = process_active_dengue_csv(active_dengue_csv, conn)
-            upsert_dengue_data(active_records, conn)
-            
-            # Process dengue_hotspot.csv (using upsert to update existing or insert new)
-            hotspot_records = process_hotspot_csv(hotspot_csv, conn)
-            upsert_dengue_data(hotspot_records, conn)
-            
-            logger.info("Successfully stored all dengue data to database")
-            
-        finally:
-            conn.close()
-            logger.info("Database connection closed")
+        # Process second CSV file with a fresh connection
+        # Even if there's a delay, the connection will be fresh
+        process_and_store_csv(hotspot_csv, process_hotspot_csv, "dengue_hotspot.csv")
+        
+        logger.info("Successfully stored all dengue data to database")
             
     except Exception as e:
         logger.error(f"Fatal error: {e}")

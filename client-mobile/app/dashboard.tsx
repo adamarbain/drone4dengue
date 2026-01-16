@@ -79,6 +79,7 @@ export default function Dashboard() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showLocationButtonDengue, setShowLocationButtonDengue] = useState(false);
+  const searchAbortControllerRef = useRef<AbortController | null>(null);
   
   // Location Alert states
   interface LocationAlert {
@@ -104,6 +105,7 @@ export default function Dashboard() {
   const [alertSearchQuery, setAlertSearchQuery] = useState('');
   const [alertSearchResults, setAlertSearchResults] = useState<any[]>([]);
   const [isAlertSearching, setIsAlertSearching] = useState(false);
+  const alertSearchAbortControllerRef = useRef<AbortController | null>(null);
   
   // Risk threshold settings
   const [riskThresholds, setRiskThresholds] = useState({ lowThreshold: 1.0, highThreshold: 3.0 });
@@ -171,6 +173,7 @@ export default function Dashboard() {
       }
     }
   }, [activeTab, companyId]);
+
 
   useEffect(() => {
     let isMounted = true;
@@ -468,7 +471,7 @@ export default function Dashboard() {
     }
   };
 
-  const searchLocation = async (query: string) => {
+  const searchLocation = async (query: string, signal?: AbortSignal) => {
     if (!query || query.trim().length === 0) {
       setSearchResults([]);
       return;
@@ -481,6 +484,7 @@ export default function Dashboard() {
         headers: {
           'Content-Type': 'application/json',
         },
+        signal, // Pass abort signal to cancel request if needed
       });
 
       if (!response.ok) {
@@ -489,7 +493,11 @@ export default function Dashboard() {
 
       const data = await response.json();
       setSearchResults(data);
-    } catch (error) {
+    } catch (error: any) {
+      // Don't show error if request was aborted (user typed again)
+      if (error.name === 'AbortError') {
+        return;
+      }
       console.error('Error searching location:', error);
       Alert.alert('Error', 'Failed to search location');
       setSearchResults([]);
@@ -500,6 +508,11 @@ export default function Dashboard() {
 
   const handleSearchResultSelect = (result: any) => {
     if (orgMapRef.current) {
+      // Cancel any pending search request
+      if (searchAbortControllerRef.current) {
+        searchAbortControllerRef.current.abort();
+      }
+      
       const lat = parseFloat(result.lat);
       const lon = parseFloat(result.lon);
       
@@ -516,7 +529,7 @@ export default function Dashboard() {
   };
 
   // Search location for alert modal
-  const searchAlertLocation = async (query: string) => {
+  const searchAlertLocation = async (query: string, signal?: AbortSignal) => {
     if (!query || query.trim().length === 0) {
       setAlertSearchResults([]);
       return;
@@ -529,6 +542,7 @@ export default function Dashboard() {
         headers: {
           'Content-Type': 'application/json',
         },
+        signal, // Pass abort signal to cancel request if needed
       });
 
       if (!response.ok) {
@@ -537,7 +551,11 @@ export default function Dashboard() {
 
       const data = await response.json();
       setAlertSearchResults(data);
-    } catch (error) {
+    } catch (error: any) {
+      // Don't show error if request was aborted (user typed again)
+      if (error.name === 'AbortError') {
+        return;
+      }
       console.error('Error searching location:', error);
       setAlertSearchResults([]);
     } finally {
@@ -546,6 +564,11 @@ export default function Dashboard() {
   };
 
   const handleAlertSearchResultSelect = (result: any) => {
+    // Cancel any pending search request
+    if (alertSearchAbortControllerRef.current) {
+      alertSearchAbortControllerRef.current.abort();
+    }
+    
     const lat = parseFloat(result.lat);
     const lon = parseFloat(result.lon);
     
@@ -908,13 +931,32 @@ export default function Dashboard() {
                           value={searchQuery}
                           onChangeText={(text) => {
                             setSearchQuery(text);
-                            searchLocation(text);
+                            // Only update state - search will be triggered on Enter press
                           }}
-                          onSubmitEditing={() => searchLocation(searchQuery)}
+                          onSubmitEditing={() => {
+                            // Search only when user presses Enter/Submit
+                            if (!searchQuery.trim()) {
+                              setSearchResults([]);
+                              return;
+                            }
+                            
+                            // Cancel any pending request
+                            if (searchAbortControllerRef.current) {
+                              searchAbortControllerRef.current.abort();
+                            }
+                            
+                            const abortController = new AbortController();
+                            searchAbortControllerRef.current = abortController;
+                            searchLocation(searchQuery.trim(), abortController.signal);
+                          }}
                         />
                         {searchQuery.length > 0 && (
                           <TouchableOpacity
                             onPress={() => {
+                              // Cancel any pending search request
+                              if (searchAbortControllerRef.current) {
+                                searchAbortControllerRef.current.abort();
+                              }
                               setSearchQuery('');
                               setSearchResults([]);
                             }}
@@ -1311,6 +1353,10 @@ export default function Dashboard() {
                       transparent={true}
                       animationType="slide"
                       onRequestClose={() => {
+                        // Cancel any pending search request
+                        if (alertSearchAbortControllerRef.current) {
+                          alertSearchAbortControllerRef.current.abort();
+                        }
                         setShowCreateAlertModal(false);
                         setNewAlertName('');
                         setNewAlertLocation(null);
@@ -1325,6 +1371,10 @@ export default function Dashboard() {
                             <Text className="text-2xl font-bold text-black">Create Location Alert</Text>
                             <TouchableOpacity
                               onPress={() => {
+                                // Cancel any pending search request
+                                if (alertSearchAbortControllerRef.current) {
+                                  alertSearchAbortControllerRef.current.abort();
+                                }
                                 setShowCreateAlertModal(false);
                                 setNewAlertName('');
                                 setNewAlertLocation(null);
@@ -1367,14 +1417,33 @@ export default function Dashboard() {
                                   value={alertSearchQuery}
                                   onChangeText={(text) => {
                                     setAlertSearchQuery(text);
-                                    searchAlertLocation(text);
+                                    // Only update state - search will be triggered on Enter press
                                   }}
-                                  onSubmitEditing={() => searchAlertLocation(alertSearchQuery)}
+                                  onSubmitEditing={() => {
+                                    // Search only when user presses Enter/Submit
+                                    if (!alertSearchQuery.trim()) {
+                                      setAlertSearchResults([]);
+                                      return;
+                                    }
+                                    
+                                    // Cancel any pending request
+                                    if (alertSearchAbortControllerRef.current) {
+                                      alertSearchAbortControllerRef.current.abort();
+                                    }
+                                    
+                                    const abortController = new AbortController();
+                                    alertSearchAbortControllerRef.current = abortController;
+                                    searchAlertLocation(alertSearchQuery.trim(), abortController.signal);
+                                  }}
                                   style={{ color: '#0F2854' }}
                                 />
                                 {alertSearchQuery.length > 0 && (
                                   <TouchableOpacity
                                     onPress={() => {
+                                      // Cancel any pending search request
+                                      if (alertSearchAbortControllerRef.current) {
+                                        alertSearchAbortControllerRef.current.abort();
+                                      }
                                       setAlertSearchQuery('');
                                       setAlertSearchResults([]);
                                     }}

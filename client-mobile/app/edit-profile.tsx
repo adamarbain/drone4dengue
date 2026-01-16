@@ -53,7 +53,14 @@ export default function EditProfilePage() {
         setShowConfirmModal(false);
         setSaving(true);
         try {
-            await updateUserProfile({ name, username, phone, address });
+            // Ensure phone and address are explicitly set to empty strings if they're null/undefined
+            // This allows users to clear these fields
+            await updateUserProfile({ 
+                name, 
+                username, 
+                phone: phone || '', 
+                address: address || '' 
+            });
             setModal({ visible: true, type: 'success', message: 'Profile updated successfully!' });
         } catch (err) {
             const message = (err instanceof Error) ? err.message : 'Failed to update profile';
@@ -158,7 +165,8 @@ export default function EditProfilePage() {
                                 value={phone}
                                 onChangeText={setPhone}
                                 keyboardType="phone-pad"
-                                style={{ color: '#181D27' }}
+                                editable={true}
+                                style={{ color: '#181D27', flex: 1, paddingVertical: 0 }}
                             />
                         </View>
                     </View>
@@ -177,7 +185,8 @@ export default function EditProfilePage() {
                                 multiline
                                 numberOfLines={3}
                                 textAlignVertical="top"
-                                style={{ color: '#181D27', minHeight: 60 }}
+                                editable={true}
+                                style={{ color: '#181D27', minHeight: 60, flex: 1, paddingVertical: 0 }}
                             />
                         </View>
                     </View>

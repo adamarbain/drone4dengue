@@ -40,6 +40,8 @@ jobs:
 
       - name: Store Dengue Data to Database
         working-directory: daily-scrap-dengue-data
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python store_dengue_data_to_db.py
 
       - name: Commit and Push Changes
