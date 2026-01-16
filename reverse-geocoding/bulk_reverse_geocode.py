@@ -215,13 +215,40 @@ class DengueDataGeocoder:
             """
             
             if resume_from_id:
+                # First try to find records with id > resume_from_id
                 query = base_query + " AND id > %s ORDER BY id LIMIT %s"
                 cursor.execute(query, (resume_from_id, self.batch_size))
+                records = cursor.fetchall()
+                
+                # If no records found with id > resume_from_id, check if there are any pending records
+                if len(records) == 0:
+                    # Check if there are any pending records at all
+                    cursor.execute("""
+                        SELECT COUNT(*) 
+                        FROM "DengueData"
+                        WHERE latitude IS NOT NULL 
+                          AND longitude IS NOT NULL 
+                          AND "isGeocoded" = FALSE
+                    """)
+                    pending_count = cursor.fetchone()[0]
+                    
+                    if pending_count > 0:
+                        # There are pending records, but none with id > resume_from_id
+                        # This means resume_from_id is past all pending records
+                        # Fall back to processing from the beginning
+                        logger.warning(f"No records found with id > {resume_from_id}, but {pending_count} pending records exist. "
+                                     f"Resuming from the beginning of pending records.")
+                        query = base_query + " ORDER BY id LIMIT %s"
+                        cursor.execute(query, (self.batch_size,))
+                        records = cursor.fetchall()
+                    else:
+                        # No pending records at all
+                        logger.info("No pending records found")
             else:
                 query = base_query + " ORDER BY id LIMIT %s"
                 cursor.execute(query, (self.batch_size,))
+                records = cursor.fetchall()
             
-            records = cursor.fetchall()
             logger.info(f"Found {len(records)} records to geocode")
             return records
             

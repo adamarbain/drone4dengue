@@ -1,7 +1,11 @@
 name: Reverse Geocode Dengue Data
 
 on:
-  workflow_dispatch:  # Manual trigger only
+  workflow_run:
+    workflows: ["Run Dengue Data Script Daily"]
+    types:
+      - completed
+  workflow_dispatch:  # Manual trigger also available
     inputs:
       batch_size:
         description: 'Number of records to process per batch'
@@ -26,6 +30,11 @@ jobs:
   reverse-geocode:
     runs-on: ubuntu-latest
     timeout-minutes: 360  # 6 hours maximum
+    # Only run if triggered by workflow_run and the triggering workflow succeeded,
+    # or if triggered manually via workflow_dispatch
+    if: |
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      github.event_name == 'workflow_dispatch'
     
     steps:
       - name: Checkout repository
@@ -44,6 +53,7 @@ jobs:
       - name: Run Reverse Geocoding Script
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # Handle inputs from both workflow_dispatch and workflow_run triggers
           BATCH_SIZE: ${{ github.event.inputs.batch_size || '100' }}
           DELAY_SECONDS: ${{ github.event.inputs.delay_seconds || '1.5' }}
           RESUME_FROM_ID: ${{ github.event.inputs.resume_from_id || '' }}
