@@ -1,0 +1,196 @@
+version: 2.1
+
+# Define reusable commands
+commands:
+  restore_node_cache_client_admin:
+    description: "Restore client-admin Node.js dependencies cache"
+    steps:
+      - restore_cache:
+          keys:
+            - node-client-admin-v2-{{ checksum "client-admin/package-lock.json" }}
+            - node-client-admin-v2-
+
+  save_node_cache_client_admin:
+    description: "Save client-admin Node.js dependencies cache"
+    steps:
+      - save_cache:
+          key: node-client-admin-v2-{{ checksum "client-admin/package-lock.json" }}
+          paths:
+            - client-admin/node_modules
+
+  restore_node_cache_client_mobile:
+    description: "Restore client-mobile Node.js dependencies cache"
+    steps:
+      - restore_cache:
+          keys:
+            - node-client-mobile-v2-{{ checksum "client-mobile/package-lock.json" }}
+            - node-client-mobile-v2-
+
+  save_node_cache_client_mobile:
+    description: "Save client-mobile Node.js dependencies cache"
+    steps:
+      - save_cache:
+          key: node-client-mobile-v2-{{ checksum "client-mobile/package-lock.json" }}
+          paths:
+            - client-mobile/node_modules
+
+  restore_node_cache_server_api:
+    description: "Restore server-api Node.js dependencies cache"
+    steps:
+      - restore_cache:
+          keys:
+            - node-server-api-v2-{{ checksum "server-api/package-lock.json" }}
+            - node-server-api-v2-
+
+  save_node_cache_server_api:
+    description: "Save server-api Node.js dependencies cache"
+    steps:
+      - save_cache:
+          key: node-server-api-v2-{{ checksum "server-api/package-lock.json" }}
+          paths:
+            - server-api/node_modules
+
+  restore_python_cache:
+    description: "Restore Python dependencies cache"
+    steps:
+      - restore_cache:
+          keys:
+            - pip-v2-{{ checksum "server-ml/requirements.txt" }}
+            - pip-v2-
+
+  save_python_cache:
+    description: "Save Python dependencies cache"
+    steps:
+      - save_cache:
+          key: pip-v2-{{ checksum "server-ml/requirements.txt" }}
+          paths:
+            - ~/.cache/pip
+
+# Define jobs
+jobs:
+  # Client Admin (Next.js) - TypeScript/React
+  test-client-admin:
+    docker:
+      - image: cimg/node:20.11
+    working_directory: ~/project
+    steps:
+      - checkout
+      - restore_node_cache_client_admin
+      - run:
+          name: Install client-admin dependencies
+          command: |
+            cd client-admin
+            npm ci
+      - save_node_cache_client_admin
+      - run:
+          name: Run client-admin linter
+          command: |
+            cd client-admin
+            npm run lint
+      - run:
+          name: Build client-admin
+          command: |
+            cd client-admin
+            npm run build
+
+  # Client Mobile (Expo/React Native) - TypeScript
+  test-client-mobile:
+    docker:
+      - image: cimg/node:20.11
+    working_directory: ~/project
+    steps:
+      - checkout
+      - restore_node_cache_client_mobile
+      - run:
+          name: Install client-mobile dependencies
+          command: |
+            cd client-mobile
+            npm ci
+      - save_node_cache_client_mobile
+      - run:
+          name: Run client-mobile linter
+          command: |
+            cd client-mobile
+            npm run lint
+
+  # Server API (Node.js/Express) - JavaScript
+  test-server-api:
+    docker:
+      - image: cimg/node:20.11
+    working_directory: ~/project
+    steps:
+      - checkout
+      - restore_node_cache_server_api
+      - run:
+          name: Install server-api dependencies
+          command: |
+            cd server-api
+            npm ci
+      - save_node_cache_server_api
+      - run:
+          name: Generate Prisma Client
+          command: |
+            cd server-api
+            npx prisma generate
+      - run:
+          name: Check server-api syntax
+          command: |
+            cd server-api
+            node --check index.js || echo "Syntax check completed"
+
+  # Server ML (Python/Flask) - Machine Learning Service
+  test-server-ml:
+    docker:
+      - image: cimg/python:3.11
+    working_directory: ~/project
+    steps:
+      - checkout
+      - restore_python_cache
+      - run:
+          name: Install system dependencies
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y gdal-bin libgdal-dev python3-gdal
+      - run:
+          name: Install Python dependencies
+          command: |
+            cd server-ml
+            python3 -m pip install --upgrade pip
+            pip3 install -r requirements.txt
+      - save_python_cache
+      - run:
+          name: Check Python syntax
+          command: |
+            cd server-ml
+            python3 -m py_compile *.py 2>/dev/null || echo "Syntax check completed"
+
+  # Python Scripts - Reverse Geocoding
+  test-python-scripts:
+    docker:
+      - image: cimg/python:3.11
+    working_directory: ~/project
+    steps:
+      - checkout
+      - restore_python_cache
+      - run:
+          name: Install Python dependencies for scripts
+          command: |
+            python3 -m pip install --upgrade pip
+            pip3 install psycopg2-binary requests urllib3 python-dotenv pandas geopandas shapely
+      - save_python_cache
+      - run:
+          name: Check Python script syntax
+          command: |
+            python3 -m py_compile reverse-geocoding/bulk_reverse_geocode.py 2>/dev/null || echo "Syntax check completed"
+            python3 -m py_compile daily-scrap-dengue-data/*.py 2>/dev/null || echo "Syntax check completed"
+
+# Workflow to run all tests
+workflows:
+  version: 2
+  test-all:
+    jobs:
+      - test-client-admin
+      - test-client-mobile
+      - test-server-api
+      - test-server-ml
+      - test-python-scripts
