@@ -304,7 +304,34 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Check if server-ml files changed
+          command: |
+            # Check if server-ml directory changed
+            # For PRs/merges, check against base branch, otherwise check last commit
+            if [ -n "${CIRCLE_PULL_REQUEST}" ]; then
+              # This is a PR - compare against base branch
+              BASE_BRANCH=$(echo "${CIRCLE_PULL_REQUEST}" | sed 's/.*\///')
+              CHANGED_FILES=$(git diff --name-only origin/${BASE_BRANCH}...HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+            elif [ -n "${CIRCLE_COMPARE_URL}" ]; then
+              # Use compare URL if available
+              CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD~1)
+            else
+              # Fallback: check last commit
+              CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+            fi
+            
+            if echo "$CHANGED_FILES" | grep -q "^server-ml/"; then
+              echo "✅ server-ml/ directory changed, proceeding with deployment"
+              echo "Changed files:"
+              echo "$CHANGED_FILES" | grep "^server-ml/"
+              echo "true" > /tmp/should_deploy.txt
+            else
+              echo "⏭️  No changes detected in server-ml/ directory, skipping deployment"
+              echo "false" > /tmp/should_deploy.txt
+            fi
+      - run:
           name: Authenticate to Google Cloud
+          when: on_success
           command: |
             # Handle both base64-encoded and raw JSON
             if echo "${GCP_SA_KEY}" | base64 -d > /tmp/gcp-key.json 2>/dev/null; then
@@ -317,18 +344,30 @@ jobs:
             gcloud config set project ${GCP_PROJECT_ID}
       - run:
           name: Build and Push Container
+          when: on_success
           command: |
-            cd server-ml
-            gcloud builds submit --tag us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/drone-images/server-ml .
+            if [ "$(cat /tmp/should_deploy.txt)" = "true" ]; then
+              cd server-ml
+              gcloud builds submit --tag us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/drone-images/server-ml .
+            else
+              echo "⏭️  Skipping build (no changes detected)"
+              exit 0
+            fi
       - run:
           name: Deploy to Cloud Run
+          when: on_success
           command: |
-            gcloud run deploy server-ml \
-              --image us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/drone-images/server-ml \
-              --platform managed \
-              --region us-central1 \
-              --allow-unauthenticated \
-              --memory 2Gi
+            if [ "$(cat /tmp/should_deploy.txt)" = "true" ]; then
+              gcloud run deploy server-ml \
+                --image us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/drone-images/server-ml \
+                --platform managed \
+                --region us-central1 \
+                --allow-unauthenticated \
+                --memory 2Gi
+            else
+              echo "⏭️  Skipping deployment (no changes detected)"
+              exit 0
+            fi
 
   # Deploy Server API to Cloud Run
   # Equivalent to: deploy-server-api.yml
@@ -339,7 +378,34 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Check if server-api files changed
+          command: |
+            # Check if server-api directory changed
+            # For PRs/merges, check against base branch, otherwise check last commit
+            if [ -n "${CIRCLE_PULL_REQUEST}" ]; then
+              # This is a PR - compare against base branch
+              BASE_BRANCH=$(echo "${CIRCLE_PULL_REQUEST}" | sed 's/.*\///')
+              CHANGED_FILES=$(git diff --name-only origin/${BASE_BRANCH}...HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+            elif [ -n "${CIRCLE_COMPARE_URL}" ]; then
+              # Use compare URL if available
+              CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD~1)
+            else
+              # Fallback: check last commit
+              CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+            fi
+            
+            if echo "$CHANGED_FILES" | grep -q "^server-api/"; then
+              echo "✅ server-api/ directory changed, proceeding with deployment"
+              echo "Changed files:"
+              echo "$CHANGED_FILES" | grep "^server-api/"
+              echo "true" > /tmp/should_deploy.txt
+            else
+              echo "⏭️  No changes detected in server-api/ directory, skipping deployment"
+              echo "false" > /tmp/should_deploy.txt
+            fi
+      - run:
           name: Authenticate to Google Cloud
+          when: on_success
           command: |
             # Handle both base64-encoded and raw JSON
             if echo "${GCP_SA_KEY}" | base64 -d > /tmp/gcp-key.json 2>/dev/null; then
@@ -352,37 +418,49 @@ jobs:
             gcloud config set project ${GCP_PROJECT_ID}
       - run:
           name: Build and Push Container
+          when: on_success
           command: |
-            cd server-api
-            gcloud builds submit --tag us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/drone-images/server-api .
+            if [ "$(cat /tmp/should_deploy.txt)" = "true" ]; then
+              cd server-api
+              gcloud builds submit --tag us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/drone-images/server-api .
+            else
+              echo "⏭️  Skipping build (no changes detected)"
+              exit 0
+            fi
       - run:
           name: Deploy to Cloud Run
+          when: on_success
           command: |
-            gcloud run deploy server-api \
-              --image us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/drone-images/server-api \
-              --platform managed \
-              --region us-central1 \
-              --allow-unauthenticated \
-              --memory 1Gi \
-              --set-env-vars "DATABASE_URL=${DATABASE_URL}" \
-              --set-env-vars "REDIS_HOST=${REDIS_HOST}" \
-              --set-env-vars "REDIS_PORT=${REDIS_PORT}" \
-              --set-env-vars "REDIS_PASSWORD=${REDIS_PASSWORD}" \
-              --set-env-vars "REDIS_USERNAME=${REDIS_USERNAME}" \
-              --set-env-vars "ML_SERVICE_URL=${ML_SERVICE_URL}" \
-              --set-env-vars "FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}" \
-              --set-env-vars "FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}" \
-              --set-env-vars "FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}" \
-              --set-env-vars "FIREBASE_PRIVATE_KEY_BASE64=${FIREBASE_PRIVATE_KEY_BASE64}" \
-              --set-env-vars "SENDER_EMAIL=${SENDER_EMAIL}" \
-              --set-env-vars "SENDER_EMAIL_PW=${SENDER_EMAIL_PW}" \
-              --set-env-vars "TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}" \
-              --set-env-vars "TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}" \
-              --set-env-vars "TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}" \
-              --set-env-vars "NODE_ENV=production" \
-              --set-env-vars "API_BASE_URL=${API_BASE_URL}" \
-              --set-env-vars "SENTRY_DSN=${SENTRY_DSN}" \
-              --set-env-vars "LOCATION_ALERT_API_KEY=${LOCATION_ALERT_API_KEY}"
+            if [ "$(cat /tmp/should_deploy.txt)" = "true" ]; then
+              gcloud run deploy server-api \
+                --image us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/drone-images/server-api \
+                --platform managed \
+                --region us-central1 \
+                --allow-unauthenticated \
+                --memory 1Gi \
+                --set-env-vars "DATABASE_URL=${DATABASE_URL}" \
+                --set-env-vars "REDIS_HOST=${REDIS_HOST}" \
+                --set-env-vars "REDIS_PORT=${REDIS_PORT}" \
+                --set-env-vars "REDIS_PASSWORD=${REDIS_PASSWORD}" \
+                --set-env-vars "REDIS_USERNAME=${REDIS_USERNAME}" \
+                --set-env-vars "ML_SERVICE_URL=${ML_SERVICE_URL}" \
+                --set-env-vars "FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}" \
+                --set-env-vars "FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}" \
+                --set-env-vars "FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}" \
+                --set-env-vars "FIREBASE_PRIVATE_KEY_BASE64=${FIREBASE_PRIVATE_KEY_BASE64}" \
+                --set-env-vars "SENDER_EMAIL=${SENDER_EMAIL}" \
+                --set-env-vars "SENDER_EMAIL_PW=${SENDER_EMAIL_PW}" \
+                --set-env-vars "TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}" \
+                --set-env-vars "TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}" \
+                --set-env-vars "TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}" \
+                --set-env-vars "NODE_ENV=production" \
+                --set-env-vars "API_BASE_URL=${API_BASE_URL}" \
+                --set-env-vars "SENTRY_DSN=${SENTRY_DSN}" \
+                --set-env-vars "LOCATION_ALERT_API_KEY=${LOCATION_ALERT_API_KEY}"
+            else
+              echo "⏭️  Skipping deployment (no changes detected)"
+              exit 0
+            fi
 
   # ============================================
   # API TRIGGER JOBS (from GitHub Actions)
@@ -602,8 +680,9 @@ workflows:
       - run-dengue-data-script
 
   # Deploy Server ML workflow
-  # Triggers on push to main/master when server-ml/** changes
-  # Also supports manual trigger and repository_dispatch (via GitHub API)
+  # Triggers on push to main/master
+  # Note: CircleCI doesn't support path filters in workflows, so this runs on any push to main/master
+  # The job will check if server-ml files changed before deploying
   deploy-server-ml-workflow:
     jobs:
       - deploy-server-ml:
@@ -612,8 +691,6 @@ workflows:
               only:
                 - main
                 - master
-            paths:
-              - server-ml/**
 
   # Manual trigger for Server ML deployment
   deploy-server-ml-manual:
@@ -621,8 +698,9 @@ workflows:
       - deploy-server-ml
 
   # Deploy Server API workflow
-  # Triggers on push to main/master when server-api/** changes
-  # Also supports manual trigger
+  # Triggers on push to main/master
+  # Note: CircleCI doesn't support path filters in workflows, so this runs on any push to main/master
+  # The job will check if server-api files changed before deploying
   deploy-server-api-workflow:
     jobs:
       - deploy-server-api:
@@ -631,8 +709,6 @@ workflows:
               only:
                 - main
                 - master
-            paths:
-              - server-api/**
 
   # Manual trigger for Server API deployment
   deploy-server-api-manual:
