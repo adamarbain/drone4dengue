@@ -66,3 +66,5 @@ Provides end users with recommendations based on risk levels and supports dengue
 
 * UC12: Get Potential Dengue Notification
 * UC13: Get Recommendations
+* UC15: Monitor Daily Dengue Cases
+* UC16: Create Dengue Location Alert
