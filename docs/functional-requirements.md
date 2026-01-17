@@ -61,3 +61,5 @@ Grouped by module, each requirement supports one or more use cases.
 * **REQ-28**: The system shall allow users to view recommendations categorized by risk level (High, Medium, Low).
 * **REQ-29**: The system shall display detailed preventive tips upon user selection.
 * **REQ-30**: The system shall allow navigating between categories or returning to the main menu.
+* **REQ-31**: The system shall allow public users to view and monitor daily dengue cases.
+* **REQ-32**: The system shall allow public users to create, manage, and receive notifications for location-based dengue alerts.

@@ -453,3 +453,115 @@ User can also view other drone activities and monitoring areas nearby.
 ### Exception Flows:
 
 * E1.1: Save fails → show message and log it
+
+## UC15: Monitor Daily Dengue Cases
+**Module**: Public Awareness & Prevention
+**Actors**: Public User
+**Trigger**: User navigates to Dashboard and selects "Dengue Cases" tab
+**Precondition**: User is logged in with companyId=comp-999, location permission is granted
+**Postcondition**: User can view and interact with daily dengue cases on the map
+**Description**: This use case enables public users to monitor and view daily dengue cases reported within the last 24 hours on an interactive map interface. Users can explore cases geographically, search for specific locations, view detailed case information, and navigate the map to understand the spatial distribution of dengue outbreaks in their area.
+**Priority**: High
+
+### Main Flow:
+
+1. User opens the mobile app and navigates to the Dashboard page.
+2. System checks if user has companyId='comp-999' (Public User).
+3. System displays two tabs: "Current" and "Dengue Cases".
+4. User taps on the "Dengue Cases" tab.
+5. System fetches the latest dengue cases from the last 24 hours.
+6. System displays a loading indicator while fetching data.
+7. System displays all dengue cases as red markers on an interactive map.
+8. Map automatically fits to show all available cases with appropriate padding.
+9. User can interact with the map:
+   - Pan to explore different areas
+   - Zoom in/out to see more or less detail
+   - View user's current location (blue marker)
+10. User can search for locations using the search bar positioned above the map.
+11. System performs geocoding search and displays up to 5 matching results.
+12. User selects a search result from the dropdown.
+13. Map animates to center on the selected location.
+14. User taps on a dengue case marker (red pin).
+15. System displays a modal dialog with case details:
+    - Location name
+    - Date of report (formatted as "DD Month YYYY")
+    - Active cases count (highlighted in red)
+    - Total cases count (if available)
+    - Coverage area information (if available)
+16. User can tap "View on Map" button to center the map on that specific case location.
+17. User can close the modal by tapping the close button (X) or tapping outside the modal.
+18. If user navigates away from their current location (>200m), a "Return to Location" button appears.
+19. User taps the "Return to Location" button.
+20. Map animates back to center on user's current location.
+
+### Alternative Flow:
+
+* A1.1: User searches for location → system displays search results dropdown, user selects result → map navigates to location
+* A2.1: User clears search query → search results are cleared, search bar is reset
+* A3.1: No dengue cases available → system displays message "No dengue cases found - No active cases in the last 24 hours"
+
+### Exception Flow:
+
+* E1.1: Failed to fetch dengue cases → system displays error alert "Failed to load dengue cases"
+* E2.1: Location permission denied → system shows warning in console, user can still use app but without location features
+* E3.1: Network error during search → system displays error alert "Failed to search location"
+* E4.1: Geocoding service unavailable → search results remain empty, user can still use map
+
+---
+
+## UC16: Create Dengue Location Alert
+**Module**: Public Awareness & Prevention
+**Actors**: Public User
+**Trigger**: User taps "Location Alert" button on the Dengue Cases map view
+**Precondition**: User is logged in and viewing the Dengue Cases tab
+**Postcondition**: Location alert is created and saved, user can receive notifications for that location
+**Description**: This use case allows public users to create location-based alerts for monitoring dengue cases near specific areas of interest (e.g., home, office, school). Users can pin locations on a map or search for addresses, name their alerts, and receive notifications when dengue cases are detected within approximately 500 meters of their saved locations. Users can also manage existing alerts by toggling their active status or deleting them.
+**Priority**: High
+
+### Main Flow:
+
+1. User is viewing the Dengue Cases map with dengue case markers displayed.
+2. User taps the "Location Alert" button (bottom-left floating button with notification icon).
+3. System fetches user's existing location alerts.
+4. System displays an alert options modal with two options:
+   - "View Existing Alerts" (shows count of saved alerts)
+   - "Create New Alert"
+5. User taps "Create New Alert".
+6. System displays the alert creation modal (slides up from bottom, 85% screen height).
+7. User enters an alert name in the "Alert Name" field (e.g., "Home", "Office", "School").
+8. User selects a location using one of two methods:
+   - **Method A (Search)**: User types in the location search bar, system performs geocoding and displays results, user selects a result
+   - **Method B (Map Tap)**: User taps directly on the interactive map to pin a location
+9. System performs reverse geocoding to get the address name for the selected coordinates.
+10. System displays the selected location with:
+    - Blue marker pin on the map
+    - Location address/name in a highlighted box below the map
+11. System displays an informational note: "You will receive notifications when dengue cases are detected within approximately 500m of your pinned location."
+12. User reviews the alert name and location.
+13. User taps the "Create Alert" button.
+14. System validates that both alert name and location are provided.
+15. System creates the location alert with:
+    - Alert name
+    - Latitude and longitude coordinates
+    - Bounding box (500m radius)
+    - Address (from reverse geocoding)
+    - Active status (default: true)
+16. System displays success message: "Location alert created successfully".
+17. System closes the creation modal and refreshes the alerts list.
+18. Alert is saved and user will receive notifications when dengue cases are detected near this location.
+
+### Alternative Flow:
+
+* A1.1: User taps "View Existing Alerts" → system displays modal with list of all saved alerts, user can toggle active/paused status, delete alerts, or create new alert
+* A2.1: User changes selected location → user can search again or tap different point on map, system updates marker and address
+* A3.1: User clears search query → search results are cleared, user can continue with map selection
+* A4.1: User closes modal without creating → system discards all entered data, returns to map view
+
+### Exception Flow:
+
+* E1.1: Alert name is empty → system displays error alert "Please enter a name for the alert", create button remains disabled
+* E2.1: Location is not selected → system displays error alert "Please pin a location on the map", create button remains disabled
+* E3.1: Failed to create alert → system displays error alert "Failed to create location alert"
+* E4.1: Reverse geocoding fails → system displays coordinates instead of address name (format: "lat, lon")
+* E5.1: Network error during search → search results remain empty, user can still use map to select location
+* E6.1: Failed to fetch existing alerts → system still allows creating new alert, but cannot show existing count
