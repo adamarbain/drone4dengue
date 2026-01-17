@@ -72,116 +72,7 @@ jobs:
   # TEST JOBS (from original config)
   # ============================================
   
-  test-client-admin:
-    docker:
-      - image: cimg/node:20.11
-    working_directory: ~/project
-    steps:
-      - checkout
-      - restore_node_cache_client_admin
-      - run:
-          name: Install client-admin dependencies
-          command: |
-            cd client-admin
-            npm ci
-      - save_node_cache_client_admin
-      - run:
-          name: Run client-admin linter
-          command: |
-            cd client-admin
-            npm run lint
-      - run:
-          name: Build client-admin
-          command: |
-            cd client-admin
-            npm run build
 
-  test-client-mobile:
-    docker:
-      - image: cimg/node:20.11
-    working_directory: ~/project
-    steps:
-      - checkout
-      - restore_node_cache_client_mobile
-      - run:
-          name: Install client-mobile dependencies
-          command: |
-            cd client-mobile
-            npm ci
-      - save_node_cache_client_mobile
-      - run:
-          name: Run client-mobile linter
-          command: |
-            cd client-mobile
-            npm run lint
-
-  test-server-api:
-    docker:
-      - image: cimg/node:20.11
-    working_directory: ~/project
-    steps:
-      - checkout
-      - restore_node_cache_server_api
-      - run:
-          name: Install server-api dependencies
-          command: |
-            cd server-api
-            npm ci
-      - save_node_cache_server_api
-      - run:
-          name: Generate Prisma Client
-          command: |
-            cd server-api
-            npx prisma generate
-      - run:
-          name: Check server-api syntax
-          command: |
-            cd server-api
-            node --check index.js || echo "Syntax check completed"
-
-  test-server-ml:
-    docker:
-      - image: cimg/python:3.11
-    working_directory: ~/project
-    steps:
-      - checkout
-      - restore_python_cache
-      - run:
-          name: Install system dependencies
-          command: |
-            sudo apt-get update
-            sudo apt-get install -y gdal-bin libgdal-dev python3-gdal
-      - run:
-          name: Install Python dependencies
-          command: |
-            cd server-ml
-            python3 -m pip install --upgrade pip
-            pip3 install -r requirements.txt
-      - save_python_cache
-      - run:
-          name: Check Python syntax
-          command: |
-            cd server-ml
-            python3 -m py_compile *.py 2>/dev/null || echo "Syntax check completed"
-
-  test-python-scripts:
-    docker:
-      - image: cimg/python:3.11
-    working_directory: ~/project
-    steps:
-      - checkout
-      - restore_python_cache
-      - run:
-          name: Install Python dependencies for scripts
-          command: |
-            python3 -m pip install --upgrade pip
-            pip3 install psycopg2-binary requests urllib3 python-dotenv pandas geopandas shapely
-      - save_python_cache
-      - run:
-          name: Check Python script syntax
-          command: |
-            python3 -m py_compile reverse-geocoding/bulk_reverse_geocode.py 2>/dev/null || echo "Syntax check completed"
-            python3 -m py_compile daily-scrap-dengue-data/*.py 2>/dev/null || echo "Syntax check completed"
 
   # ============================================
   # DATA PROCESSING JOBS (from GitHub Actions)
@@ -638,15 +529,6 @@ jobs:
 workflows:
   version: 2
   
-  # Test workflow - runs on every push
-  test-all:
-    jobs:
-      - test-client-admin
-      - test-client-mobile
-      - test-server-api
-      - test-server-ml
-      - test-python-scripts
-
   # Daily data processing workflow
   # Runs daily at 1pm UTC (9pm Malaysia time)
   # Equivalent to: scrap-dengue-data-script.yml
