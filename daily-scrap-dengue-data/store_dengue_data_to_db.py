@@ -160,7 +160,7 @@ def process_hotspot_csv(csv_path):
         raise
 
 def upsert_dengue_data(records, conn):
-    """Insert or update dengue data records in the database."""
+    """Insert or update dengue data records in the database using batch upsert."""
     if not records:
         logger.info("No records to insert")
         return
@@ -168,11 +168,33 @@ def upsert_dengue_data(records, conn):
     cur = conn.cursor()
     
     try:
-        inserted_count = 0
-        updated_count = 0
-        skipped_count = 0
+        total_records = len(records)
+        logger.info(f"Processing {total_records} records using batch upsert...")
         
-        insert_query = """
+        # Use PostgreSQL ON CONFLICT for efficient upsert
+        # This requires a unique constraint on (date, location, source)
+        # First, ensure the constraint exists (idempotent)
+        cur.execute("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_constraint 
+                    WHERE conname = 'denguedata_date_location_source_unique'
+                ) THEN
+                    ALTER TABLE "DengueData" 
+                    ADD CONSTRAINT denguedata_date_location_source_unique 
+                    UNIQUE (date, location, source);
+                END IF;
+            EXCEPTION
+                WHEN duplicate_table THEN NULL;
+                WHEN duplicate_object THEN NULL;
+            END $$;
+        """)
+        conn.commit()
+        logger.info("Ensured unique constraint exists on (date, location, source)")
+        
+        # Batch upsert query using ON CONFLICT
+        upsert_query = """
         INSERT INTO "DengueData" (
             id, location, date, "activeCases", "totalCases", 
             "days_duration", "coverageArea", status, source, 
@@ -183,48 +205,29 @@ def upsert_dengue_data(records, conn):
             %(days_duration)s, %(coverageArea)s, %(status)s, %(source)s,
             %(latitude)s, %(longitude)s, NOW(), NOW()
         )
+        ON CONFLICT (date, location, source) DO UPDATE SET
+            "activeCases" = EXCLUDED."activeCases",
+            "totalCases" = EXCLUDED."totalCases",
+            "days_duration" = EXCLUDED."days_duration",
+            "coverageArea" = EXCLUDED."coverageArea",
+            status = EXCLUDED.status,
+            latitude = EXCLUDED.latitude,
+            longitude = EXCLUDED.longitude,
+            "updatedAt" = NOW()
         """
         
-        total_records = len(records)
-        logger.info(f"Processing {total_records} records...")
+        # Process in batches of 1000 for memory efficiency and progress logging
+        batch_size = 1000
+        processed = 0
         
-        for idx, record in enumerate(records, 1):
-            # Log progress every 500 records to keep CircleCI from timing out
-            if idx % 500 == 0 or idx == total_records:
-                logger.info(f"Progress: {idx}/{total_records} records processed ({inserted_count} inserted, {updated_count} updated)")
-            
-            # Check if record already exists (date, location, source combination)
-            check_query = """
-            SELECT id FROM "DengueData"
-            WHERE date = %s AND location = %s AND source = %s
-            LIMIT 1
-            """
-            cur.execute(check_query, (record['date'], record['location'], record['source']))
-            exists = cur.fetchone()
-            
-            if exists:
-                # Update existing record
-                update_query = """
-                UPDATE "DengueData"
-                SET "activeCases" = %(activeCases)s,
-                    "totalCases" = %(totalCases)s,
-                    "days_duration" = %(days_duration)s,
-                    "coverageArea" = %(coverageArea)s,
-                    status = %(status)s,
-                    latitude = %(latitude)s,
-                    longitude = %(longitude)s,
-                    "updatedAt" = NOW()
-                WHERE date = %(date)s AND location = %(location)s AND source = %(source)s
-                """
-                cur.execute(update_query, record)
-                updated_count += 1
-            else:
-                # Insert new record
-                cur.execute(insert_query, record)
-                inserted_count += 1
+        for i in range(0, total_records, batch_size):
+            batch = records[i:i + batch_size]
+            cur.executemany(upsert_query, batch)
+            processed += len(batch)
+            logger.info(f"Progress: {processed}/{total_records} records processed")
         
         conn.commit()
-        logger.info(f"Successfully processed {total_records} records: {inserted_count} inserted, {updated_count} updated, {skipped_count} skipped")
+        logger.info(f"Successfully processed {total_records} records using batch upsert")
         
     except Exception as e:
         conn.rollback()
