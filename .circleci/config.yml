@@ -219,7 +219,7 @@ jobs:
             
             # Debug: Check if Python can see the environment variable and parse it
             echo "Verifying Python can access and parse DATABASE_URL..."
-            python3 -c "
+            cat > /tmp/debug_db.py << 'ENDOFPYTHON'
 import os
 from urllib.parse import urlparse
 import sys
@@ -240,8 +240,8 @@ try:
     print(f'   Hostname: {parsed.hostname}')
     print(f'   Port: {parsed.port}')
     print(f'   Username: {parsed.username}')
-    print(f'   Database: {parsed.path[1:] if parsed.path else \"None\"}')
-    print(f'   Has password: {\"Yes\" if parsed.password else \"No\"}')
+    print(f'   Database: {parsed.path[1:] if parsed.path else "None"}')
+    print(f'   Has password: {"Yes" if parsed.password else "No"}')
     
     if not parsed.hostname:
         print('❌ ERROR: Hostname is None/empty - this will cause Unix socket connection!')
@@ -250,7 +250,8 @@ try:
 except Exception as e:
     print(f'❌ ERROR parsing URL: {e}')
     sys.exit(1)
-"
+ENDOFPYTHON
+            python3 /tmp/debug_db.py
             
             echo "Starting reverse geocoding script..."
             python bulk_reverse_geocode.py
