@@ -110,11 +110,28 @@ jobs:
             cd daily-scrap-dengue-data
             python dengue_ml_models_improved.py
       - run:
+          name: Verify DATABASE_URL is set
+          command: |
+            if [ -z "${DATABASE_URL}" ]; then
+              echo "❌ ERROR: DATABASE_URL environment variable is not set!"
+              echo "Please add DATABASE_URL to CircleCI project settings → Environment Variables"
+              exit 1
+            else
+              echo "✅ DATABASE_URL is set (length: ${#DATABASE_URL} characters)"
+              echo "DATABASE_URL starts with: $(echo ${DATABASE_URL} | cut -c1-20)..."
+            fi
+      - run:
           name: Store Dengue Data to Database
           environment:
             DATABASE_URL: ${DATABASE_URL}
           command: |
             cd daily-scrap-dengue-data
+            # Verify DATABASE_URL is available to Python script
+            if [ -z "${DATABASE_URL}" ]; then
+              echo "❌ ERROR: DATABASE_URL is not available in this step"
+              exit 1
+            fi
+            echo "Storing dengue data to database..."
             python store_dengue_data_to_db.py
       - run:
           name: Commit and Push Changes
@@ -167,6 +184,18 @@ jobs:
             pip3 install psycopg2-binary requests urllib3 python-dotenv
       - save_python_cache
       - run:
+          name: Verify DATABASE_URL is set
+          command: |
+            if [ -z "${DATABASE_URL}" ]; then
+              echo "❌ ERROR: DATABASE_URL environment variable is not set!"
+              echo "Please add DATABASE_URL to CircleCI project settings → Environment Variables"
+              exit 1
+            else
+              echo "✅ DATABASE_URL is set (length: ${#DATABASE_URL} characters)"
+              # Show first few characters for verification (without exposing full URL)
+              echo "DATABASE_URL starts with: $(echo ${DATABASE_URL} | cut -c1-20)..."
+            fi
+      - run:
           name: Run Reverse Geocoding Script
           no_output_timeout: 360m  # 6 hours maximum (matches GitHub Actions)
           environment:
@@ -176,6 +205,12 @@ jobs:
             RESUME_FROM_ID: << parameters.resume_from_id >>
           command: |
             cd reverse-geocoding
+            # Verify DATABASE_URL is available to Python script
+            if [ -z "${DATABASE_URL}" ]; then
+              echo "❌ ERROR: DATABASE_URL is not available in this step"
+              exit 1
+            fi
+            echo "Starting reverse geocoding script..."
             python bulk_reverse_geocode.py
       - store_artifacts:
           path: reverse-geocoding/progress.log
