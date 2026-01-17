@@ -205,11 +205,52 @@ jobs:
             RESUME_FROM_ID: << parameters.resume_from_id >>
           command: |
             cd reverse-geocoding
+            # Explicitly export environment variables to ensure they're available to Python
+            export DATABASE_URL="${DATABASE_URL}"
+            export BATCH_SIZE="<< parameters.batch_size >>"
+            export DELAY_SECONDS="<< parameters.delay_seconds >>"
+            export RESUME_FROM_ID="<< parameters.resume_from_id >>"
+            
             # Verify DATABASE_URL is available to Python script
             if [ -z "${DATABASE_URL}" ]; then
               echo "❌ ERROR: DATABASE_URL is not available in this step"
               exit 1
             fi
+            
+            # Debug: Check if Python can see the environment variable and parse it
+            echo "Verifying Python can access and parse DATABASE_URL..."
+            python3 << 'PYEOF'
+import os
+from urllib.parse import urlparse
+
+db_url = os.getenv('DATABASE_URL')
+if not db_url:
+    print("❌ ERROR: DATABASE_URL not found in Python environment")
+    exit(1)
+
+print(f"✅ DATABASE_URL found (length: {len(db_url)})")
+print(f"   Starts with: {db_url[:30]}...")
+
+# Test URL parsing
+try:
+    parsed = urlparse(db_url)
+    print(f"✅ URL parsed successfully:")
+    print(f"   Scheme: {parsed.scheme}")
+    print(f"   Hostname: {parsed.hostname}")
+    print(f"   Port: {parsed.port}")
+    print(f"   Username: {parsed.username}")
+    print(f"   Database: {parsed.path[1:] if parsed.path else 'None'}")
+    print(f"   Has password: {'Yes' if parsed.password else 'No'}")
+    
+    if not parsed.hostname:
+        print("❌ ERROR: Hostname is None/empty - this will cause Unix socket connection!")
+        print("   This usually means the DATABASE_URL format is incorrect")
+        exit(1)
+except Exception as e:
+    print(f"❌ ERROR parsing URL: {e}")
+    exit(1)
+PYEOF
+            
             echo "Starting reverse geocoding script..."
             python bulk_reverse_geocode.py
       - store_artifacts:
