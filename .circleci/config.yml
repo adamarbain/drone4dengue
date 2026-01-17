@@ -121,6 +121,7 @@ jobs:
             fi
       - run:
           name: Store Dengue Data to Database
+          no_output_timeout: 120m  # Allow up to 60 minutes for database operations (thousands of records)
           command: |
             cd daily-scrap-dengue-data
             # Verify DATABASE_URL is available to Python script
@@ -129,7 +130,9 @@ jobs:
               exit 1
             fi
             echo "Storing dengue data to database..."
-            python3 store_dengue_data_to_db.py
+            echo "This may take several minutes for thousands of records..."
+            # Run with unbuffered output to see progress in real-time
+            python3 -u store_dengue_data_to_db.py
       - run:
           name: Commit and Push Changes
           command: |

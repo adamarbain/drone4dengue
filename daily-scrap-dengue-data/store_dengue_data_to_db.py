@@ -185,7 +185,14 @@ def upsert_dengue_data(records, conn):
         )
         """
         
-        for record in records:
+        total_records = len(records)
+        logger.info(f"Processing {total_records} records...")
+        
+        for idx, record in enumerate(records, 1):
+            # Log progress every 500 records to keep CircleCI from timing out
+            if idx % 500 == 0 or idx == total_records:
+                logger.info(f"Progress: {idx}/{total_records} records processed ({inserted_count} inserted, {updated_count} updated)")
+            
             # Check if record already exists (date, location, source combination)
             check_query = """
             SELECT id FROM "DengueData"
@@ -217,7 +224,7 @@ def upsert_dengue_data(records, conn):
                 inserted_count += 1
         
         conn.commit()
-        logger.info(f"Successfully processed {len(records)} records: {inserted_count} inserted, {updated_count} updated, {skipped_count} skipped")
+        logger.info(f"Successfully processed {total_records} records: {inserted_count} inserted, {updated_count} updated, {skipped_count} skipped")
         
     except Exception as e:
         conn.rollback()
