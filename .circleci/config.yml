@@ -217,7 +217,7 @@ jobs:
             
             # Debug: Check if Python can see the environment variable and parse it
             echo "Verifying Python can access and parse DATABASE_URL..."
-            python3 << 'PYEOF'
+            python3 \<< 'PYEOF'
             import os
             from urllib.parse import urlparse
             import sys
