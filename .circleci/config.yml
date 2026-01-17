@@ -68,7 +68,10 @@ commands:
 
 # Define jobs
 jobs:
-  # Client Admin (Next.js) - TypeScript/React
+  # ============================================
+  # TEST JOBS (from original config)
+  # ============================================
+  
   test-client-admin:
     docker:
       - image: cimg/node:20.11
@@ -93,7 +96,6 @@ jobs:
             cd client-admin
             npm run build
 
-  # Client Mobile (Expo/React Native) - TypeScript
   test-client-mobile:
     docker:
       - image: cimg/node:20.11
@@ -113,7 +115,6 @@ jobs:
             cd client-mobile
             npm run lint
 
-  # Server API (Node.js/Express) - JavaScript
   test-server-api:
     docker:
       - image: cimg/node:20.11
@@ -138,7 +139,6 @@ jobs:
             cd server-api
             node --check index.js || echo "Syntax check completed"
 
-  # Server ML (Python/Flask) - Machine Learning Service
   test-server-ml:
     docker:
       - image: cimg/python:3.11
@@ -164,7 +164,6 @@ jobs:
             cd server-ml
             python3 -m py_compile *.py 2>/dev/null || echo "Syntax check completed"
 
-  # Python Scripts - Reverse Geocoding
   test-python-scripts:
     docker:
       - image: cimg/python:3.11
@@ -184,9 +183,384 @@ jobs:
             python3 -m py_compile reverse-geocoding/bulk_reverse_geocode.py 2>/dev/null || echo "Syntax check completed"
             python3 -m py_compile daily-scrap-dengue-data/*.py 2>/dev/null || echo "Syntax check completed"
 
-# Workflow to run all tests
+  # ============================================
+  # DATA PROCESSING JOBS (from GitHub Actions)
+  # ============================================
+
+  # Run Dengue Data Script Daily
+  # Equivalent to: scrap-dengue-data-script.yml
+  run-dengue-data-script:
+    docker:
+      - image: cimg/python:3.11
+    working_directory: ~/project
+    resource_class: medium  # More resources for data processing
+    steps:
+      - checkout
+      - restore_python_cache
+      - run:
+          name: Install system dependencies
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y gdal-bin libgdal-dev python3-gdal
+      - run:
+          name: Install Python dependencies
+          command: |
+            python3 -m pip install --upgrade pip
+            pip3 install requests pandas matplotlib geopandas shapely folium plotly pytz scikit-learn joblib seaborn psycopg2-binary
+      - save_python_cache
+      - run:
+          name: Run Daily Data Processing Script
+          command: |
+            cd daily-scrap-dengue-data
+            python dailydenguedataprocessing.py
+      - run:
+          name: Train ML Models
+          command: |
+            cd daily-scrap-dengue-data
+            python dengue_ml_models_improved.py
+      - run:
+          name: Store Dengue Data to Database
+          environment:
+            DATABASE_URL: ${DATABASE_URL}
+          command: |
+            cd daily-scrap-dengue-data
+            python store_dengue_data_to_db.py
+      - run:
+          name: Commit and Push Changes
+          command: |
+            git config --global user.name "circleci[bot]"
+            git config --global user.email "circleci[bot]@users.noreply.github.com"
+            git remote set-url origin https://${GH_PAT}@github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}.git
+            git add -A
+            git commit -m "Daily update: data processing and ML model training" || echo "No changes to commit"
+            git pull --rebase origin ${CIRCLE_BRANCH}
+            git push origin ${CIRCLE_BRANCH}
+      - run:
+          name: Trigger Server ML Deployment (if needed)
+          command: |
+            if git diff --cached --name-only | grep -q "^server-ml/" || git diff HEAD~1 HEAD --name-only 2>/dev/null | grep -q "^server-ml/"; then
+              echo "server-ml/ directory changed, triggering deployment via GitHub API..."
+              curl -X POST \
+                -H "Accept: application/vnd.github.v3+json" \
+                -H "Authorization: token ${GH_PAT}" \
+                https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/dispatches \
+                -d '{"event_type":"deploy-server-ml"}' || echo "Failed to trigger deployment, but push should trigger it automatically"
+            else
+              echo "No changes detected in server-ml/ directory."
+            fi
+
+  # Reverse Geocode Dengue Data
+  # Equivalent to: reverse-geocode-dengue-data.yml
+  reverse-geocode-dengue-data:
+    docker:
+      - image: cimg/python:3.11
+    working_directory: ~/project
+    resource_class: medium
+    parameters:
+      batch_size:
+        type: string
+        default: "100"
+      delay_seconds:
+        type: string
+        default: "1.5"
+      resume_from_id:
+        type: string
+        default: ""
+    steps:
+      - checkout
+      - restore_python_cache
+      - run:
+          name: Install dependencies
+          command: |
+            python3 -m pip install --upgrade pip
+            pip3 install psycopg2-binary requests urllib3 python-dotenv
+      - save_python_cache
+      - run:
+          name: Run Reverse Geocoding Script
+          no_output_timeout: 360m  # 6 hours maximum (matches GitHub Actions)
+          environment:
+            DATABASE_URL: ${DATABASE_URL}
+            BATCH_SIZE: << parameters.batch_size >>
+            DELAY_SECONDS: << parameters.delay_seconds >>
+            RESUME_FROM_ID: << parameters.resume_from_id >>
+          command: |
+            cd reverse-geocoding
+            python bulk_reverse_geocode.py
+      - store_artifacts:
+          path: reverse-geocoding/progress.log
+          destination: reverse-geocoding-progress
+          when: always
+
+  # ============================================
+  # DEPLOYMENT JOBS (from GitHub Actions)
+  # ============================================
+
+  # Deploy Server ML to Cloud Run
+  # Equivalent to: deploy-server-ml.yml
+  deploy-server-ml:
+    docker:
+      - image: google/cloud-sdk:latest
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Authenticate to Google Cloud
+          command: |
+            # Handle both base64-encoded and raw JSON
+            if echo "${GCP_SA_KEY}" | base64 -d > /tmp/gcp-key.json 2>/dev/null; then
+              echo "Decoded base64-encoded service account key"
+            else
+              echo "${GCP_SA_KEY}" > /tmp/gcp-key.json
+              echo "Using raw JSON service account key"
+            fi
+            gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+            gcloud config set project ${GCP_PROJECT_ID}
+      - run:
+          name: Build and Push Container
+          command: |
+            cd server-ml
+            gcloud builds submit --tag us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/drone-images/server-ml .
+      - run:
+          name: Deploy to Cloud Run
+          command: |
+            gcloud run deploy server-ml \
+              --image us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/drone-images/server-ml \
+              --platform managed \
+              --region us-central1 \
+              --allow-unauthenticated \
+              --memory 2Gi
+
+  # Deploy Server API to Cloud Run
+  # Equivalent to: deploy-server-api.yml
+  deploy-server-api:
+    docker:
+      - image: google/cloud-sdk:latest
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Authenticate to Google Cloud
+          command: |
+            # Handle both base64-encoded and raw JSON
+            if echo "${GCP_SA_KEY}" | base64 -d > /tmp/gcp-key.json 2>/dev/null; then
+              echo "Decoded base64-encoded service account key"
+            else
+              echo "${GCP_SA_KEY}" > /tmp/gcp-key.json
+              echo "Using raw JSON service account key"
+            fi
+            gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+            gcloud config set project ${GCP_PROJECT_ID}
+      - run:
+          name: Build and Push Container
+          command: |
+            cd server-api
+            gcloud builds submit --tag us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/drone-images/server-api .
+      - run:
+          name: Deploy to Cloud Run
+          command: |
+            gcloud run deploy server-api \
+              --image us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/drone-images/server-api \
+              --platform managed \
+              --region us-central1 \
+              --allow-unauthenticated \
+              --memory 1Gi \
+              --set-env-vars "DATABASE_URL=${DATABASE_URL}" \
+              --set-env-vars "REDIS_HOST=${REDIS_HOST}" \
+              --set-env-vars "REDIS_PORT=${REDIS_PORT}" \
+              --set-env-vars "REDIS_PASSWORD=${REDIS_PASSWORD}" \
+              --set-env-vars "REDIS_USERNAME=${REDIS_USERNAME}" \
+              --set-env-vars "ML_SERVICE_URL=${ML_SERVICE_URL}" \
+              --set-env-vars "FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}" \
+              --set-env-vars "FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}" \
+              --set-env-vars "FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}" \
+              --set-env-vars "FIREBASE_PRIVATE_KEY_BASE64=${FIREBASE_PRIVATE_KEY_BASE64}" \
+              --set-env-vars "SENDER_EMAIL=${SENDER_EMAIL}" \
+              --set-env-vars "SENDER_EMAIL_PW=${SENDER_EMAIL_PW}" \
+              --set-env-vars "TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}" \
+              --set-env-vars "TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}" \
+              --set-env-vars "TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}" \
+              --set-env-vars "NODE_ENV=production" \
+              --set-env-vars "API_BASE_URL=${API_BASE_URL}" \
+              --set-env-vars "SENTRY_DSN=${SENTRY_DSN}" \
+              --set-env-vars "LOCATION_ALERT_API_KEY=${LOCATION_ALERT_API_KEY}"
+
+  # ============================================
+  # API TRIGGER JOBS (from GitHub Actions)
+  # ============================================
+
+  # Daily Location-based Alert Notifications
+  # Equivalent to: location-alert-notification.yml
+  location-alert-notification:
+    docker:
+      - image: cimg/base:stable
+    working_directory: ~/project
+    steps:
+      - run:
+          name: Install jq
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y jq curl
+      - run:
+          name: Check and Send Location-based Notifications
+          command: |
+            echo "Starting location-based alert check at $(date)"
+            
+            response=$(curl -s -w "\n%{http_code}" -X POST \
+              "${API_BASE_URL}/api/location-alerts/check-and-notify" \
+              -H "Content-Type: application/json" \
+              -H "x-api-key: ${LOCATION_ALERT_API_KEY}")
+            
+            http_code=$(echo "$response" | tail -n1)
+            body=$(echo "$response" | sed '$d')
+            
+            echo "Response Status: $http_code"
+            echo "Response Body: $body"
+            
+            if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+              echo "✅ Location alert check completed successfully"
+              
+              notifications_sent=$(echo "$body" | jq -r '.notificationsSent // 0')
+              alerts_checked=$(echo "$body" | jq -r '.alertsChecked // 0')
+              dengue_cases=$(echo "$body" | jq -r '.dengueCasesFound // 0')
+              
+              echo "📊 Summary:"
+              echo "   - Alerts checked: $alerts_checked"
+              echo "   - Dengue cases found: $dengue_cases"
+              echo "   - Notifications sent: $notifications_sent"
+            else
+              echo "❌ Location alert check failed with status code: $http_code"
+              exit 1
+            fi
+            
+            echo "Completed at $(date)"
+      - run:
+          name: Log Completion
+          when: on_success
+          command: |
+            echo "🎉 Daily location-based alert notification job completed successfully"
+      - run:
+          name: Log Failure
+          when: on_fail
+          command: |
+            echo "⚠️ Daily location-based alert notification job failed"
+
+  # Daily Bulk Prediction
+  # Equivalent to: daily-bulk-prediction.yml
+  daily-bulk-prediction:
+    docker:
+      - image: cimg/base:stable
+    working_directory: ~/project
+    steps:
+      - run:
+          name: Install jq
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y jq curl
+      - run:
+          name: Login to API and get token
+          command: |
+            echo "Logging in to API..."
+            LOGIN_RESPONSE=$(curl -s -X POST "${API_BASE_URL}/auth/login" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"email\": \"${API_ADMIN_EMAIL}\",
+                \"password\": \"${API_ADMIN_PASSWORD}\"
+              }")
+            
+            TOKEN=$(echo "$LOGIN_RESPONSE" | jq -r '.token // empty')
+            
+            if [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; then
+              echo "❌ Error: Failed to get token"
+              echo "Response: $LOGIN_RESPONSE"
+              exit 1
+            fi
+            
+            echo "✅ Token obtained successfully"
+            echo "$TOKEN" > /tmp/api_token.txt
+      - run:
+          name: Trigger Bulk Prediction
+          command: |
+            TOKEN=$(cat /tmp/api_token.txt)
+            echo "Triggering bulk prediction for all company locations..."
+            echo "API URL: ${API_BASE_URL}/api/predict/bulk"
+            
+            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${API_BASE_URL}/api/predict/bulk" \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Content-Type: application/json" \
+              --max-time 1800)
+            
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+            BODY=$(echo "$RESPONSE" | sed '$d')
+            
+            echo "HTTP Status Code: $HTTP_CODE"
+            echo "Response Body:"
+            echo "$BODY" | jq '.' || echo "$BODY"
+            
+            if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+              echo "✅ Bulk prediction triggered successfully"
+              
+              if echo "$BODY" | jq -e '.summary' > /dev/null 2>&1; then
+                echo ""
+                echo "📊 Prediction Summary:"
+                echo "$BODY" | jq '.summary'
+              fi
+              
+              if echo "$BODY" | jq -e '.predictions' > /dev/null 2>&1; then
+                PREDICTION_COUNT=$(echo "$BODY" | jq '.predictions | length')
+                echo "✅ Successfully created $PREDICTION_COUNT predictions"
+              fi
+            else
+              echo "❌ Bulk prediction failed with status code: $HTTP_CODE"
+              echo "Error response: $BODY"
+              exit 1
+            fi
+      - run:
+          name: Trigger Daily User Predictions
+          command: |
+            TOKEN=$(cat /tmp/api_token.txt)
+            echo ""
+            echo "Triggering daily prediction for mobile users..."
+            echo "API URL: ${API_BASE_URL}/api/predict/daily-users"
+            
+            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${API_BASE_URL}/api/predict/daily-users" \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Content-Type: application/json" \
+              --max-time 1800)
+            
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+            BODY=$(echo "$RESPONSE" | sed '$d')
+            
+            echo "HTTP Status Code: $HTTP_CODE"
+            echo "Response Body:"
+            echo "$BODY" | jq '.' || echo "$BODY"
+            
+            if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+              echo "✅ Daily user prediction triggered successfully"
+              
+              if echo "$BODY" | jq -e '.summary' > /dev/null 2>&1; then
+                echo ""
+                echo "📊 Daily Prediction Summary:"
+                echo "$BODY" | jq '.summary'
+              fi
+              
+              if echo "$BODY" | jq -e '.predictions' > /dev/null 2>&1; then
+                PREDICTION_COUNT=$(echo "$BODY" | jq '.predictions | length')
+                echo "✅ Successfully created $PREDICTION_COUNT daily predictions for users"
+              fi
+            else
+              echo "❌ Daily user prediction failed with status code: $HTTP_CODE"
+              echo "Error response: $BODY"
+              exit 1
+            fi
+
+# ============================================
+# WORKFLOWS
+# ============================================
+
 workflows:
   version: 2
+  
+  # Test workflow - runs on every push
   test-all:
     jobs:
       - test-client-admin
@@ -194,3 +568,112 @@ workflows:
       - test-server-api
       - test-server-ml
       - test-python-scripts
+
+  # Daily data processing workflow
+  # Runs daily at 1pm UTC (9pm Malaysia time)
+  # Equivalent to: scrap-dengue-data-script.yml
+  daily-data-processing:
+    triggers:
+      - schedule:
+          cron: "0 13 * * *"  # 1pm UTC = 9pm Malaysia time
+          filters:
+            branches:
+              only:
+                - main
+                - master
+    jobs:
+      - run-dengue-data-script
+      - reverse-geocode-dengue-data:
+          requires:
+            - run-dengue-data-script
+
+  # Reverse geocode workflow (manual trigger)
+  # Can be triggered manually from CircleCI UI
+  reverse-geocode-manual:
+    jobs:
+      - reverse-geocode-dengue-data:
+          batch_size: "100"
+          delay_seconds: "1.5"
+          resume_from_id: ""
+
+  # Manual trigger for daily data processing
+  run-dengue-data-script-manual:
+    jobs:
+      - run-dengue-data-script
+
+  # Deploy Server ML workflow
+  # Triggers on push to main/master when server-ml/** changes
+  # Also supports manual trigger and repository_dispatch (via GitHub API)
+  deploy-server-ml-workflow:
+    jobs:
+      - deploy-server-ml:
+          filters:
+            branches:
+              only:
+                - main
+                - master
+            paths:
+              - server-ml/**
+
+  # Manual trigger for Server ML deployment
+  deploy-server-ml-manual:
+    jobs:
+      - deploy-server-ml
+
+  # Deploy Server API workflow
+  # Triggers on push to main/master when server-api/** changes
+  # Also supports manual trigger
+  deploy-server-api-workflow:
+    jobs:
+      - deploy-server-api:
+          filters:
+            branches:
+              only:
+                - main
+                - master
+            paths:
+              - server-api/**
+
+  # Manual trigger for Server API deployment
+  deploy-server-api-manual:
+    jobs:
+      - deploy-server-api
+
+  # Manual triggers for scheduled workflows
+  location-alert-manual:
+    jobs:
+      - location-alert-notification
+
+  daily-bulk-prediction-manual:
+    jobs:
+      - daily-bulk-prediction
+
+  # Daily location alert notifications
+  # Runs daily at 4am UTC (12pm Malaysia time)
+  # Equivalent to: location-alert-notification.yml
+  daily-location-alerts:
+    triggers:
+      - schedule:
+          cron: "0 4 * * *"  # 4am UTC = 12pm Malaysia time
+          filters:
+            branches:
+              only:
+                - main
+                - master
+    jobs:
+      - location-alert-notification
+
+  # Daily bulk prediction
+  # Runs daily at 4am UTC (12pm Malaysia time)
+  # Equivalent to: daily-bulk-prediction.yml
+  daily-bulk-prediction-workflow:
+    triggers:
+      - schedule:
+          cron: "0 4 * * *"  # 4am UTC = 12pm Malaysia time
+          filters:
+            branches:
+              only:
+                - main
+                - master
+    jobs:
+      - daily-bulk-prediction
