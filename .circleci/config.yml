@@ -71,8 +71,7 @@ jobs:
   # ============================================
   # TEST JOBS (from original config)
   # ============================================
-  
-
+  # Note: Test jobs can be added here if needed in the future
 
   # ============================================
   # DATA PROCESSING JOBS (from GitHub Actions)
@@ -103,12 +102,12 @@ jobs:
           name: Run Daily Data Processing Script
           command: |
             cd daily-scrap-dengue-data
-            python dailydenguedataprocessing.py
+            python3 dailydenguedataprocessing.py
       - run:
           name: Train ML Models
           command: |
             cd daily-scrap-dengue-data
-            python dengue_ml_models_improved.py
+            python3 dengue_ml_models_improved.py
       - run:
           name: Verify DATABASE_URL is set
           command: |
@@ -132,7 +131,7 @@ jobs:
               exit 1
             fi
             echo "Storing dengue data to database..."
-            python store_dengue_data_to_db.py
+            python3 store_dengue_data_to_db.py
       - run:
           name: Commit and Push Changes
           command: |
@@ -140,9 +139,13 @@ jobs:
             git config --global user.email "circleci[bot]@users.noreply.github.com"
             git remote set-url origin https://${GH_PAT}@github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}.git
             git add -A
-            git commit -m "Daily update: data processing and ML model training" || echo "No changes to commit"
-            git pull --rebase origin ${CIRCLE_BRANCH}
-            git push origin ${CIRCLE_BRANCH}
+            if git diff --staged --quiet; then
+              echo "No changes to commit"
+            else
+              git commit -m "Daily update: data processing and ML model training"
+              git pull --rebase origin ${CIRCLE_BRANCH} || true
+              git push origin ${CIRCLE_BRANCH} || echo "Push failed or nothing to push"
+            fi
       - run:
           name: Trigger Server ML Deployment (if needed)
           command: |
@@ -205,12 +208,7 @@ jobs:
             RESUME_FROM_ID: << parameters.resume_from_id >>
           command: |
             cd reverse-geocoding
-            # Explicitly export environment variables to ensure they're available to Python
-            export DATABASE_URL="${DATABASE_URL}"
-            export BATCH_SIZE="<< parameters.batch_size >>"
-            export DELAY_SECONDS="<< parameters.delay_seconds >>"
-            export RESUME_FROM_ID="<< parameters.resume_from_id >>"
-            
+            # Environment variables are already set via the environment block above
             # Verify DATABASE_URL is available to Python script
             if [ -z "${DATABASE_URL}" ]; then
               echo "❌ ERROR: DATABASE_URL is not available in this step"
@@ -220,40 +218,43 @@ jobs:
             # Debug: Check if Python can see the environment variable and parse it
             echo "Verifying Python can access and parse DATABASE_URL..."
             python3 << 'PYEOF'
-import os
-from urllib.parse import urlparse
-import sys
+            import os
+            from urllib.parse import urlparse
+            import sys
 
-db_url = os.getenv('DATABASE_URL')
-if not db_url:
-    print('❌ ERROR: DATABASE_URL not found in Python environment')
-    sys.exit(1)
+            db_url = os.getenv('DATABASE_URL')
+            if not db_url:
+                print('❌ ERROR: DATABASE_URL not found in Python environment')
+                sys.exit(1)
 
-print(f'✅ DATABASE_URL found (length: {len(db_url)})')
-print(f'   Starts with: {db_url[:30]}...')
+            print(f'✅ DATABASE_URL found (length: {len(db_url)})')
+            print(f'   Starts with: {db_url[:30]}...')
+            print(f'✅ BATCH_SIZE: {os.getenv("BATCH_SIZE", "not set")}')
+            print(f'✅ DELAY_SECONDS: {os.getenv("DELAY_SECONDS", "not set")}')
+            print(f'✅ RESUME_FROM_ID: {os.getenv("RESUME_FROM_ID", "not set")}')
 
-# Test URL parsing
-try:
-    parsed = urlparse(db_url)
-    print(f'✅ URL parsed successfully:')
-    print(f'   Scheme: {parsed.scheme}')
-    print(f'   Hostname: {parsed.hostname}')
-    print(f'   Port: {parsed.port}')
-    print(f'   Username: {parsed.username}')
-    print(f'   Database: {parsed.path[1:] if parsed.path else "None"}')
-    print(f'   Has password: {"Yes" if parsed.password else "No"}')
-    
-    if not parsed.hostname:
-        print('❌ ERROR: Hostname is None/empty - this will cause Unix socket connection!')
-        print('   This usually means the DATABASE_URL format is incorrect')
-        sys.exit(1)
-except Exception as e:
-    print(f'❌ ERROR parsing URL: {e}')
-    sys.exit(1)
-PYEOF
-            
-            echo "Starting reverse geocoding script..."
-            python bulk_reverse_geocode.py
+            # Test URL parsing
+            try:
+                parsed = urlparse(db_url)
+                print(f'✅ URL parsed successfully:')
+                print(f'   Scheme: {parsed.scheme}')
+                print(f'   Hostname: {parsed.hostname}')
+                print(f'   Port: {parsed.port}')
+                print(f'   Username: {parsed.username}')
+                print(f'   Database: {parsed.path[1:] if parsed.path else "None"}')
+                print(f'   Has password: {"Yes" if parsed.password else "No"}')
+                
+                if not parsed.hostname:
+                    print('❌ ERROR: Hostname is None/empty - this will cause Unix socket connection!')
+                    print('   This usually means the DATABASE_URL format is incorrect')
+                    sys.exit(1)
+            except Exception as e:
+                print(f'❌ ERROR parsing URL: {e}')
+                sys.exit(1)
+            PYEOF
+                        
+                        echo "Starting reverse geocoding script..."
+                        python3 bulk_reverse_geocode.py
       - store_artifacts:
           path: reverse-geocoding/progress.log
           destination: reverse-geocoding-progress
@@ -650,6 +651,7 @@ workflows:
               only:
                 - main
                 - master
+    # Note: Workflows without explicit triggers run on every push matching the filters
 
   # Manual trigger for Server ML deployment
   deploy-server-ml-manual:
@@ -668,6 +670,7 @@ workflows:
               only:
                 - main
                 - master
+    # Note: Workflows without explicit triggers run on every push matching the filters
 
   # Manual trigger for Server API deployment
   deploy-server-api-manual:
