@@ -219,7 +219,7 @@ jobs:
             
             # Debug: Check if Python can see the environment variable and parse it
             echo "Verifying Python can access and parse DATABASE_URL..."
-            cat > /tmp/debug_db.py << 'ENDOFPYTHON'
+            python3 << 'PYEOF'
 import os
 from urllib.parse import urlparse
 import sys
@@ -250,8 +250,7 @@ try:
 except Exception as e:
     print(f'❌ ERROR parsing URL: {e}')
     sys.exit(1)
-ENDOFPYTHON
-            python3 /tmp/debug_db.py
+PYEOF
             
             echo "Starting reverse geocoding script..."
             python bulk_reverse_geocode.py
