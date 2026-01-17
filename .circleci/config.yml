@@ -219,37 +219,38 @@ jobs:
             
             # Debug: Check if Python can see the environment variable and parse it
             echo "Verifying Python can access and parse DATABASE_URL..."
-            python3 << 'PYEOF'
+            python3 -c "
 import os
 from urllib.parse import urlparse
+import sys
 
 db_url = os.getenv('DATABASE_URL')
 if not db_url:
-    print("❌ ERROR: DATABASE_URL not found in Python environment")
-    exit(1)
+    print('❌ ERROR: DATABASE_URL not found in Python environment')
+    sys.exit(1)
 
-print(f"✅ DATABASE_URL found (length: {len(db_url)})")
-print(f"   Starts with: {db_url[:30]}...")
+print(f'✅ DATABASE_URL found (length: {len(db_url)})')
+print(f'   Starts with: {db_url[:30]}...')
 
 # Test URL parsing
 try:
     parsed = urlparse(db_url)
-    print(f"✅ URL parsed successfully:")
-    print(f"   Scheme: {parsed.scheme}")
-    print(f"   Hostname: {parsed.hostname}")
-    print(f"   Port: {parsed.port}")
-    print(f"   Username: {parsed.username}")
-    print(f"   Database: {parsed.path[1:] if parsed.path else 'None'}")
-    print(f"   Has password: {'Yes' if parsed.password else 'No'}")
+    print(f'✅ URL parsed successfully:')
+    print(f'   Scheme: {parsed.scheme}')
+    print(f'   Hostname: {parsed.hostname}')
+    print(f'   Port: {parsed.port}')
+    print(f'   Username: {parsed.username}')
+    print(f'   Database: {parsed.path[1:] if parsed.path else \"None\"}')
+    print(f'   Has password: {\"Yes\" if parsed.password else \"No\"}')
     
     if not parsed.hostname:
-        print("❌ ERROR: Hostname is None/empty - this will cause Unix socket connection!")
-        print("   This usually means the DATABASE_URL format is incorrect")
-        exit(1)
+        print('❌ ERROR: Hostname is None/empty - this will cause Unix socket connection!')
+        print('   This usually means the DATABASE_URL format is incorrect')
+        sys.exit(1)
 except Exception as e:
-    print(f"❌ ERROR parsing URL: {e}")
-    exit(1)
-PYEOF
+    print(f'❌ ERROR parsing URL: {e}')
+    sys.exit(1)
+"
             
             echo "Starting reverse geocoding script..."
             python bulk_reverse_geocode.py
