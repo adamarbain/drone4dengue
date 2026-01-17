@@ -159,6 +159,67 @@ def process_hotspot_csv(csv_path):
         logger.error(f"Error reading dengue_hotspot.csv: {e}")
         raise
 
+def _upsert_individual(records, conn, cur):
+    """Fallback: upsert records one by one when unique constraint cannot be created."""
+    total_records = len(records)
+    processed = 0
+    inserted = 0
+    updated = 0
+    
+    for record in records:
+        try:
+            # Check if record exists
+            cur.execute("""
+                SELECT id FROM "DengueData" 
+                WHERE date = %(date)s AND location = %(location)s AND source = %(source)s
+                LIMIT 1
+            """, record)
+            existing = cur.fetchone()
+            
+            if existing:
+                # Update existing record
+                cur.execute("""
+                    UPDATE "DengueData" SET
+                        "activeCases" = %(activeCases)s,
+                        "totalCases" = %(totalCases)s,
+                        "days_duration" = %(days_duration)s,
+                        "coverageArea" = %(coverageArea)s,
+                        status = %(status)s,
+                        latitude = %(latitude)s,
+                        longitude = %(longitude)s,
+                        "updatedAt" = NOW()
+                    WHERE date = %(date)s AND location = %(location)s AND source = %(source)s
+                """, record)
+                updated += 1
+            else:
+                # Insert new record
+                cur.execute("""
+                    INSERT INTO "DengueData" (
+                        id, location, date, "activeCases", "totalCases", 
+                        "days_duration", "coverageArea", status, source, 
+                        latitude, longitude, "createdAt", "updatedAt"
+                    )
+                    VALUES (
+                        gen_random_uuid(), %(location)s, %(date)s, %(activeCases)s, %(totalCases)s,
+                        %(days_duration)s, %(coverageArea)s, %(status)s, %(source)s,
+                        %(latitude)s, %(longitude)s, NOW(), NOW()
+                    )
+                """, record)
+                inserted += 1
+            
+            processed += 1
+            if processed % 1000 == 0:
+                conn.commit()
+                logger.info(f"Progress: {processed}/{total_records} records processed")
+                
+        except Exception as e:
+            logger.warning(f"Error processing record: {e}")
+            continue
+    
+    conn.commit()
+    logger.info(f"Completed: {inserted} inserted, {updated} updated out of {total_records} records")
+
+
 def upsert_dengue_data(records, conn):
     """Insert or update dengue data records in the database using batch upsert."""
     if not records:
@@ -173,25 +234,49 @@ def upsert_dengue_data(records, conn):
         
         # Use PostgreSQL ON CONFLICT for efficient upsert
         # This requires a unique constraint on (date, location, source)
-        # First, ensure the constraint exists (idempotent)
+        # First, check if constraint exists
         cur.execute("""
-            DO $$
-            BEGIN
-                IF NOT EXISTS (
-                    SELECT 1 FROM pg_constraint 
-                    WHERE conname = 'denguedata_date_location_source_unique'
-                ) THEN
+            SELECT 1 FROM pg_constraint 
+            WHERE conname = 'denguedata_date_location_source_unique'
+        """)
+        constraint_exists = cur.fetchone() is not None
+        
+        if not constraint_exists:
+            logger.info("Unique constraint does not exist, cleaning up duplicates first...")
+            
+            # Remove duplicates before creating constraint
+            # Keep the record with the latest updatedAt (or first one if no updatedAt)
+            cur.execute("""
+                DELETE FROM "DengueData" a
+                USING "DengueData" b
+                WHERE a.id < b.id
+                AND a.date = b.date
+                AND a.location = b.location
+                AND a.source = b.source
+            """)
+            deleted_count = cur.rowcount
+            if deleted_count > 0:
+                logger.info(f"Removed {deleted_count} duplicate records")
+            conn.commit()
+            
+            # Now create the unique constraint
+            try:
+                cur.execute("""
                     ALTER TABLE "DengueData" 
                     ADD CONSTRAINT denguedata_date_location_source_unique 
-                    UNIQUE (date, location, source);
-                END IF;
-            EXCEPTION
-                WHEN duplicate_table THEN NULL;
-                WHEN duplicate_object THEN NULL;
-            END $$;
-        """)
-        conn.commit()
-        logger.info("Ensured unique constraint exists on (date, location, source)")
+                    UNIQUE (date, location, source)
+                """)
+                conn.commit()
+                logger.info("Created unique constraint on (date, location, source)")
+            except Exception as e:
+                # If constraint creation still fails, log and continue with fallback approach
+                conn.rollback()
+                logger.warning(f"Could not create unique constraint: {e}")
+                logger.info("Falling back to individual upsert approach...")
+                _upsert_individual(records, conn, cur)
+                return
+        else:
+            logger.info("Unique constraint already exists on (date, location, source)")
         
         # Batch upsert query using ON CONFLICT
         upsert_query = """
