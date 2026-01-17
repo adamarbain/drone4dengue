@@ -202,14 +202,11 @@ jobs:
           name: Run Reverse Geocoding Script
           no_output_timeout: 360m  # 6 hours maximum (matches GitHub Actions)
           environment:
-            DATABASE_URL: ${DATABASE_URL}
             BATCH_SIZE: << parameters.batch_size >>
             DELAY_SECONDS: << parameters.delay_seconds >>
             RESUME_FROM_ID: << parameters.resume_from_id >>
           command: |
             cd reverse-geocoding
-            # Environment variables are already set via the environment block above
-            # Verify DATABASE_URL is available to Python script
             if [ -z "${DATABASE_URL}" ]; then
               echo "❌ ERROR: DATABASE_URL is not available in this step"
               exit 1
