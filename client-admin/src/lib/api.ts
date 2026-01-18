@@ -299,6 +299,16 @@ export async function getRecentPredictions(companyId: string, limit: number = 6)
   return response.data;
 }
 
+// Get dashboard historical stats for comparison
+export async function getDashboardHistoricalStats(): Promise<{
+  riskPredictionsLastWeek: number;
+  droneInsightsLastWeek: number;
+  activeUsersLastWeek: number;
+}> {
+  const response = await api.get('/users/dashboard/historical-stats');
+  return response.data;
+}
+
 // Get comprehensive dashboard stats
 export async function getDashboardStats(companyId: string): Promise<DashboardStats> {
   try {
@@ -315,9 +325,19 @@ export async function getDashboardStats(companyId: string): Promise<DashboardSta
       p.createdAt.startsWith(today)
     ).length || 0;
 
+    // Get drone images uploaded this week (last 7 days)
+    let droneInsightsUploaded = 0;
+    try {
+      const droneStatsResponse = await api.get('/drones/stats');
+      droneInsightsUploaded = droneStatsResponse.data.thisWeekImages || 0;
+    } catch (err) {
+      console.warn('Failed to fetch drone insights count:', err);
+      droneInsightsUploaded = 0;
+    }
+
     return {
       riskPredictionsToday,
-      droneInsightsUploaded: 0, // This would need a separate endpoint for drone uploads
+      droneInsightsUploaded,
       activeUsers: userSummary.active,
       totalUsers: userSummary.total,
       pendingUsers: userSummary.pending,
