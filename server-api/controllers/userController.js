@@ -507,6 +507,84 @@ exports.getUserSummary = async (req, res) => {
   }
 };
 
+// GET /users/dashboard/historical-stats
+// Returns historical stats for last week comparison
+// return : {
+//   "riskPredictionsLastWeek": 5,
+//   "droneInsightsLastWeek": 10,
+//   "activeUsersLastWeek": 8
+// }
+exports.getDashboardHistoricalStats = async (req, res) => {
+  try {
+    const companyId = req.companyId;
+    
+    // Calculate date ranges
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    // Last week same day (7 days ago)
+    const lastWeekSameDay = new Date(today);
+    lastWeekSameDay.setDate(lastWeekSameDay.getDate() - 7);
+    const lastWeekSameDayStart = new Date(lastWeekSameDay);
+    lastWeekSameDayStart.setHours(0, 0, 0, 0);
+    const lastWeekSameDayEnd = new Date(lastWeekSameDay);
+    lastWeekSameDayEnd.setHours(23, 59, 59, 999);
+    
+    // Last week period (7-14 days ago) for drone insights
+    const lastWeekStart = new Date(today);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 14);
+    lastWeekStart.setHours(0, 0, 0, 0);
+    const lastWeekEnd = new Date(today);
+    lastWeekEnd.setDate(lastWeekEnd.getDate() - 7);
+    lastWeekEnd.setHours(23, 59, 59, 999);
+    
+    // Get risk predictions from last week same day
+    const riskPredictionsLastWeek = await prisma.companyPrediction.count({
+      where: {
+        companyId,
+        createdAt: {
+          gte: lastWeekSameDayStart,
+          lte: lastWeekSameDayEnd
+        }
+      }
+    });
+    
+    // Get drone images uploaded last week (7-14 days ago)
+    const droneInsightsLastWeek = await prisma.image.count({
+      where: {
+        companyId,
+        createdAt: {
+          gte: lastWeekStart,
+          lte: lastWeekEnd
+        }
+      }
+    });
+    
+    // Get active users count from last week
+    // Count users who were verified and existed before last week end
+    const activeUsersLastWeek = await prisma.user.count({
+      where: {
+        companyId,
+        status: 'Verified',
+        createdAt: {
+          lte: lastWeekEnd
+        }
+      }
+    });
+    
+    console.log(`[GET DASHBOARD HISTORICAL STATS] Successfully retrieved historical stats for company ${companyId}`);
+    res.json({
+      riskPredictionsLastWeek,
+      droneInsightsLastWeek,
+      activeUsersLastWeek
+    });
+
+  } catch (err) {
+    logger.error('[GET DASHBOARD HISTORICAL STATS ERROR]', { error: err.message, stack: err.stack, companyId: req.companyId });
+    return sendInternalError(res, 'Failed to get dashboard historical stats', err);
+  }
+};
+
 // PUT /users/:id/status
 exports.adminUpdateUserStatus = async (req, res) => {
   try {

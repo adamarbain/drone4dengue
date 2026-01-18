@@ -33,6 +33,9 @@ router.put('/:id/permissions', checkToken, userController.updateUserPermission);
 // GET /users/summary
 router.get('/summary/dashboard', checkToken, userController.getUserSummary);
 
+// GET /users/dashboard/historical-stats
+router.get('/dashboard/historical-stats', checkToken, userController.getDashboardHistoricalStats);
+
 // PUT /users/:id/status
 router.put('/:id/status', checkToken, userController.adminUpdateUserStatus);
 

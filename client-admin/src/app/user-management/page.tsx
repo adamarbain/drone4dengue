@@ -166,6 +166,10 @@ export default function UserManagementPage() {
   const [filterStatus, setFilterStatus] = useState<string>("")
   const [filterRole, setFilterRole] = useState<string>("")
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+
   // Helper: Auth headers
   const getAuthHeaders = () => {
     const TOKEN = typeof window !== "undefined" ? localStorage.getItem("token") : null
@@ -184,6 +188,9 @@ export default function UserManagementPage() {
       if (searchTerm) params.append("search", searchTerm)
       if (filterStatus) params.append("status", filterStatus)
       if (filterRole) params.append("role", filterRole)
+      // Send a large limit to fetch all users (frontend handles pagination)
+      params.append("limit", "10000")
+      params.append("page", "1")
       const res = await fetch(`${API_URL}/users?${params.toString()}`, {
         headers: getAuthHeaders(),
       })
@@ -396,6 +403,17 @@ export default function UserManagementPage() {
 
   // Filtered users (search is server-side)
   const filteredUsers = users
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex)
+
+  // Reset to page 1 when filters or itemsPerPage change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, filterStatus, filterRole, itemsPerPage])
 
   // CSV Export Function
   const exportToCSV = () => {
@@ -679,7 +697,7 @@ export default function UserManagementPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map((user, idx) => (
+                  {paginatedUsers.map((user, idx) => (
                     <motion.tr
                       key={user.id}
                       className={`border-b border-gray-100 last:border-0 hover:bg-light-bg/50 transition-colors ${
@@ -780,6 +798,72 @@ export default function UserManagementPage() {
                 </tbody>
               </table>
             </div>
+            {/* Pagination Controls */}
+            {filteredUsers.length > 0 && (
+              <div className="flex items-center justify-between mt-4 px-6 py-3 bg-gray-50 rounded-b-xl">
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-gray-600">
+                    Showing {startIndex + 1} to {Math.min(endIndex, filteredUsers.length)} of {filteredUsers.length} users
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-600">Rows per page:</label>
+                    <select
+                      value={itemsPerPage}
+                      onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                      className="px-3 py-1 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent-blue"
+                    >
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`px-3 py-1 rounded-lg border transition-colors ${
+                            currentPage === pageNum
+                              ? 'bg-accent-blue text-white border-accent-blue'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </motion.div>
         </motion.section>
 

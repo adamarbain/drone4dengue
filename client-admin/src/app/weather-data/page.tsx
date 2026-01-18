@@ -253,6 +253,10 @@ export default function WeatherDataPage() {
   const [filterDate, setFilterDate] = useState<string>("")
   const [filteredWeatherData, setFilteredWeatherData] = useState<WeatherRecord[]>([])
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(10)
+
   // Form state for adding/editing records
   const [formData, setFormData] = useState({
     date: "",
@@ -340,7 +344,15 @@ export default function WeatherDataPage() {
     } else {
       setFilteredWeatherData(weatherData);
     }
+    // Reset to page 1 when filter changes
+    setCurrentPage(1)
   }, [filterDate, weatherData]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredWeatherData.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedWeatherData = filteredWeatherData.slice(startIndex, endIndex)
 
   const loadWeatherData = async () => {
     setLoading(true)
@@ -1299,7 +1311,7 @@ export default function WeatherDataPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {filteredWeatherData.map((record, index) => (
+                          {paginatedWeatherData.map((record, index) => (
                             <motion.tr
                               key={record.id}
                               custom={index}
@@ -1375,6 +1387,57 @@ export default function WeatherDataPage() {
                           ))}
                         </tbody>
                       </table>
+                    </div>
+                  )}
+                  {/* Pagination Controls */}
+                  {filteredWeatherData.length > 0 && (
+                    <div className="flex items-center justify-between mt-4 px-6 py-3 bg-gray-50 rounded-b-xl border-t border-gray-200">
+                      <div className="text-sm text-gray-600">
+                        Showing {startIndex + 1} to {Math.min(endIndex, filteredWeatherData.length)} of {filteredWeatherData.length} records
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={currentPage === 1}
+                          className="px-3 py-1 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Previous
+                        </button>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            let pageNum;
+                            if (totalPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (currentPage <= 3) {
+                              pageNum = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                              pageNum = totalPages - 4 + i;
+                            } else {
+                              pageNum = currentPage - 2 + i;
+                            }
+                            return (
+                              <button
+                                key={pageNum}
+                                onClick={() => setCurrentPage(pageNum)}
+                                className={`px-3 py-1 rounded-lg border transition-colors ${
+                                  currentPage === pageNum
+                                    ? 'bg-accent-blue text-white border-accent-blue'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                }`}
+                              >
+                                {pageNum}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                          disabled={currentPage === totalPages}
+                          className="px-3 py-1 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Next
+                        </button>
+                      </div>
                     </div>
                   )}
                 </CardContent>

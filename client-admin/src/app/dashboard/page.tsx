@@ -19,7 +19,7 @@ import {
 import { motion } from "framer-motion"
 import { useEffect, useState } from "react"
 import { useAuth } from "@/context/AuthContext"
-import { getDashboardStats, getRecentPredictions, createPrediction, reverseGeocode, DashboardStats, RecentPrediction } from "@/lib/api"
+import { getDashboardStats, getRecentPredictions, createPrediction, reverseGeocode, DashboardStats, RecentPrediction, api, setAuthToken, getDashboardHistoricalStats } from "@/lib/api"
 import PredictionModal, { PredictionFormData } from "@/components/PredictionModal"
 
 // Helper function to format date
@@ -81,6 +81,12 @@ export default function DashboardPage() {
   const [isCreatingPrediction, setIsCreatingPrediction] = useState(false);
   const [recentDroneImages, setRecentDroneImages] = useState<any[]>([]);
   const [loadingImages, setLoadingImages] = useState(false);
+  const [selectedPrediction, setSelectedPrediction] = useState<RecentPrediction | null>(null);
+  const [historicalStats, setHistoricalStats] = useState<{
+    riskPredictionsLastWeek: number;
+    droneInsightsLastWeek: number;
+    activeUsersLastWeek: number;
+  } | null>(null);
 
   // Helper: get token
   const getToken = () => {
@@ -106,20 +112,27 @@ export default function DashboardPage() {
   const fetchRecentDroneImages = async () => {
     try {
       setLoadingImages(true)
-      const response = await fetch(`${process.env.API_BASE_URL}/drones/recent-images`, {
-        headers: {
-          'Authorization': `Bearer ${getToken()}`
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch recent drone images')
+      const token = getToken()
+      if (!token) {
+        console.warn('No token available for fetching drone images')
+        return []
       }
 
-      const data = await response.json()
+      // Ensure token is set on api instance
+      setAuthToken(token)
+
+      // Use the api instance which handles base URL and auth properly
+      const response = await api.get('/drones/recent-images')
+
+      const data = response.data
+      console.log('Fetched recent drone images:', data)
       return data.images || []
-    } catch (error) {
+    } catch (error: any) {
       console.error('Fetch recent drone images error:', error)
+      if (error.response) {
+        console.error('Response status:', error.response.status)
+        console.error('Response data:', error.response.data)
+      }
       return []
     } finally {
       setLoadingImages(false)
@@ -159,13 +172,17 @@ export default function DashboardPage() {
     
     setIsLoading(true);
     try {
-      const [stats, predictions] = await Promise.all([
+      const [stats, predictions, images, historical] = await Promise.all([
         getDashboardStats(companyId),
-        getRecentPredictions(companyId, 6)
+        getRecentPredictions(companyId, 6),
+        fetchRecentDroneImages(),
+        getDashboardHistoricalStats().catch(() => null)
       ]);
       
       setDashboardStats(stats);
       setRecentPredictions(predictions.predictions || []);
+      setRecentDroneImages(images);
+      setHistoricalStats(historical);
     } catch (err) {
       console.error('Error refreshing dashboard data:', err);
       setError('Failed to refresh dashboard data');
@@ -200,28 +217,43 @@ export default function DashboardPage() {
     }
   };
 
-  // Create stats array from dashboard data
+  // Helper function to calculate percentage change
+  const calculateChange = (current: number, previous: number): { change: number; isIncrease: boolean } => {
+    if (previous === 0) {
+      return { change: current > 0 ? 100 : 0, isIncrease: current > 0 };
+    }
+    const change = ((current - previous) / previous) * 100;
+    return { change: Math.round(change), isIncrease: change >= 0 };
+  };
+
+  // Create stats array from dashboard data with real historical comparison
   const stats = dashboardStats ? [
     {
       label: "Risk Prediction Today",
       value: dashboardStats.riskPredictionsToday,
       icon: <FiActivity className="text-accent-blue" />,
-      change: 0, // This would need historical data to calculate
-      isIncrease: true,
+      ...(historicalStats ? calculateChange(
+        dashboardStats.riskPredictionsToday,
+        historicalStats.riskPredictionsLastWeek
+      ) : { change: 0, isIncrease: true }),
     },
     {
       label: "Drone Insights Uploaded",
       value: dashboardStats.droneInsightsUploaded,
       icon: <FiCamera className="text-accent-blue" />,
-      change: 0, // This would need historical data to calculate
-      isIncrease: true,
+      ...(historicalStats ? calculateChange(
+        dashboardStats.droneInsightsUploaded,
+        historicalStats.droneInsightsLastWeek
+      ) : { change: 0, isIncrease: true }),
     },
     {
       label: "Active Users",
       value: dashboardStats.activeUsers,
       icon: <FiUsers className="text-accent-blue" />,
-      change: 0, // This would need historical data to calculate
-      isIncrease: false,
+      ...(historicalStats ? calculateChange(
+        dashboardStats.activeUsers,
+        historicalStats.activeUsersLastWeek
+      ) : { change: 0, isIncrease: false }),
     },
   ] : [];
 
@@ -315,7 +347,7 @@ export default function DashboardPage() {
                         className={`flex items-center gap-1 text-sm ${stat.isIncrease ? "text-green-600" : "text-red-600"}`}
                       >
                         {stat.isIncrease ? <FiArrowUp size={14} /> : <FiArrowDown size={14} />}
-                        <span>{stat.change} from last week</span>
+                        <span>{stat.change > 0 ? '+' : ''}{stat.change}% from last week</span>
                       </div>
                     </div>
                     <div className="text-4xl font-bold mb-1">{stat.value}</div>
@@ -331,13 +363,13 @@ export default function DashboardPage() {
           <motion.div variants={item} className="mb-10">
             <div className="font-bold text-xl mb-4 text-primary-dark">Quick Action</div>
             <div className="flex gap-4">
-              <button 
-                onClick={() => setIsPredictionModalOpen(true)}
+              <Link
+                href="/prediction-alert"
                 className="bg-accent-blue text-white px-6 py-3 rounded-lg font-bold text-base hover:bg-secondary-blue transition-all flex items-center gap-2 shadow-md hover:shadow-lg"
               >
                 <FiPlus />
                 New Risk Prediction
-              </button>
+              </Link>
               <Link 
                 href="/drone-management"
                 className="bg-white text-accent-blue border border-accent-blue px-6 py-3 rounded-lg font-bold text-base hover:bg-accent-blue hover:text-white transition-all flex items-center gap-2"
@@ -352,15 +384,18 @@ export default function DashboardPage() {
           <motion.div variants={item} className="mb-10">
             <div className="flex justify-between items-center mb-4">
               <div className="font-bold text-xl text-primary-dark">Recent Predictions</div>
-              <button className="text-accent-blue hover:underline text-sm font-medium flex items-center gap-1">
+              <Link 
+                href="/prediction-alert"
+                className="text-accent-blue hover:underline text-sm font-medium flex items-center gap-1"
+              >
                 View all <FiArrowUp className="rotate-45" size={14} />
-              </button>
+              </Link>
             </div>
             <div className="overflow-x-auto rounded-xl shadow-md">
               <table className="min-w-full bg-white rounded-xl overflow-hidden">
                 <thead>
                   <tr className="text-left text-primary-dark font-semibold text-base bg-light-bg">
-                    <th className="py-4 px-6">Area</th>
+                    <th className="py-4 px-6">Operational Area</th>
                     <th className="py-4 px-6">Date</th>
                     <th className="py-4 px-6">Status</th>
                     <th className="py-4 px-6">Risk Score</th>
@@ -420,10 +455,17 @@ export default function DashboardPage() {
                         </td>
                         <td className="py-4 px-6">
                           <div className="flex gap-2">
-                            <button className="p-2 rounded-lg hover:bg-light-bg/50 text-accent-blue">
+                            <button 
+                              onClick={() => setSelectedPrediction(row)}
+                              className="p-2 rounded-lg hover:bg-light-bg/50 text-accent-blue transition-colors"
+                              title="View details"
+                            >
                               <FiEye size={18} />
                             </button>
-                            <button className="p-2 rounded-lg hover:bg-light-bg/50 text-accent-blue">
+                            <button 
+                              className="p-2 rounded-lg hover:bg-light-bg/50 text-accent-blue transition-colors"
+                              title="Download"
+                            >
                               <FiDownload size={18} />
                             </button>
                           </div>
@@ -444,7 +486,15 @@ export default function DashboardPage() {
 
           {/* Recent Drone Images */}
           <motion.div variants={item}>
-            <div className="font-bold text-xl mb-4 text-primary-dark">Recent Drone Images</div>
+            <div className="flex justify-between items-center mb-4">
+              <div className="font-bold text-xl text-primary-dark">Recent Drone Images</div>
+              <Link 
+                href="/drone-management"
+                className="text-accent-blue hover:underline text-sm font-medium flex items-center gap-1"
+              >
+                View all <FiArrowUp className="rotate-45" size={14} />
+              </Link>
+            </div>
             {loadingImages ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-blue mx-auto mb-4"></div>
@@ -511,6 +561,78 @@ export default function DashboardPage() {
         onSubmit={handleCreatePrediction}
         isLoading={isCreatingPrediction}
       />
+
+      {/* Prediction Details Modal */}
+      {selectedPrediction && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-primary-dark">Prediction Details</h2>
+              <button
+                onClick={() => setSelectedPrediction(null)}
+                className="text-gray-500 hover:text-gray-700 transition-colors p-2 hover:bg-gray-100 rounded-lg"
+                aria-label="Close"
+              >
+                <FiArrowUp className="rotate-45" size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-gray-500 mb-1">Area</div>
+                  <div className="font-semibold text-lg">
+                    {selectedPrediction.companyLocation?.name || 'Unknown Location'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500 mb-1">Date</div>
+                  <div className="font-semibold text-lg">
+                    {formatDate(selectedPrediction.createdAt)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500 mb-1">Risk Level</div>
+                  <span
+                    className={`inline-block px-3 py-1 rounded-full text-sm font-semibold border ${statusColors[selectedPrediction.riskLevel?.toLowerCase() || '']}`}
+                  >
+                    <span
+                      className={`inline-block w-2 h-2 rounded-full mr-1.5 ${selectedPrediction.riskLevel.toLowerCase() === "low" ? "bg-green-500" : selectedPrediction.riskLevel?.toLowerCase() === "medium" ? "bg-yellow-500" : "bg-red-500"}`}
+                    ></span>
+                    {selectedPrediction.riskLevel?.toUpperCase() || 'N/A'}
+                  </span>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500 mb-1">Risk Score</div>
+                  <div className="font-semibold text-lg">
+                    {selectedPrediction.riskScore.toFixed(2)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500 mb-1">Latitude</div>
+                  <div className="font-semibold">
+                    {selectedPrediction.latitude.toFixed(6)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500 mb-1">Longitude</div>
+                  <div className="font-semibold">
+                    {selectedPrediction.longitude.toFixed(6)}
+                  </div>
+                </div>
+              </div>
+              <div className="pt-4 border-t border-gray-200">
+                <Link
+                  href="/prediction-alert"
+                  className="inline-flex items-center gap-2 bg-accent-blue text-white px-4 py-2 rounded-lg font-semibold hover:bg-secondary-blue transition-colors"
+                >
+                  <FiEye size={18} />
+                  View Full Details
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -206,6 +206,14 @@ exports.getDroneStats = async (req, res) => {
   try {
     const companyId = req.companyId;
 
+    // Calculate this week date range
+    const today = new Date();
+    const thisWeekStart = new Date(today);
+    thisWeekStart.setDate(thisWeekStart.getDate() - 7);
+    thisWeekStart.setHours(0, 0, 0, 0);
+    const thisWeekEnd = new Date(today);
+    thisWeekEnd.setHours(23, 59, 59, 999);
+
     const [
       totalDrones,
       operationalDrones,
@@ -213,7 +221,8 @@ exports.getDroneStats = async (req, res) => {
       inactiveDrones,
       totalImages,
       uploadedImages,
-      videoFrameImages
+      videoFrameImages,
+      thisWeekImages
     ] = await Promise.all([
       prisma.drone.count({ where: { companyId } }),
       prisma.drone.count({ where: { companyId, status: 'Operational' } }),
@@ -221,20 +230,29 @@ exports.getDroneStats = async (req, res) => {
       prisma.drone.count({ where: { companyId, status: 'Inactive' } }),
       prisma.image.count({ 
         where: { 
-          drone: { companyId } 
+          companyId 
         } 
       }),
       prisma.image.count({ 
         where: { 
-          drone: { companyId },
+          companyId,
           sourceType: 'upload'
         } 
       }),
       prisma.image.count({ 
         where: { 
-          drone: { companyId },
+          companyId,
           sourceType: 'video_frame'
         } 
+      }),
+      prisma.image.count({
+        where: {
+          companyId,
+          createdAt: {
+            gte: thisWeekStart,
+            lte: thisWeekEnd
+          }
+        }
       })
     ]);
 
@@ -246,6 +264,7 @@ exports.getDroneStats = async (req, res) => {
       totalImages,
       uploadedImages,
       videoFrameImages,
+      thisWeekImages,
       coverageAreas: await prisma.drone.groupBy({
         by: ['operationalArea'],
         where: { companyId },
