@@ -13,7 +13,8 @@
 | F007 | Notification center (fetch notifications, risk-type specific cards, mark single/all as read, pull-to-reREQesh, badge count sync) | High | REQ-26, REQ-27 |
 | F008 | Prediction-linked navigation (from dashboard prediction to risk analysis and recommendations with correct risk-level context) | Medium | REQ-24, REQ-28, REQ-29, REQ-30 |
 | F009 | Company-based data integration (using companyId to fetch company locations and predictions, map fit-to-markers behaviour) | High | REQ-24, REQ-25, REQ-26, REQ-27 |
-| F010 | Location-aware navigation controls (map region tracking, “return to current/original location” controls on dashboard and risk-analysis maps) | Medium | REQ-24, REQ-30 |
+| F010 | Location-aware navigation controls (map region tracking, "return to current/original location" controls on dashboard and risk-analysis maps) | Medium | REQ-24, REQ-30 |
+| F025 | Monitor Daily Dengue Cases & Location Alerts (view dengue cases on map with search, case details modal, create/manage location-based alerts with notifications) | High | REQ-31, REQ-32 |
 
 ## Admin Web Features to Test
 
