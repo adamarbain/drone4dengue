@@ -37,7 +37,16 @@ jobs:
       - name: Build and Push Container
         run: |
           cd server-ml
-          gcloud builds submit --tag ${{ env.IMAGE_NAME }} .
+          BUILD_ID="$(gcloud builds submit --tag '${{ env.IMAGE_NAME }}' --async --format='value(id)' .)"
+          echo "Cloud Build started: ${BUILD_ID}"
+          # Avoid Cloud Build "get_requests" rate limits by waiting with backoff.
+          for i in 1 2 3 4 5; do
+            if gcloud builds wait "${BUILD_ID}" --timeout="3600s"; then
+              break
+            fi
+            echo "Build wait failed (attempt ${i}); retrying in $((i*15))s..."
+            sleep $((i*15))
+          done
 
       - name: Deploy to Cloud Run
         run: |
