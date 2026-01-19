@@ -60,6 +60,13 @@ class ImprovedDengueMLModels:
         # Convert date to datetime
         self.df['date'] = pd.to_datetime(self.df['date'], format='%d/%m/%Y')
 
+        # Only keep records starting from 18/12/2025 (inclusive)
+        cutoff_date = pd.to_datetime('18/12/2025', format='%d/%m/%Y')
+        before_rows = len(self.df)
+        self.df = self.df[self.df['date'] >= cutoff_date].copy()
+        after_rows = len(self.df)
+        print(f"Filtered to date >= {cutoff_date.date()}: {after_rows}/{before_rows} rows kept")
+
         # Normalize column names if needed (support both x/y and centroid_x/centroid_y)
         if 'centroid_x' not in self.df.columns and 'x' in self.df.columns:
             self.df = self.df.rename(columns={'x': 'centroid_x', 'y': 'centroid_y'})
@@ -71,6 +78,8 @@ class ImprovedDengueMLModels:
             hotspot_df = pd.read_csv('dengue_hotspot.csv')
             # Parse date
             hotspot_df['date'] = pd.to_datetime(hotspot_df['date'], format='%d/%m/%Y')
+            # Apply the same cutoff to hotspot data for consistent merging
+            hotspot_df = hotspot_df[hotspot_df['date'] >= cutoff_date].copy()
             # Normalize columns if needed
             if 'centroid_x' not in hotspot_df.columns and 'x' in hotspot_df.columns:
                 hotspot_df = hotspot_df.rename(columns={'x': 'centroid_x', 'y': 'centroid_y'})

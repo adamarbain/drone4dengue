@@ -84,7 +84,7 @@ export default function AboutPage() {
                   className="text-white/70"
                   style={{ fontSize: tablet ? 16 : 14 }}
                 >
-                  Version 1.0.6
+                  Version 1.0.7
                 </Text>
               </View>
             </View>

@@ -1070,6 +1070,132 @@ def predict():
         logger.error(f"Prediction endpoint error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
+@app.route('/predict/weighted-50-50', methods=['POST'])
+def predict_weighted_50_50():
+    """
+    Prediction endpoint with equal weighting (50% Model 1, 50% Model 2)
+    
+    Expected JSON payload:
+    {
+        "latitude": float,
+        "longitude": float,
+        "weather_data": {
+            "temperature": float,
+            "humidity": float,
+            "rainfall": float
+        } (optional - will fetch automatically if not provided),
+        "historical_cases_data": [
+            {
+                "date": "YYYY-MM-DD",
+                "cases": float
+            }
+        ] (optional - for Model 1 historical features),
+        "target_date": "YYYY-MM-DD" (optional - defaults to current date)
+    }
+    
+    Combines scores with 50/50 weighting between Model 1 and Model 2.
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+        
+        latitude = data.get('latitude')
+        longitude = data.get('longitude')
+        weather_data = data.get('weather_data')
+        historical_cases_data = data.get('historical_cases_data')
+        target_date_str = data.get('target_date')
+        
+        if latitude is None or longitude is None:
+            return jsonify({"error": "latitude and longitude are required"}), 400
+        
+        # Parse target date if provided
+        target_date = None
+        if target_date_str:
+            try:
+                target_date = datetime.strptime(target_date_str, '%Y-%m-%d')
+            except ValueError:
+                return jsonify({"error": "Invalid target_date format. Use YYYY-MM-DD"}), 400
+        
+        # Validate coordinates
+        if not (-90 <= latitude <= 90) or not (-180 <= longitude <= 180):
+            return jsonify({"error": "Invalid coordinates"}), 400
+        
+        # Ensure models are loaded
+        if not (prediction_service.model1 and prediction_service.scaler1) and not (prediction_service.model2 and prediction_service.scaler2):
+            return jsonify({"error": "No models loaded. Service cannot make predictions without models."}), 503
+        
+        # Prepare features
+        model1_features, model2_features = prediction_service._prepare_features(
+            latitude, longitude, weather_data, historical_cases_data, target_date
+        )
+        
+        model1_score = None
+        model2_score = None
+        
+        # Predict with Model 1
+        if prediction_service.model1 and prediction_service.scaler1:
+            if hasattr(prediction_service.model1, 'feature_importances_'):
+                model1_score = float(prediction_service.model1.predict(model1_features.reshape(1, -1))[0])
+            else:
+                model1_scaled = prediction_service.scaler1.transform(model1_features.reshape(1, -1))
+                model1_score = float(prediction_service.model1.predict(model1_scaled)[0])
+        
+        # Predict with Model 2
+        if prediction_service.model2 and prediction_service.scaler2:
+            if hasattr(prediction_service.model2, 'feature_importances_'):
+                model2_score = float(prediction_service.model2.predict(model2_features.reshape(1, -1))[0])
+            else:
+                model2_scaled = prediction_service.scaler2.transform(model2_features.reshape(1, -1))
+                model2_score = float(prediction_service.model2.predict(model2_scaled)[0])
+        
+        if model1_score is None and model2_score is None:
+            return jsonify({"error": "No valid predictions from any model"}), 500
+        
+        # Combine with 50/50 weighting (ignore model3 here)
+        combined_score = (
+            (model1_score if model1_score is not None else 0.0) * 0.5 +
+            (model2_score if model2_score is not None else 0.0) * 0.5
+        )
+        
+        # Determine risk level using same thresholds
+        if combined_score >= 3:
+            risk_level = "high"
+        elif combined_score >= 1:
+            risk_level = "medium"
+        else:
+            risk_level = "low"
+        
+        # Historical features for response if provided
+        historical_features = None
+        if historical_cases_data:
+            historical_features = prediction_service._calculate_historical_features(
+                historical_cases_data, target_date or datetime.now()
+            )
+        
+        result = {
+            "model1_score": model1_score,
+            "model2_score": model2_score,
+            "combined_score": combined_score,
+            "risk_level": risk_level,
+            "historical_features_used": historical_features,
+            "is_hotspot": int(prediction_service._is_location_hotspot(latitude, longitude)),
+            "location_cluster": int(prediction_service._get_location_cluster(latitude, longitude))
+        }
+        
+        return jsonify({
+            "success": True,
+            "prediction": result,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.error(f"Weighted prediction endpoint error: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
 @app.route('/predict/model1', methods=['POST'])
 def predict_model1():
     """
