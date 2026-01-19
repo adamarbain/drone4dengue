@@ -342,8 +342,8 @@ export default function ReportsPage() {
             {[
               { label: "Reports Generated", value: stats.reportsGenerated.toString(), icon: <FiFileText />, color: "bg-blue-500" },
               { label: "Data Points", value: stats.dataPoints >= 1000 ? `${(stats.dataPoints / 1000).toFixed(1)}K` : stats.dataPoints.toString(), icon: <FiBarChart2 />, color: "bg-green-500" },
-              { label: "Export Formats", value: stats.exportFormats.toString(), icon: <FiDownload />, color: "bg-purple-500" },
-              { label: "Accuracy Rate", value: stats.accuracyRate, icon: <FiTrendingUp />, color: "bg-orange-500" },
+              { label: "Export Formats", value: stats.exportFormats.toString(), icon: <FiDownload />, color: "bg-purple-500" }
+              // { label: "Accuracy Rate", value: stats.accuracyRate, icon: <FiTrendingUp />, color: "bg-orange-500" },
             ].map((stat, idx) => (
               <motion.div
                 key={stat.label}

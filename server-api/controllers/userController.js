@@ -138,24 +138,38 @@ exports.updateProfile = async (req, res) => {
     requestBody: { name, username, phone, organization, address, role, status, email }
   });
 
-  if (!name && !username && !email && !phone && !address && !role && !status) {
+  // Check if at least one field is explicitly provided (not undefined)
+  // Allow empty strings for phone and address
+  const hasFieldsToUpdate = name !== undefined || 
+                            username !== undefined || 
+                            email !== undefined || 
+                            phone !== undefined || 
+                            address !== undefined || 
+                            organization !== undefined ||
+                            role !== undefined || 
+                            status !== undefined;
+  
+  if (!hasFieldsToUpdate) {
     logger.warn('[UPDATE PROFILE] No required fields to update', { userId });
     return sendValidationError(res, ['At least one field must be provided for update']);
   }
 
   try {
     console.log('[UPDATE PROFILE] Attempting database update');
+    const updateData = {};
+    
+    // Allow empty strings for phone and address (users should be able to clear these fields)
+    if (name !== undefined) updateData.name = name;
+    if (username !== undefined) updateData.username = username;
+    if (phone !== undefined) updateData.phone = phone; // Allow empty string
+    if (organization !== undefined) updateData.organization = organization;
+    if (address !== undefined) updateData.address = address; // Allow empty string
+    if (role !== undefined) updateData.role = role;
+    if (status !== undefined) updateData.status = status;
+    
     const user = await prisma.user.update({
       where: { id: userId },
-      data: {
-        ...(name && { name }),
-        ...(username && { username }), 
-        ...(phone && { phone }),
-        ...(organization && { organization }),
-        ...(address && { address }),
-        ...(role && { role }),
-        ...(status && { status })
-      },
+      data: updateData,
     });
 
     // Exclude password from response
