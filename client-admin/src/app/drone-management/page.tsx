@@ -908,75 +908,56 @@ export default function DroneManagementPage() {
               </div>
 
               {/* Pagination Controls */}
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
-                <div className="text-sm text-gray-600">
-                  Showing <span className="font-semibold">{Math.min(totalDrones, (currentPage - 1) * dronesPerPage + 1)}</span> to{" "}
-                  <span className="font-semibold">{Math.min(totalDrones, currentPage * dronesPerPage)}</span> of{" "}
-                  <span className="font-semibold">{totalDrones}</span> drones
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    onClick={() => setCurrentPage(1)}
-                    disabled={currentPage === 1}
-                    title="First Page"
-                  >
-                    <FiChevronRight className="rotate-180" size={18} />
-                    <FiChevronRight className="rotate-180 -ml-3" size={18} />
-                  </button>
-                  <button
-                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    title="Previous Page"
-                  >
-                    <FiChevronRight className="rotate-180" size={18} />
-                  </button>
-                  
-                  <div className="flex items-center gap-1 mx-2">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-                      
-                      return (
-                        <button
-                          key={pageNum}
-                          className={`w-10 h-10 rounded-lg border font-medium transition-all ${currentPage === pageNum ? "bg-accent-blue text-white border-accent-blue" : "border-gray-300 hover:bg-gray-100 text-gray-700"}`}
-                          onClick={() => setCurrentPage(pageNum)}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
+              {filteredDrones.length > 0 && (
+                <div className="flex items-center justify-between mt-4 px-6 py-3 bg-gray-50 rounded-b-xl">
+                  <div className="text-sm text-gray-600">
+                    Showing {Math.min(totalDrones, (currentPage - 1) * dronesPerPage + 1)} to {Math.min(totalDrones, currentPage * dronesPerPage)} of {totalDrones} drones
                   </div>
-
-                  <button
-                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    title="Next Page"
-                  >
-                    <FiChevronRight size={18} />
-                  </button>
-                  <button
-                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    onClick={() => setCurrentPage(totalPages)}
-                    disabled={currentPage === totalPages}
-                    title="Last Page"
-                  >
-                    <FiChevronRight size={18} />
-                    <FiChevronRight className="-ml-3" size={18} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Previous
+                    </button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`px-3 py-1 rounded-lg border transition-colors ${
+                              currentPage === pageNum
+                                ? 'bg-accent-blue text-white border-accent-blue'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </motion.div>
 

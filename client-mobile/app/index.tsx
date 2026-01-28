@@ -54,7 +54,7 @@ export default function Index() {
           DengueEye
         </Text>
         <Text className="text-white text-center font-medium text-sm leading-tight tracking-tight">
-          v1.0.6
+          v1.0.7
         </Text>
       </View>
     </SafeAreaView>

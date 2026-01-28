@@ -71,6 +71,12 @@ export default function Dashboard() {
     status?: string | null;
     coverageArea?: string | null;
     source?: string | null;
+    displayName?: string | null;
+    state?: string | null;
+    city?: string | null;
+    road?: string | null;
+    suburb?: string | null;
+    district?: string | null;
   }
   const [dengueCases, setDengueCases] = useState<DengueCase[]>([]);
   const [loadingDengueCases, setLoadingDengueCases] = useState(false);
@@ -78,6 +84,7 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const [showLocationButtonDengue, setShowLocationButtonDengue] = useState(false);
   const searchAbortControllerRef = useRef<AbortController | null>(null);
   
@@ -105,6 +112,7 @@ export default function Dashboard() {
   const [alertSearchQuery, setAlertSearchQuery] = useState('');
   const [alertSearchResults, setAlertSearchResults] = useState<any[]>([]);
   const [isAlertSearching, setIsAlertSearching] = useState(false);
+  const [hasAlertSearched, setHasAlertSearched] = useState(false);
   const alertSearchAbortControllerRef = useRef<AbortController | null>(null);
   
   // Risk threshold settings
@@ -525,6 +533,7 @@ export default function Dashboard() {
       
       setSearchQuery('');
       setSearchResults([]);
+      setHasSearched(false);
     }
   };
 
@@ -589,6 +598,7 @@ export default function Dashboard() {
     // Clear search
     setAlertSearchQuery('');
     setAlertSearchResults([]);
+    setHasAlertSearched(false);
   };
 
   // Reverse geocode to get location name from coordinates
@@ -937,6 +947,7 @@ export default function Dashboard() {
                             // Search only when user presses Enter/Submit
                             if (!searchQuery.trim()) {
                               setSearchResults([]);
+                              setHasSearched(false);
                               return;
                             }
                             
@@ -945,6 +956,7 @@ export default function Dashboard() {
                               searchAbortControllerRef.current.abort();
                             }
                             
+                            setHasSearched(true);
                             const abortController = new AbortController();
                             searchAbortControllerRef.current = abortController;
                             searchLocation(searchQuery.trim(), abortController.signal);
@@ -959,6 +971,7 @@ export default function Dashboard() {
                               }
                               setSearchQuery('');
                               setSearchResults([]);
+                              setHasSearched(false);
                             }}
                             className="ml-2"
                           >
@@ -987,6 +1000,15 @@ export default function Dashboard() {
                               </TouchableOpacity>
                             ))}
                           </ScrollView>
+                        </View>
+                      )}
+                      
+                      {/* No Results Message */}
+                      {hasSearched && !isSearching && searchResults.length === 0 && searchQuery.trim().length > 0 && (
+                        <View className="mt-1 bg-white rounded-xl border border-gray-200 shadow-lg px-4 py-3">
+                          <Text className="text-sm text-gray-600 text-center">
+                            Location "{searchQuery}" not found. Please try a different search term.
+                          </Text>
                         </View>
                       )}
                     </View>
@@ -1096,8 +1118,43 @@ export default function Dashboard() {
                             <ScrollView showsVerticalScrollIndicator={false}>
                               <View className="mb-4">
                                 <Text className="text-sm font-semibold text-gray-600 mb-1">Location</Text>
-                                <Text className="text-base text-black font-semibold">{selectedDengueCase.location}</Text>
+                                <Text className="text-base text-black font-semibold">{selectedDengueCase.displayName}</Text>
                               </View>
+                              
+                              {selectedDengueCase.state !== null && selectedDengueCase.state !== undefined && (
+                                <View className="mb-4">
+                                  <Text className="text-sm font-semibold text-gray-600 mb-1">State</Text>
+                                  <Text className="text-base text-black">{selectedDengueCase.state}</Text>
+                                </View>
+                              )}
+                              
+                              {selectedDengueCase.city !== null && selectedDengueCase.city !== undefined && (
+                                <View className="mb-4">
+                                  <Text className="text-sm font-semibold text-gray-600 mb-1">City</Text>
+                                  <Text className="text-base text-black">{selectedDengueCase.city}</Text>
+                                </View>
+                              )}
+                              
+                              {selectedDengueCase.road !== null && selectedDengueCase.road !== undefined && (
+                                <View className="mb-4">
+                                  <Text className="text-sm font-semibold text-gray-600 mb-1">Road</Text>
+                                  <Text className="text-base text-black">{selectedDengueCase.road}</Text>
+                                </View>
+                              )}
+                              
+                              {selectedDengueCase.suburb !== null && selectedDengueCase.suburb !== undefined && (
+                                <View className="mb-4">
+                                  <Text className="text-sm font-semibold text-gray-600 mb-1">Suburb</Text>
+                                  <Text className="text-base text-black">{selectedDengueCase.suburb}</Text>
+                                </View>
+                              )}
+                              
+                              {selectedDengueCase.district !== null && selectedDengueCase.district !== undefined && (
+                                <View className="mb-4">
+                                  <Text className="text-sm font-semibold text-gray-600 mb-1">District</Text>
+                                  <Text className="text-base text-black">{selectedDengueCase.district}</Text>
+                                </View>
+                              )}
                               
                               <View className="mb-4">
                                 <Text className="text-sm font-semibold text-gray-600 mb-1">Date</Text>
@@ -1363,6 +1420,7 @@ export default function Dashboard() {
                         setNewAlertLocationName('');
                         setAlertSearchQuery('');
                         setAlertSearchResults([]);
+                        setHasAlertSearched(false);
                       }}
                     >
                       <View className="flex-1 bg-black/50 justify-end">
@@ -1381,6 +1439,7 @@ export default function Dashboard() {
                                 setNewAlertLocationName('');
                                 setAlertSearchQuery('');
                                 setAlertSearchResults([]);
+                                setHasAlertSearched(false);
                               }}
                               className="p-2"
                             >
@@ -1423,6 +1482,7 @@ export default function Dashboard() {
                                     // Search only when user presses Enter/Submit
                                     if (!alertSearchQuery.trim()) {
                                       setAlertSearchResults([]);
+                                      setHasAlertSearched(false);
                                       return;
                                     }
                                     
@@ -1431,6 +1491,7 @@ export default function Dashboard() {
                                       alertSearchAbortControllerRef.current.abort();
                                     }
                                     
+                                    setHasAlertSearched(true);
                                     const abortController = new AbortController();
                                     alertSearchAbortControllerRef.current = abortController;
                                     searchAlertLocation(alertSearchQuery.trim(), abortController.signal);
@@ -1446,6 +1507,7 @@ export default function Dashboard() {
                                       }
                                       setAlertSearchQuery('');
                                       setAlertSearchResults([]);
+                                      setHasAlertSearched(false);
                                     }}
                                     className="ml-2"
                                   >
@@ -1473,6 +1535,15 @@ export default function Dashboard() {
                                       </TouchableOpacity>
                                     ))}
                                   </ScrollView>
+                                </View>
+                              )}
+                              
+                              {/* No Results Message */}
+                              {hasAlertSearched && !isAlertSearching && alertSearchResults.length === 0 && alertSearchQuery.trim().length > 0 && (
+                                <View className="bg-white rounded-xl border border-gray-200 mt-2 px-4 py-3">
+                                  <Text className="text-sm text-gray-600 text-center">
+                                    Location "{alertSearchQuery}" not found. Please try a different search term.
+                                  </Text>
                                 </View>
                               )}
                             </View>
