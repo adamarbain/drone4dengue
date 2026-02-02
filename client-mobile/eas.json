@@ -39,6 +39,10 @@
         "appleId": "adamarbain2107@icloud.com",
         "ascAppId": "6757015797",
         "appleTeamId": "VLZUCTZK97"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-services.json",
+        "track": "production"
       }
     }
   }

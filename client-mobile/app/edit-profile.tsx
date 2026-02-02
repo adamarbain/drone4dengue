@@ -53,14 +53,19 @@ export default function EditProfilePage() {
         setShowConfirmModal(false);
         setSaving(true);
         try {
-            // Ensure phone and address are explicitly set to empty strings if they're null/undefined
+            // Explicitly send phone and address even if empty strings
             // This allows users to clear these fields
-            await updateUserProfile({ 
+            const updateData: { name: string; username: string; phone?: string; address?: string } = {
                 name, 
-                username, 
-                phone: phone || '', 
-                address: address || '' 
-            });
+                username
+            };
+            
+            // Always include phone and address, even if empty strings
+            // This ensures the backend receives them and can clear the fields
+            updateData.phone = phone;
+            updateData.address = address;
+            
+            await updateUserProfile(updateData);
             setModal({ visible: true, type: 'success', message: 'Profile updated successfully!' });
         } catch (err) {
             const message = (err instanceof Error) ? err.message : 'Failed to update profile';

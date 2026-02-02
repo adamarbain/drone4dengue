@@ -125,6 +125,10 @@ export default function PredictionAlertPage() {
   // System health state
   const [systemHealth, setSystemHealth] = useState<any>(null)
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(10)
+
   // Reverse geocoding cache and helpers
   const reverseGeocodeCache = new Map<string, string>()
   const getAreaName = async (lat: number, lon: number): Promise<string> => {
@@ -206,6 +210,17 @@ export default function PredictionAlertPage() {
     
     return match
   })
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredPredictions.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedPredictions = filteredPredictions.slice(startIndex, endIndex)
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [selectedRisk, dateRange])
 
   // Handlers
 
@@ -449,7 +464,7 @@ export default function PredictionAlertPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredPredictions.map((prediction, idx) => (
+                    paginatedPredictions.map((prediction, idx) => (
                       <tr key={prediction.id} className={idx % 2 === 0 ? "bg-gray-50" : "bg-white"}>
                         <td className="py-3 px-6 font-medium text-primary-dark">
                           <div className="flex items-center gap-2">
@@ -563,7 +578,57 @@ export default function PredictionAlertPage() {
                 </tbody>
               </table>
             </div>
-            <div className="text-sm text-gray-500 mt-2">Showing {filteredPredictions.length} of {predictions.length} predictions</div>
+            {/* Pagination Controls */}
+            {filteredPredictions.length > 0 && (
+              <div className="flex items-center justify-between mt-4 px-6 py-3 bg-gray-50 rounded-b-xl">
+                <div className="text-sm text-gray-600">
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredPredictions.length)} of {filteredPredictions.length} predictions
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`px-3 py-1 rounded-lg border transition-colors ${
+                            currentPage === pageNum
+                              ? 'bg-accent-blue text-white border-accent-blue'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </motion.div>
 
           {/* View Details Modal */}

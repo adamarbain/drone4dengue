@@ -591,7 +591,7 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
               </button>
             </div>
 
-            <div className="h-80 w-full rounded-lg overflow-hidden bg-gray-100">
+            <div className="h-[600px] w-full rounded-lg overflow-hidden bg-gray-100">
               <MapcnMap center={getMapCenter()} zoom={11}>
                 <MapControls />
                 <AutoFitBounds companyLocations={companyLocations} />
@@ -604,6 +604,8 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
                   .map((location) => {
                     const todayPrediction = getTodayPrediction(location.id)
                     const hasTodayPrediction = !!todayPrediction
+                    const riskLevel = todayPrediction?.riskLevel || ''
+                    const markerColor = getRiskColor(riskLevel)
 
                     return (
                       <MapMarker
@@ -612,7 +614,7 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
                         latitude={location.latitude as number}
                       >
                         <MarkerContent>
-                          <div className="size-5 rounded-full bg-rose-500 border-2 border-white shadow-lg cursor-pointer hover:scale-110 transition-transform" />
+                          <div className={`size-5 rounded-full ${markerColor} border-2 border-white shadow-lg cursor-pointer hover:scale-110 transition-transform`} />
                           <MarkerLabel position="bottom">
                             {location.name || 'Location'}
                           </MarkerLabel>

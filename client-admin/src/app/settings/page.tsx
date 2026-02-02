@@ -1286,7 +1286,7 @@ export default function SettingsPage() {
           </motion.div>
 
           {/* Advanced Settings */}
-          <motion.div variants={item} className="mt-8">
+          {/* <motion.div variants={item} className="mt-8">
             <Card className="bg-white shadow-md rounded-xl overflow-hidden">
               <div className="bg-light-bg px-6 py-4 border-b border-accent-blue">
                 <h2 className="text-xl font-bold flex items-center gap-2">
@@ -1360,7 +1360,7 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
+          </motion.div> */}
         </motion.section>
 
         {/* Operational Area Modal */}

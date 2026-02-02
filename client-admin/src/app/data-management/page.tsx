@@ -13,10 +13,12 @@ import {
   FiTrendingUp,
   FiDatabase,
   FiChevronRight,
+  FiEye,
+  FiX,
 } from "react-icons/fi"
 import Image from "next/image"
-import { motion } from "framer-motion"
-import { useState, useEffect, useRef } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { useState, useEffect, useRef, useMemo } from "react"
 import type { JSX } from "react"
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
 import dynamic from 'next/dynamic';
@@ -68,7 +70,6 @@ const item = {
 const CoverageMap = dynamic(() => import('./CoverageMap'), { ssr: false });
 
 export default function DataManagementPage() {
-  const { companyId } = useAuth()
   const [dataRows, setDataRows] = useState<any[]>([])
   const [summary, setSummary] = useState<any>(null)
   const [loading, setLoading] = useState(false) // Changed to false - don't load on initial
@@ -76,8 +77,6 @@ export default function DataManagementPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState<string | null>(null)
-  const [mapData, setMapData] = useState<any[]>([])
-  const [historicalData, setHistoricalData] = useState<any[]>([])
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRows, setTotalRows] = useState(0);
@@ -92,27 +91,11 @@ export default function DataManagementPage() {
   // Track if filters have been applied (to show data)
   const [hasAppliedFilters, setHasAppliedFilters] = useState(false)
 
-  // For locations covered count
-  const [uniqueLocations, setUniqueLocations] = useState<string[]>([])
-
-  // Fetch locations count on mount
-  useEffect(() => {
-    async function fetchLocations() {
-      try {
-        const res = await fetch(`${API_URL}/dengue-data/locations`);
-        if (res.ok) {
-          const locations = await res.json();
-          setUniqueLocations(locations);
-        }
-      } catch (err) {
-        console.error("Failed to fetch locations:", err);
-      }
-    }
-    fetchLocations();
-  }, []);
-
   // Track search trigger - increments when Search button is clicked
   const [searchTrigger, setSearchTrigger] = useState(0)
+
+  // Details modal state
+  const [selectedRow, setSelectedRow] = useState<any | null>(null)
 
   // Fetch data only when Search button is clicked or pagination changes
   useEffect(() => {
@@ -171,36 +154,6 @@ export default function DataManagementPage() {
     // Only trigger on searchTrigger (button click) or currentPage (pagination)
   }, [searchTrigger, currentPage])
 
-  useEffect(() => {
-    async function fetchMapData() {
-      try {
-        const res = await fetch(`${API_URL}/dengue-data/map/location`, {
-          headers: {
-            Authorization: `Bearer ${getToken()}`
-          }
-        })
-        if (res.ok) {
-          setMapData(await res.json())
-        }
-      } catch {}
-    }
-    fetchMapData()
-  }, [])
-
-  useEffect(() => {
-    async function fetchHistorical() {
-      try {
-        const res = await fetch(`${API_URL}/dengue-data/historical/dengue-data`, {
-          headers: {
-            Authorization: `Bearer ${getToken()}`
-          }
-        })
-        if (res.ok) setHistoricalData(await res.json())
-      } catch {}
-    }
-    fetchHistorical()
-  }, [])
-
   // Handle search/filter button click - only fetch data when this is clicked
   const handleSearch = () => {
     setHasAppliedFilters(true);
@@ -221,6 +174,73 @@ export default function DataManagementPage() {
   };
 
   const paginatedData = dataRows;
+
+  // Compute historical trends data from paginatedData
+  const historicalData = useMemo(() => {
+    if (!paginatedData || paginatedData.length === 0) return [];
+    
+    // Group by date and aggregate
+    const groupedByDate = paginatedData.reduce((acc, row) => {
+      const date = row.date ? new Date(row.date).toISOString().split('T')[0] : null;
+      if (!date) return acc;
+      
+      if (!acc[date]) {
+        acc[date] = { date, activeCases: 0, hotspotCount: 0 };
+      }
+      
+      acc[date].activeCases += row.activeCases || 0;
+      if (row.status === 'Hotspot') {
+        acc[date].hotspotCount += 1;
+      }
+      
+      return acc;
+    }, {} as Record<string, { date: string; activeCases: number; hotspotCount: number }>);
+    
+    // Convert to array and sort by date
+    const result = Object.values(groupedByDate) as Array<{ date: string; activeCases: number; hotspotCount: number }>;
+    return result.sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+  }, [paginatedData]);
+
+  // Compute map data from paginatedData (unique locations with coordinates)
+  const mapData = useMemo(() => {
+    if (!paginatedData || paginatedData.length === 0) return [];
+    
+    // Create a map to store unique locations (by location string)
+    const locationMap = new Map<string, any>();
+    
+    paginatedData.forEach((row) => {
+      const locationKey = row.location || row.displayName || '';
+      if (!locationKey) return;
+      
+      // Only add if we have coordinates and haven't seen this location yet
+      if (row.latitude && row.longitude && !locationMap.has(locationKey)) {
+        locationMap.set(locationKey, {
+          id: row.id || locationKey,
+          location: locationKey,
+          latitude: row.latitude,
+          longitude: row.longitude,
+          activeCases: row.activeCases || 0,
+          totalCases: row.totalCases || row.activeCases || 0,
+          status: row.status || 'Active Cases'
+        });
+      }
+    });
+    
+    return Array.from(locationMap.values());
+  }, [paginatedData]);
+
+  // Compute unique locations count from paginatedData
+  const uniqueLocations = useMemo(() => {
+    if (!paginatedData || paginatedData.length === 0) return [];
+    const locations = new Set<string>();
+    paginatedData.forEach((row) => {
+      const location = row.location || row.displayName;
+      if (location) locations.add(location);
+    });
+    return Array.from(locations);
+  }, [paginatedData]);
 
   // Export handler
   const onExport = () => {
@@ -263,32 +283,9 @@ export default function DataManagementPage() {
       if (!res.ok) throw new Error('Upload failed')
       const result = await res.json()
       setUploadMsg(`Imported: ${result.imported}, Errors: ${result.errors.length}`)
-      // Refetch data
-      let url = `${API_URL}/dengue-data`;
-      const params = [];
-      if (startDate) params.push(`startDate=${encodeURIComponent(startDate)}`);
-      if (endDate) params.push(`endDate=${encodeURIComponent(endDate)}`);
-      if (selectedStatus) params.push(`status=${encodeURIComponent(selectedStatus)}`);
-      if (locationSearch) params.push(`search=${encodeURIComponent(locationSearch)}`);
-      if (params.length) url += `?${params.join("&")}`;
-      const [recordsRes, summaryRes] = await Promise.all([
-        fetch(url, {
-          headers: {
-            Authorization: `Bearer ${getToken()}`
-          }
-        }),
-        fetch(`${API_URL}/dengue-data/summary/dengue-data`, {
-          headers: {
-            Authorization: `Bearer ${getToken()}`
-          }
-        })
-      ])
-      if (recordsRes.ok && summaryRes.ok) {
-        const recordsData = await recordsRes.json();
-        setDataRows(recordsData.data || []);
-        setTotalPages(recordsData.pagination?.totalPages || 1);
-        setTotalRows(recordsData.pagination?.total || 0);
-        setSummary(await summaryRes.json());
+      // Refetch data by triggering search if filters are applied
+      if (hasAppliedFilters) {
+        setSearchTrigger(prev => prev + 1);
       }
     } catch (e: any) {
       setUploadMsg(e.message)
@@ -311,6 +308,160 @@ export default function DataManagementPage() {
         </LineChart>
       </ResponsiveContainer>
     )
+  }
+
+  // Details Modal Component
+  function DetailsModal({ row, onClose }: { row: any; onClose: () => void }) {
+    if (!row) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white">
+              <h2 className="text-2xl font-bold text-primary-dark">Record Details</h2>
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <FiX className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Date</label>
+                    <div className="mt-1 flex items-center gap-2">
+                      <FiCalendar className="text-accent-blue" size={16} />
+                      <span className="text-base text-primary-dark">
+                        {row.date ? new Date(row.date).toLocaleDateString("en-GB", { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        }) : '-'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Location</label>
+                    <div className="mt-1 flex items-start gap-2">
+                      <FiMapPin className="text-accent-blue mt-1 flex-shrink-0" size={16} />
+                      <span className="text-base text-primary-dark">
+                        {row.displayName || row.location || '-'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {row.district && (
+                    <div>
+                      <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">District</label>
+                      <div className="mt-1">
+                        <span className="text-base text-primary-dark">{row.district}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {row.suburb && (
+                    <div>
+                      <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Suburb</label>
+                      <div className="mt-1">
+                        <span className="text-base text-primary-dark">{row.suburb}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {row.road && (
+                    <div>
+                      <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Road</label>
+                      <div className="mt-1">
+                        <span className="text-base text-primary-dark">{row.road}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">State</label>
+                    <div className="mt-1">
+                      <span className="text-base text-primary-dark">{row.state || '-'}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Status/Type</label>
+                    <div className="mt-1">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                        row.status === 'Hotspot' ? 'text-red-700 bg-red-100 border border-red-200' :
+                        row.status === 'Active Cases' ? 'text-blue-700 bg-blue-100 border border-blue-200' :
+                        'text-gray-700 bg-gray-100 border border-gray-200'
+                      }`}>
+                        {row.status || '-'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Active Cases</label>
+                    <div className="mt-1">
+                      <span className="text-2xl font-bold text-red-600">{row.activeCases ?? '-'}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Cases</label>
+                    <div className="mt-1">
+                      <span className="text-2xl font-bold text-gray-700">{row.totalCases ?? row.activeCases ?? '-'}</span>
+                    </div>
+                  </div>
+
+                  {row.status !== 'Active Cases' && (
+                    <div>
+                      <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Cumulative Duration</label>
+                      <div className="mt-1">
+                        <span className="text-2xl font-bold text-blue-600">{row.days_duration ?? '-'} days</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {(row.latitude && row.longitude) && (
+                    <div>
+                      <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Coordinates</label>
+                      <div className="mt-1">
+                        <span className="text-base text-primary-dark">
+                          {row.latitude.toFixed(6)}, {row.longitude.toFixed(6)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-end">
+              <Button
+                onClick={onClose}
+                className="bg-accent-blue text-white hover:bg-secondary-blue"
+              >
+                Close
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+    );
   }
 
   return (
@@ -503,12 +654,13 @@ export default function DataManagementPage() {
                       <th className="py-4 px-6">Cumulative Duration</th>
                       <th className="py-4 px-6">Type</th>
                       <th className="py-4 px-6">State</th>
+                      <th className="py-4 px-6 text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {!hasAppliedFilters ? (
                       <tr>
-                        <td colSpan={6} className="py-16 px-6 text-center">
+                        <td colSpan={7} className="py-16 px-6 text-center">
                           <div className="flex flex-col items-center justify-center text-gray-500">
                             <FiFilter className="text-gray-300 mb-4" size={48} />
                             <p className="text-lg font-medium mb-2">No Data Displayed</p>
@@ -546,11 +698,14 @@ export default function DataManagementPage() {
                           <td className="py-4 px-6">
                             <div className="h-4 bg-gray-200 rounded w-24" />
                           </td>
+                          <td className="py-4 px-6">
+                            <div className="h-4 bg-gray-200 rounded w-16 mx-auto" />
+                          </td>
                         </tr>
                       ))
                     ) : paginatedData.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-16 px-6 text-center">
+                        <td colSpan={7} className="py-16 px-6 text-center">
                           <div className="flex flex-col items-center justify-center text-gray-500">
                             <FiDatabase className="text-gray-300 mb-4" size={48} />
                             <p className="text-lg font-medium mb-2">No Records Found</p>
@@ -599,133 +754,140 @@ export default function DataManagementPage() {
                           <td className="py-4 px-6 text-primary-dark">
                             {row.state || '-'}
                           </td>
+                          <td className="py-4 px-6">
+                            <button
+                              onClick={() => setSelectedRow(row)}
+                              className="mx-auto flex items-center justify-center gap-2 px-4 py-2 bg-accent-blue text-white rounded-lg hover:bg-secondary-blue transition-colors text-sm font-medium"
+                              title="View Details"
+                            >
+                              <FiEye size={16} />
+                              View
+                            </button>
+                          </td>
                         </motion.tr>
                       ))
                     )}
                   </tbody>
                 </table>
               </div>
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
-                <div className="text-sm text-gray-600">
-                  {hasAppliedFilters && totalRows > 0 ? (
-                    <>
-                      Showing <span className="font-semibold">{Math.min(totalRows, (currentPage - 1) * rowsPerPage + 1)}</span> to{" "}
-                      <span className="font-semibold">{Math.min(totalRows, currentPage * rowsPerPage)}</span> of{" "}
-                      <span className="font-semibold">{totalRows}</span> records
-                    </>
+              {/* Pagination Controls */}
+              {hasAppliedFilters && totalRows > 0 && (
+                <div className="flex items-center justify-between mt-4 px-6 py-3 bg-gray-50 rounded-b-xl border-t border-gray-200">
+                  <div className="text-sm text-gray-600">
+                    Showing {Math.min(totalRows, (currentPage - 1) * rowsPerPage + 1)} to {Math.min(totalRows, currentPage * rowsPerPage)} of {totalRows} records
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Previous
+                    </button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`px-3 py-1 rounded-lg border transition-colors ${
+                              currentPage === pageNum
+                                ? 'bg-accent-blue text-white border-accent-blue'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Historical Trends & Map - Only show when data exists */}
+          {paginatedData.length > 0 && (
+            <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="bg-white rounded-xl p-8 shadow-md border border-accent-blue/30">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="font-bold text-lg">Historical Trends</h3>
+                  <FiTrendingUp className="text-accent-blue" />
+                </div>
+                <div className="text-center mb-6">
+                  <div className="text-4xl font-extrabold text-accent-blue mb-2">{
+                    (historicalData as Array<{ date: string; activeCases: number; hotspotCount: number }>).reduce((sum: number, row) => sum + (row.activeCases || 0), 0).toLocaleString()
+                  }</div>
+                  <div className="text-lg text-gray-500 mb-4">Total Active Cases</div>
+                </div>
+                {historicalData.length > 0 ? (
+                  <HistoricalTrendsChart />
+                ) : (
+                  <div className="h-40 flex items-center justify-center text-gray-400">
+                    No historical data available
+                  </div>
+                )}
+                {/* <button className="w-full bg-accent-blue text-white py-3 rounded-lg font-bold text-base hover:bg-secondary-blue transition-colors">
+                  View Detailed Analytics
+                </button> */}
+              </div>
+
+              <div className="bg-white rounded-xl p-6 shadow-md border border-accent-blue/30">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-lg">Coverage Map</h3>
+                  <FiMapPin className="text-accent-blue" />
+                </div>
+                <div className="relative rounded-lg overflow-hidden mb-4">
+                  {mapData.length > 0 ? (
+                    <CoverageMap mapData={mapData} />
                   ) : (
-                    <span>Apply filters to view records</span>
+                    <div className="h-64 flex items-center justify-center text-gray-400 bg-gray-50">
+                      No location data available
+                    </div>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    onClick={() => setCurrentPage(1)}
-                    disabled={currentPage === 1}
-                    title="First Page"
-                  >
-                    <FiChevronRight className="rotate-180" size={18} />
-                    <FiChevronRight className="rotate-180 -ml-3" size={18} />
-                  </button>
-                  <button
-                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    title="Previous Page"
-                  >
-                    <FiChevronRight className="rotate-180" size={18} />
-                  </button>
-                  
-                  <div className="flex items-center gap-1 mx-2">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-                      
-                      return (
-                        <button
-                          key={pageNum}
-                          className={`w-10 h-10 rounded-lg border font-medium transition-all ${currentPage === pageNum ? "bg-accent-blue text-white border-accent-blue" : "border-gray-300 hover:bg-gray-100 text-gray-700"}`}
-                          onClick={() => setCurrentPage(pageNum)}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-3 bg-light-bg rounded-lg">
+                    <div className="text-lg font-bold text-accent-blue">
+                      {uniqueLocations.length}
+                    </div>
+                    <div className="text-xs text-gray-600">Locations Covered</div>
                   </div>
-
-                  <button
-                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    title="Next Page"
-                  >
-                    <FiChevronRight size={18} />
-                  </button>
-                  <button
-                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    onClick={() => setCurrentPage(totalPages)}
-                    disabled={currentPage === totalPages}
-                    title="Last Page"
-                  >
-                    <FiChevronRight size={18} />
-                    <FiChevronRight className="-ml-3" size={18} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Historical Trends & Map */}
-          <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-white rounded-xl p-8 shadow-md border border-accent-blue/30">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-bold text-lg">Historical Trends</h3>
-                <FiTrendingUp className="text-accent-blue" />
-              </div>
-              <div className="text-center mb-6">
-                <div className="text-4xl font-extrabold text-accent-blue mb-2">{
-                  (historicalData || []).reduce((sum, row) => sum + (row.activeCases || 0), 0).toLocaleString()
-                }</div>
-                <div className="text-lg text-gray-500 mb-4">Total Active Cases</div>
-              </div>
-              <HistoricalTrendsChart />
-              <button className="w-full bg-accent-blue text-white py-3 rounded-lg font-bold text-base hover:bg-secondary-blue transition-colors">
-                View Detailed Analytics
-              </button>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 shadow-md border border-accent-blue/30">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-lg">Coverage Map</h3>
-                <FiMapPin className="text-accent-blue" />
-              </div>
-              <div className="relative rounded-lg overflow-hidden mb-4">
-                <CoverageMap mapData={mapData} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-3 bg-light-bg rounded-lg">
-                  <div className="text-lg font-bold text-accent-blue">
-                    {uniqueLocations.length - 1}
+                  <div className="text-center p-3 bg-light-bg rounded-lg">
+                    <div className="text-lg font-bold text-accent-blue">24/7</div>
+                    <div className="text-xs text-gray-600">Monitoring</div>
                   </div>
-                  <div className="text-xs text-gray-600">Locations Covered</div>
-                </div>
-                <div className="text-center p-3 bg-light-bg rounded-lg">
-                  <div className="text-lg font-bold text-accent-blue">24/7</div>
-                  <div className="text-xs text-gray-600">Monitoring</div>
                 </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          )}
         </motion.section>
       </main>
+
+      {/* Details Modal */}
+      <AnimatePresence>
+        {selectedRow && (
+          <DetailsModal row={selectedRow} onClose={() => setSelectedRow(null)} />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

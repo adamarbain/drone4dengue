@@ -299,6 +299,16 @@ export async function getRecentPredictions(companyId: string, limit: number = 6)
   return response.data;
 }
 
+// Get dashboard historical stats for comparison
+export async function getDashboardHistoricalStats(): Promise<{
+  riskPredictionsLastWeek: number;
+  droneInsightsLastWeek: number;
+  activeUsersLastWeek: number;
+}> {
+  const response = await api.get('/users/dashboard/historical-stats');
+  return response.data;
+}
+
 // Get comprehensive dashboard stats
 export async function getDashboardStats(companyId: string): Promise<DashboardStats> {
   try {
@@ -315,9 +325,19 @@ export async function getDashboardStats(companyId: string): Promise<DashboardSta
       p.createdAt.startsWith(today)
     ).length || 0;
 
+    // Get drone images uploaded this week (last 7 days)
+    let droneInsightsUploaded = 0;
+    try {
+      const droneStatsResponse = await api.get('/drones/stats');
+      droneInsightsUploaded = droneStatsResponse.data.thisWeekImages || 0;
+    } catch (err) {
+      console.warn('Failed to fetch drone insights count:', err);
+      droneInsightsUploaded = 0;
+    }
+
     return {
       riskPredictionsToday,
-      droneInsightsUploaded: 0, // This would need a separate endpoint for drone uploads
+      droneInsightsUploaded,
       activeUsers: userSummary.active,
       totalUsers: userSummary.total,
       pendingUsers: userSummary.pending,
@@ -409,5 +429,101 @@ export async function markAllNotificationsAsRead(): Promise<{ updated: number }>
 // Delete notification
 export async function deleteNotification(notificationId: string): Promise<{ success: boolean }> {
   const response = await api.delete(`/api/notifications/${notificationId}`);
+  return response.data;
+}
+
+// Prediction Accuracy API functions
+export interface PredictionAccuracyRequest {
+  latitude: number;
+  longitude: number;
+  date: string; // YYYY-MM-DD format
+}
+
+export interface PredictionAccuracyResponse {
+  success: boolean;
+  test: {
+    location: {
+      latitude: number;
+      longitude: number;
+    };
+    date: string;
+    toleranceRadius: string;
+  };
+  prediction: {
+    available: boolean;
+    combinedScore?: number;
+    riskLevel?: string;
+    model1Score?: number;
+    model2Score?: number;
+    isHotspot?: number;
+    locationCluster?: number;
+    error?: string;
+  };
+  actualData: {
+    found: boolean;
+    source: string;
+    totalActiveCases: number;
+    riskLevel: string;
+    recordsCount: number;
+    records: Array<{
+      id: string;
+      location: string;
+      date: string;
+      activeCases: number;
+      totalCases: number;
+      status: string;
+    }>;
+  };
+  accuracy: {
+    score: number | null;
+    riskLevelMatch: boolean | null;
+    interpretation: string;
+  };
+  comparison: {
+    predicted?: {
+      score: number;
+      riskLevel: string;
+      model1Score?: number;
+      model2Score?: number;
+    };
+    actual?: {
+      totalCases: number;
+      riskLevel: string;
+      recordsFound: number;
+      locations: string[];
+    };
+    metrics?: {
+      riskLevelMatch: boolean;
+      scoreDifference: number | null;
+      accuracyScore: number | null;
+      note?: string;
+    };
+  };
+  timestamp: string;
+}
+
+export interface DateRangeResponse {
+  success: boolean;
+  dateRange: {
+    earliest: string | null;
+    latest: string | null;
+    totalRecords: number;
+  };
+  filtered: boolean;
+}
+
+// Test prediction accuracy (public endpoint)
+export async function testPredictionAccuracy(data: PredictionAccuracyRequest): Promise<PredictionAccuracyResponse> {
+  const response = await api.post('/api/prediction-accuracy/test', data);
+  return response.data;
+}
+
+// Get available date range for accuracy testing (public endpoint)
+export async function getAccuracyDateRange(latitude?: number, longitude?: number): Promise<DateRangeResponse> {
+  let url = '/api/prediction-accuracy/date-range';
+  if (latitude !== undefined && longitude !== undefined) {
+    url += `?latitude=${latitude}&longitude=${longitude}`;
+  }
+  const response = await api.get(url);
   return response.data;
 } 

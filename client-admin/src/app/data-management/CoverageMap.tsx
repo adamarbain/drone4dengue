@@ -29,7 +29,7 @@ export default function CoverageMap({ mapData }: { mapData: any[] }) {
           >
             <Popup>
               <div>
-                <div className="font-bold">{point.location}</div>
+                <div className="font-bold">{point.displayName || point.location}</div>
                 <div>Active: {point.activeCases}</div>
                 <div>Total: {point.totalCases}</div>
                 <div>Status: {point.status}</div>
