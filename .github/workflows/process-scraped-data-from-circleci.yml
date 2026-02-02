@@ -1,0 +1,40 @@
+name: Process Scraped Data from CircleCI
+
+on:
+  repository_dispatch:
+    types:
+      - process-scraped-data
+  workflow_dispatch:     # Allows manual trigger for testing
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  trigger-ml-workflow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Log trigger event
+        run: |
+          echo "Received repository_dispatch event from CircleCI"
+          echo "Event type: process-scraped-data"
+          echo "Triggering ML training workflow..."
+      
+      - name: Trigger ML Training Workflow
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.GH_PAT }}" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/02-train-ml-models.yml/dispatches \
+            -d '{"ref":"${{ github.ref_name }}"}'
+      
+      - name: Wait for workflow to be queued
+        run: sleep 5
+      
+      - name: Verify workflow was triggered
+        run: |
+          echo "ML Training workflow should now be queued or running"
+          echo "Check the Actions tab to verify: https://github.com/${{ github.repository }}/actions"
