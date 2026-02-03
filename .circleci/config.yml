@@ -158,14 +158,14 @@ workflows:
   # Only runs data scraping - GitHub Actions handles ML training and DB storage
   daily-data-processing:
     triggers:
-      - schedule:
-          cron: "0 13 * * *"  # 1pm UTC = 9pm Malaysia time
-          filters:
-            branches:
-              only:
-                - main
-                - master
-                - development
+      # - schedule:
+      #     cron: "0 13 * * *"  # 1pm UTC = 9pm Malaysia time
+      #     filters:
+      #       branches:
+      #         only:
+      #           - main
+      #           - master
+      #           - development
     jobs:
       - run-daily-data-processing
 
