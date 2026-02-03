@@ -2,7 +2,7 @@ name: Reverse Geocode Dengue Data
 
 on:
   workflow_run:
-    workflows: ["Run Dengue Data Script Daily"]
+    workflows: ["Store Dengue Data to Database"]
     types:
       - completed
   workflow_dispatch:  # Manual trigger also available
