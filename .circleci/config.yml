@@ -168,8 +168,3 @@ workflows:
       #           - development
     jobs:
       - run-daily-data-processing
-
-  # Manual trigger for daily data processing
-  run-daily-data-processing-manual:
-    jobs:
-      - run-daily-data-processing
