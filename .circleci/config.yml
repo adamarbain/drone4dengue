@@ -125,13 +125,13 @@ jobs:
             echo "Repository: ${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}"
             echo "Branch: ${CIRCLE_BRANCH}"
             
-            RESPONSE=$(curl -X POST \
-              -H "Accept: application/vnd.github.v3+json" \
-              -H "Authorization: token ${GH_PAT}" \
-              https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/dispatches \
-              -d '{"event_type":"process-scraped-data"}' \
-              -w "\nHTTP_STATUS:%{http_code}" \
-              -s)
+            # RESPONSE=$(curl -X POST \
+            #   -H "Accept: application/vnd.github.v3+json" \
+            #   -H "Authorization: token ${GH_PAT}" \
+            #   https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/dispatches \
+            #   -d '{"event_type":"process-scraped-data"}' \
+            #   -w "\nHTTP_STATUS:%{http_code}" \
+            #   -s)
             
             HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS" | cut -d: -f2)
             

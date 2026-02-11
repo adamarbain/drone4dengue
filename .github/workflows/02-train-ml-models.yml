@@ -2,7 +2,7 @@ name: Train ML Models
 
 on:
   workflow_run:
-    workflows: ["Process Dengue Data"]
+    # workflows: ["Process Dengue Data"]
     types:
       - completed
   # schedule:
