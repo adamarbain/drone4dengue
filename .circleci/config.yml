@@ -118,32 +118,6 @@ jobs:
               git pull --rebase origin ${CIRCLE_BRANCH} || true
               git push origin ${CIRCLE_BRANCH} || echo "Push failed or nothing to push"
             fi
-      - run:
-          name: Trigger GitHub Actions Workflow
-          command: |
-            echo "Triggering GitHub Actions workflow for ML training and database operations..."
-            echo "Repository: ${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}"
-            echo "Branch: ${CIRCLE_BRANCH}"
-            
-            # RESPONSE=$(curl -X POST \
-            #   -H "Accept: application/vnd.github.v3+json" \
-            #   -H "Authorization: token ${GH_PAT}" \
-            #   https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/dispatches \
-            #   -d '{"event_type":"process-scraped-data"}' \
-            #   -w "\nHTTP_STATUS:%{http_code}" \
-            #   -s)
-            
-            HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS" | cut -d: -f2)
-            
-            if [ "$HTTP_STATUS" = "204" ]; then
-              echo "✓ Successfully triggered GitHub Actions workflow!"
-              echo "Check workflow status at: https://github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/actions"
-            else
-              echo "✗ Failed to trigger GitHub Actions workflow"
-              echo "HTTP Status: $HTTP_STATUS"
-              echo "Response: $RESPONSE"
-              exit 1
-            fi
 
 
 # ============================================
