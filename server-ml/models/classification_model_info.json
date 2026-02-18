@@ -1,0 +1,41 @@
+{
+  "model1_features": [
+    "centroid_x",
+    "centroid_y",
+    "location_cluster",
+    "month",
+    "day_of_year",
+    "is_hotspot",
+    "cases_lag_1",
+    "cases_lag_7",
+    "cases_lag_30",
+    "cases_avg_7",
+    "cases_avg_30"
+  ],
+  "model2_features": [
+    "centroid_x",
+    "centroid_y",
+    "humidity",
+    "temperature",
+    "rainfall",
+    "month",
+    "day_of_year",
+    "location_cluster",
+    "is_hotspot"
+  ],
+  "risk_mapping": {
+    "Low": 0,
+    "Medium": 1,
+    "High": 2
+  },
+  "risk_labels": [
+    "Low",
+    "Medium",
+    "High"
+  ],
+  "risk_thresholds": {
+    "Low": "1-2 cases",
+    "Medium": "3-5 cases",
+    "High": "6+ cases"
+  }
+}

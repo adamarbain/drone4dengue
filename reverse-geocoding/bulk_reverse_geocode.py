@@ -474,7 +474,8 @@ class DengueDataGeocoder:
 def main():
     """Main function"""
     # Get configuration from environment variables
-    database_url = os.getenv('DATABASE_URL')
+    database_url = "postgresql://neondb_owner:npg_zkRpJ0wqb1Og@ep-blue-scene-a1vazo7s-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+    # database_url = os.getenv('DATABASE_URL')
     if not database_url:
         logger.error("DATABASE_URL environment variable is required")
         sys.exit(1)
