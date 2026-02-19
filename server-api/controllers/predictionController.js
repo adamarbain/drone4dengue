@@ -366,31 +366,75 @@ async function predictCompanyThreeModels(req, res) {
     }
 
     // Get drone images for this location if imageIds are provided
+    // Apply business rules: 50+ images total AND images within last 7 days
     let imageUrls = [];
     if (imageIds && imageIds.length > 0) {
-      const images = await prisma.image.findMany({
+      // Check total image count for this location
+      const totalImageCount = await prisma.image.count({
         where: {
-          id: { in: imageIds },
           companyId: companyId,
           companyLocationId: companyLocationId
-        },
-        select: {
-          id: true,
-          url: true,
-          filename: true
         }
       });
 
-      // Convert relative URLs to absolute URLs (or use Firebase URLs as-is)
-      imageUrls = images.map(img => {
-        // If URL is already a Firebase URL (absolute), use it directly
-        if (img.url && (img.url.startsWith('http://') || img.url.startsWith('https://'))) {
-          return img.url;
-        }
-        // Otherwise, assume it's a relative URL and prepend API base URL
-        const baseUrl = process.env.API_BASE_URL || 'http://localhost:4000';
-        return `${baseUrl}${img.url}`;
+      logger.info('Three-model prediction - Image count check', { 
+        companyLocationId, 
+        totalImageCount,
+        threshold: 50 
       });
+
+      // Only proceed with Model 3 if location has 50+ images total
+      if (totalImageCount >= 50) {
+        // Calculate date for 7 days ago
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        // Filter images: only those uploaded within last 7 days
+        const images = await prisma.image.findMany({
+          where: {
+            id: { in: imageIds },
+            companyId: companyId,
+            companyLocationId: companyLocationId,
+            createdAt: { gte: sevenDaysAgo }
+          },
+          select: {
+            id: true,
+            url: true,
+            filename: true,
+            createdAt: true
+          }
+        });
+
+        logger.info('Three-model prediction - Recent images filtered', { 
+          companyLocationId,
+          totalProvided: imageIds.length,
+          recentImagesFound: images.length,
+          dateThreshold: sevenDaysAgo.toISOString()
+        });
+
+        if (images.length > 0) {
+          // Convert relative URLs to absolute URLs (or use Firebase URLs as-is)
+          imageUrls = images.map(img => {
+            // If URL is already a Firebase URL (absolute), use it directly
+            if (img.url && (img.url.startsWith('http://') || img.url.startsWith('https://'))) {
+              return img.url;
+            }
+            // Otherwise, assume it's a relative URL and prepend API base URL
+            const baseUrl = process.env.API_BASE_URL || 'http://localhost:4000';
+            return `${baseUrl}${img.url}`;
+          });
+        } else {
+          logger.warn('Three-model prediction - No recent images found, falling back to Models 1 & 2', { 
+            companyLocationId 
+          });
+        }
+      } else {
+        logger.warn('Three-model prediction - Insufficient images, falling back to Models 1 & 2', { 
+          companyLocationId,
+          totalImageCount,
+          required: 50
+        });
+      }
     }
 
     // Get three-model prediction from ML service
@@ -1132,18 +1176,52 @@ async function predictBulkAllLocations(req, res) {
             results.totalLocations++;
 
             // Get drone images for this location (optional)
-            const images = await prisma.image.findMany({
+            // Apply business rules: 50+ images total AND images within last 7 days
+            let images = [];
+            
+            // Check total image count for this location
+            const totalImageCount = await prisma.image.count({
               where: {
                 companyId: company.id,
                 companyLocationId: location.id
-              },
-              select: {
-                id: true,
-                url: true,
-                filename: true
-              },
-              take: 5 // Limit to 5 most recent images per location
+              }
             });
+
+            // Only proceed with Model 3 if location has 50+ images total
+            if (totalImageCount >= 50) {
+              // Calculate date for 7 days ago
+              const sevenDaysAgo = new Date();
+              sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+              // Get images uploaded within last 7 days
+              images = await prisma.image.findMany({
+                where: {
+                  companyId: company.id,
+                  companyLocationId: location.id,
+                  createdAt: { gte: sevenDaysAgo }
+                },
+                select: {
+                  id: true,
+                  url: true,
+                  filename: true,
+                  createdAt: true
+                },
+                orderBy: { createdAt: 'desc' }
+              });
+
+              logger.debug('[BULK PREDICTION] Image eligibility check', {
+                locationName: location.name,
+                totalImages: totalImageCount,
+                recentImages: images.length,
+                dateThreshold: sevenDaysAgo.toISOString()
+              });
+            } else {
+              logger.debug('[BULK PREDICTION] Location has insufficient images, using Models 1 & 2 only', {
+                locationName: location.name,
+                totalImages: totalImageCount,
+                required: 50
+              });
+            }
 
             // Convert image URLs to absolute URLs
             const imageUrls = images.map(img => {

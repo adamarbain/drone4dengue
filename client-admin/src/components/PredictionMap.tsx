@@ -249,13 +249,26 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
 
       try {
         // Use smart prediction logic for batch processing
-        const hasImages = await checkLocationHasImages(location.id)
+        // Apply business rules: 50+ images total AND images within last 7 days
+        const imagesResponse = await getLocationImages(companyId, location.id)
+        const allImages = imagesResponse.images || []
+        
+        // Calculate date for 7 days ago
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+        
+        // Filter images to last 7 days
+        const recentImages = allImages.filter(img => 
+          new Date(img.createdAt) >= sevenDaysAgo
+        )
+        
+        // Check if location qualifies for Model 3 (50+ images total AND recent images available)
+        const qualifiesForModel3 = allImages.length >= 50 && recentImages.length > 0
         
         let response
-        if (hasImages) {
-          // Get images for the location
-          const imagesResponse = await getLocationImages(companyId, location.id)
-          const imageIds = imagesResponse.images?.map(img => img.id) || []
+        if (qualifiesForModel3) {
+          // Get image IDs from recent images only
+          const imageIds = recentImages.map(img => img.id)
           
           // Set status to processing for three-model prediction
           setPredictionStatuses(prev => new Map(prev).set(location.id, 'processing'))
@@ -439,15 +452,28 @@ export default function PredictionMap({ onPredictionUpdate }: PredictionMapProps
       
       // Check if location has images (only for company locations)
       if (locationId) {
-        hasImages = await checkLocationHasImages(locationId)
+        // Get all images for the location
+        const imagesResponse = await getLocationImages(companyId, locationId)
+        const allImages = imagesResponse.images || []
         
-        if (hasImages) {
+        // Calculate date for 7 days ago
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+        
+        // Filter images to last 7 days
+        const recentImages = allImages.filter(img => 
+          new Date(img.createdAt) >= sevenDaysAgo
+        )
+        
+        // Check if location qualifies for Model 3 (50+ images total AND recent images available)
+        const qualifiesForModel3 = allImages.length >= 50 && recentImages.length > 0
+        
+        if (qualifiesForModel3) {
+          // Get image IDs from recent images only
+          const imageIds = recentImages.map(img => img.id)
+          
           // Set status to processing for three-model prediction
           setPredictionStatuses(prev => new Map(prev).set(locationId, 'processing'))
-          
-          // Get images for the location
-          const imagesResponse = await getLocationImages(companyId, locationId)
-          const imageIds = imagesResponse.images?.map(img => img.id) || []
           
           // Use three-model prediction (async - will take longer)
           const response = await predictCompanyThreeModels({
