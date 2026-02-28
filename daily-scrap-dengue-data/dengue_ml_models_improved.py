@@ -14,13 +14,15 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.model_selection import train_test_split, cross_val_score, TimeSeriesSplit
+from sklearn.model_selection import train_test_split, cross_val_score, TimeSeriesSplit, RandomizedSearchCV
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.svm import SVR
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.neighbors import KNeighborsRegressor
+import xgboost as xgb
+import lightgbm as lgb
 import joblib
 import warnings
 warnings.filterwarnings('ignore')
@@ -143,6 +145,40 @@ class ImprovedDengueMLModels:
         from sklearn.cluster import KMeans
         kmeans = KMeans(n_clusters=10, random_state=42)
         self.df['location_cluster'] = kmeans.fit_predict(self.df[['centroid_x', 'centroid_y']])
+        
+        # Create lagged weather features per location (aligned with dengue incubation cycle)
+        self.df = self.df.sort_values(['centroid_x', 'centroid_y', 'date']).reset_index(drop=True)
+        loc_group = self.df.groupby(['centroid_x', 'centroid_y'])
+        
+        for lag in [7, 14, 21, 28]:
+            self.df[f'rainfall_lag_{lag}'] = loc_group['rainfall'].shift(lag)
+            self.df[f'humidity_lag_{lag}'] = loc_group['humidity'].shift(lag)
+            self.df[f'temperature_lag_{lag}'] = loc_group['temperature'].shift(lag)
+        
+        # Cumulative rainfall over past 14 and 28 days (standing water indicator)
+        self.df['rainfall_cumul_14d'] = loc_group['rainfall'].transform(
+            lambda x: x.rolling(14, min_periods=1).sum()
+        )
+        self.df['rainfall_cumul_28d'] = loc_group['rainfall'].transform(
+            lambda x: x.rolling(28, min_periods=1).sum()
+        )
+        
+        lagged_cols = [c for c in self.df.columns if '_lag_' in c or '_cumul_' in c]
+        print(f"Created {len(lagged_cols)} lagged/cumulative weather features")
+        
+        # Weather interaction features
+        self.df['temp_x_humidity'] = self.df['temperature'] * self.df['humidity']
+        self.df['temp_x_rainfall'] = self.df['temperature'] * self.df['rainfall']
+        self.df['humidity_x_rainfall'] = self.df['humidity'] * self.df['rainfall']
+        
+        # Favorable mosquito breeding conditions (warm + humid + recent rain)
+        self.df['breeding_favorable'] = (
+            (self.df['temperature'].between(25, 35)) &
+            (self.df['humidity'] > 60) &
+            (self.df['rainfall'] > 0)
+        ).astype(int)
+        
+        print(f"Created 4 weather interaction features")
         
         print("Data preprocessing completed!")
         print(f"Final dataset shape: {self.df.shape}")
@@ -575,41 +611,90 @@ class ImprovedDengueMLModels:
         print("TRAINING MODEL 2: WEATHER-BASED MODEL (IMPROVED)")
         print("="*50)
         
-        # Prepare features for Model 2
-        model2_features = ['centroid_x', 'centroid_y', 'humidity', 'temperature', 'rainfall',
-                          'month', 'day_of_year', 'location_cluster', 'is_hotspot']
+        # Prepare features for Model 2 — weather + geography hybrid
+        model2_features = [
+            'centroid_x', 'centroid_y',
+            'humidity', 'temperature', 'rainfall',
+            'month', 'day_of_year', 'week_of_year',
+            'location_cluster', 'state_encoded', 'is_hotspot',
+            'rainfall_lag_7', 'humidity_lag_7', 'temperature_lag_7',
+            'rainfall_cumul_14d', 'rainfall_cumul_28d',
+            'temp_x_humidity', 'temp_x_rainfall', 'humidity_x_rainfall',
+            'breeding_favorable',
+        ]
+        print(f"Weather + geography features: {len(model2_features)} total features")
         
         X2 = self.df[model2_features].copy()
         y2 = self.df[self.target_column].copy()
         
-        # Handle missing values in Model 2 features to avoid NaN issues for some regressors
+        # Handle missing values (lagged features will have NaNs for early rows)
         if X2.isnull().any().any():
-            print("\nMissing values detected in Model 2 features. Imputing with median values...")
             missing_before = X2.isnull().sum()
-            print("Missing values per feature before imputation:")
-            print(missing_before[missing_before > 0])
-            X2 = X2.fillna(X2.median(numeric_only=True))
+            cols_with_missing = missing_before[missing_before > 0]
+            print(f"\nImputing {len(cols_with_missing)} features with missing values...")
+            X2 = X2.fillna(X2.median(numeric_only=True)).fillna(0)
             print(f"Total missing values after imputation: {int(X2.isnull().sum().sum())}")
         
         print(f"Model 2 training data: {X2.shape[0]} samples, {X2.shape[1]} features")
         
-        # Split data
-        X2_train, X2_test, y2_train, y2_test = train_test_split(X2, y2, test_size=0.2, random_state=42)
+        # Time-series aware split: train on earlier dates, test on latest 20%
+        dates = self.df['date']
+        split_date = dates.quantile(0.8)
+        train_mask = dates <= split_date
+        test_mask = dates > split_date
+        
+        X2_train, X2_test = X2[train_mask], X2[test_mask]
+        y2_train, y2_test = y2[train_mask], y2[test_mask]
+        print(f"Time-series split: train up to {split_date.date()}, test after")
+        print(f"  Train: {len(X2_train)} samples, Test: {len(X2_test)} samples")
         
         # Scale features
         self.scaler2 = StandardScaler()
         X2_train_scaled = self.scaler2.fit_transform(X2_train)
         X2_test_scaled = self.scaler2.transform(X2_test)
         
-        # Define models to test
+        # Target is count data (55% are 1, 80% are ≤2, skewness=8.6)
+        # Use Poisson/Tweedie objectives which are designed for count data
+        print(f"\nTarget distribution: median={y2_train.median():.0f}, "
+              f"mean={y2_train.mean():.2f}, skew={y2_train.skew():.2f}")
+        
+        # Define models — prioritize count-appropriate objectives
         models = {
-            'Random Forest': RandomForestRegressor(n_estimators=100, max_depth=10, random_state=42),
+            'XGBoost (Poisson)': xgb.XGBRegressor(
+                objective='count:poisson', n_estimators=200, max_depth=8,
+                learning_rate=0.05, subsample=0.8, colsample_bytree=0.8,
+                reg_alpha=0.1, reg_lambda=1.0, random_state=42, verbosity=0
+            ),
+            'LightGBM (Poisson)': lgb.LGBMRegressor(
+                objective='poisson', n_estimators=200, max_depth=8,
+                learning_rate=0.05, subsample=0.8, colsample_bytree=0.8,
+                reg_alpha=0.1, reg_lambda=1.0, random_state=42, verbose=-1
+            ),
+            'LightGBM (Tweedie)': lgb.LGBMRegressor(
+                objective='tweedie', tweedie_variance_power=1.5,
+                n_estimators=200, max_depth=8, learning_rate=0.05,
+                subsample=0.8, colsample_bytree=0.8,
+                reg_alpha=0.1, reg_lambda=1.0, random_state=42, verbose=-1
+            ),
+            'XGBoost (Squared)': xgb.XGBRegressor(
+                n_estimators=200, max_depth=8, learning_rate=0.05,
+                subsample=0.8, colsample_bytree=0.8,
+                reg_alpha=0.1, reg_lambda=1.0, random_state=42, verbosity=0
+            ),
+            'LightGBM (Squared)': lgb.LGBMRegressor(
+                n_estimators=200, max_depth=8, learning_rate=0.05,
+                subsample=0.8, colsample_bytree=0.8,
+                reg_alpha=0.1, reg_lambda=1.0, random_state=42, verbose=-1
+            ),
+            'Random Forest': RandomForestRegressor(n_estimators=200, max_depth=10, random_state=42),
             'Gradient Boosting': GradientBoostingRegressor(n_estimators=100, max_depth=6, random_state=42),
-            'Linear Regression': LinearRegression(),
             'Ridge Regression': Ridge(alpha=1.0, random_state=42),
-            'Lasso Regression': Lasso(alpha=0.1, random_state=42),
-            'SVR': SVR(kernel='rbf', C=1.0),
-            'KNN': KNeighborsRegressor(n_neighbors=5)
+        }
+        
+        tree_models = {
+            'Random Forest', 'Gradient Boosting',
+            'XGBoost (Poisson)', 'XGBoost (Squared)',
+            'LightGBM (Poisson)', 'LightGBM (Tweedie)', 'LightGBM (Squared)',
         }
         
         # Train and evaluate models
@@ -617,13 +702,15 @@ class ImprovedDengueMLModels:
         for name, model in models.items():
             print(f"\nTraining {name}...")
             
-            # Use scaled data for models that need it
-            if name in ['Linear Regression', 'Ridge Regression', 'Lasso Regression', 'SVR', 'KNN']:
+            if name not in tree_models:
                 model.fit(X2_train_scaled, y2_train)
                 y2_pred = model.predict(X2_test_scaled)
             else:
                 model.fit(X2_train, y2_train)
                 y2_pred = model.predict(X2_test)
+            
+            # Ensure non-negative predictions for count data
+            y2_pred = np.maximum(y2_pred, 0)
             
             # Calculate metrics
             mse = mean_squared_error(y2_test, y2_pred)
@@ -640,12 +727,102 @@ class ImprovedDengueMLModels:
             
             print(f"{name} - MSE: {mse:.4f}, MAE: {mae:.4f}, R²: {r2:.4f}")
         
-        # Select best model
+        # Select best model from initial comparison
         best_model2_name = max(model2_results.keys(), key=lambda x: model2_results[x]['r2'])
-        self.model2 = model2_results[best_model2_name]['model']
+        print(f"\nBest initial model: {best_model2_name} (R²: {model2_results[best_model2_name]['r2']:.4f})")
         
-        print(f"\nBest Model 2: {best_model2_name}")
-        print(f"R² Score: {model2_results[best_model2_name]['r2']:.4f}")
+        # Hyperparameter tuning on top-2 tree-based models
+        print(f"\n{'='*50}")
+        print("HYPERPARAMETER TUNING (RandomizedSearchCV)")
+        print(f"{'='*50}")
+        
+        tuning_configs = {
+            'XGBoost (Poisson)': {
+                'estimator': xgb.XGBRegressor(
+                    objective='count:poisson', random_state=42, verbosity=0
+                ),
+                'params': {
+                    'n_estimators': [100, 200, 300, 500],
+                    'max_depth': [4, 6, 8, 10],
+                    'learning_rate': [0.01, 0.05, 0.1, 0.2],
+                    'subsample': [0.7, 0.8, 0.9, 1.0],
+                    'colsample_bytree': [0.7, 0.8, 0.9, 1.0],
+                    'reg_alpha': [0, 0.1, 0.5, 1.0],
+                    'reg_lambda': [0.5, 1.0, 2.0],
+                    'min_child_weight': [1, 3, 5],
+                }
+            },
+            'LightGBM (Poisson)': {
+                'estimator': lgb.LGBMRegressor(
+                    objective='poisson', random_state=42, verbose=-1
+                ),
+                'params': {
+                    'n_estimators': [100, 200, 300, 500],
+                    'max_depth': [4, 6, 8, 10, -1],
+                    'learning_rate': [0.01, 0.05, 0.1, 0.2],
+                    'subsample': [0.7, 0.8, 0.9, 1.0],
+                    'colsample_bytree': [0.7, 0.8, 0.9, 1.0],
+                    'reg_alpha': [0, 0.1, 0.5, 1.0],
+                    'reg_lambda': [0.5, 1.0, 2.0],
+                    'num_leaves': [15, 31, 63, 127],
+                }
+            },
+            'LightGBM (Tweedie)': {
+                'estimator': lgb.LGBMRegressor(
+                    objective='tweedie', tweedie_variance_power=1.5,
+                    random_state=42, verbose=-1
+                ),
+                'params': {
+                    'n_estimators': [100, 200, 300, 500],
+                    'max_depth': [4, 6, 8, 10, -1],
+                    'learning_rate': [0.01, 0.05, 0.1, 0.2],
+                    'subsample': [0.7, 0.8, 0.9, 1.0],
+                    'colsample_bytree': [0.7, 0.8, 0.9, 1.0],
+                    'reg_alpha': [0, 0.1, 0.5, 1.0],
+                    'reg_lambda': [0.5, 1.0, 2.0],
+                    'num_leaves': [15, 31, 63, 127],
+                }
+            },
+        }
+        
+        best_tuned_r2 = model2_results[best_model2_name]['r2']
+        best_tuned_model = model2_results[best_model2_name]['model']
+        best_tuned_name = best_model2_name
+        
+        for name, config in tuning_configs.items():
+            print(f"\nTuning {name} (50 iterations, 5-fold CV on training set)...")
+            search = RandomizedSearchCV(
+                config['estimator'], config['params'],
+                n_iter=50, cv=5, scoring='r2',
+                random_state=42, n_jobs=-1
+            )
+            search.fit(X2_train, y2_train)
+            
+            y2_pred_tuned = search.predict(X2_test)
+            tuned_r2 = r2_score(y2_test, y2_pred_tuned)
+            tuned_mse = mean_squared_error(y2_test, y2_pred_tuned)
+            tuned_mae = mean_absolute_error(y2_test, y2_pred_tuned)
+            
+            print(f"  Best CV R²: {search.best_score_:.4f}")
+            print(f"  Test R²: {tuned_r2:.4f}, MSE: {tuned_mse:.4f}, MAE: {tuned_mae:.4f}")
+            print(f"  Best params: {search.best_params_}")
+            
+            model2_results[f'{name} (Tuned)'] = {
+                'model': search.best_estimator_,
+                'mse': tuned_mse,
+                'mae': tuned_mae,
+                'r2': tuned_r2,
+                'predictions': y2_pred_tuned
+            }
+            
+            if tuned_r2 > best_tuned_r2:
+                best_tuned_r2 = tuned_r2
+                best_tuned_model = search.best_estimator_
+                best_tuned_name = f'{name} (Tuned)'
+        
+        self.model2 = best_tuned_model
+        print(f"\nFinal Best Model 2: {best_tuned_name}")
+        print(f"R² Score: {best_tuned_r2:.4f}")
         
         # Store feature names for Model 2
         self.model2_feature_names = model2_features
