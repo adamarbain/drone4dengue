@@ -15,17 +15,84 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.model_selection import train_test_split, cross_val_score, TimeSeriesSplit, RandomizedSearchCV
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, StackingRegressor
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.svm import SVR
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.neighbors import KNeighborsRegressor
+from sklearn.base import BaseEstimator, RegressorMixin
+from sklearn.model_selection import TimeSeriesSplit
 import xgboost as xgb
 import lightgbm as lgb
 import joblib
 import warnings
 warnings.filterwarnings('ignore')
+
+class TwoStageHurdleModel(BaseEstimator, RegressorMixin):
+    """
+    A two-stage hurdle model for heavily right-skewed count data.
+    Stage 1: Classify if the target is above a certain threshold (the 'hurdle').
+    Stage 2: Route the data to specialized regressors for low vs. high case counts.
+    """
+    def __init__(self, hurdle_threshold=2):
+        self.hurdle_threshold = hurdle_threshold
+        
+        # Stage 1: Classifier to predict normal vs. outbreak
+        self.classifier = lgb.LGBMClassifier(
+            n_estimators=150, max_depth=6, learning_rate=0.05,
+            class_weight='balanced', random_state=42, verbose=-1
+        )
+        
+        # Stage 2a: Regressor specialized for low counts (<= 2)
+        self.regressor_low = lgb.LGBMRegressor(
+            n_estimators=100, max_depth=4, learning_rate=0.05, 
+            random_state=42, verbose=-1
+        )
+        
+        # Stage 2b: Regressor specialized for high counts (> 2) using Poisson
+        self.regressor_high = xgb.XGBRegressor(
+            objective='count:poisson', n_estimators=200, max_depth=6,
+            learning_rate=0.05, subsample=0.8, colsample_bytree=0.8,
+            random_state=42, verbosity=0
+        )
+
+    def fit(self, X, y):
+        # Create binary target for the classifier
+        y_class = (y > self.hurdle_threshold).astype(int)
+        self.classifier.fit(X, y_class)
+
+        # Create boolean masks for routing
+        mask_high = y > self.hurdle_threshold
+        mask_low = ~mask_high
+
+        # Train the specialized regressors on their respective data slices
+        if mask_low.sum() > 0:
+            self.regressor_low.fit(X[mask_low], y[mask_low])
+        if mask_high.sum() > 0:
+            self.regressor_high.fit(X[mask_high], y[mask_high])
+
+        return self
+
+    def predict(self, X):
+        # Predict if each row is an outbreak (1) or normal (0)
+        preds_class = self.classifier.predict(X)
+
+        # Initialize the final predictions array
+        final_preds = np.zeros(len(X))
+
+        # Create masks based on classifier predictions
+        mask_pred_high = preds_class == 1
+        mask_pred_low = ~mask_pred_high
+
+        # Route the data to the appropriate pre-trained regressor
+        if mask_pred_low.sum() > 0:
+            final_preds[mask_pred_low] = self.regressor_low.predict(X[mask_pred_low])
+        if mask_pred_high.sum() > 0:
+            final_preds[mask_pred_high] = self.regressor_high.predict(X[mask_pred_high])
+
+        # Dengue cases cannot be negative
+        return np.maximum(final_preds, 0)
 
 class ImprovedDengueMLModels:
     """
@@ -182,6 +249,33 @@ class ImprovedDengueMLModels:
         
         print("Data preprocessing completed!")
         print(f"Final dataset shape: {self.df.shape}")
+
+        # --- NEW PHASE 1 FEATURES: EWMA & THERMAL CURVES ---
+        
+        # 1. Exponentially Weighted Moving Averages (EWMA)
+        # Gives heavier weight to recent weather events compared to standard rolling averages
+        self.df['rainfall_ewma_14d'] = loc_group['rainfall'].transform(
+            lambda x: x.ewm(span=14, adjust=False).mean()
+        )
+        self.df['temp_ewma_7d'] = loc_group['temperature'].transform(
+            lambda x: x.ewm(span=7, adjust=False).mean()
+        )
+        self.df['humidity_ewma_7d'] = loc_group['humidity'].transform(
+            lambda x: x.ewm(span=7, adjust=False).mean()
+        )
+        
+        # 2. Biological Thermal Performance Curve (Briere Equation)
+        # Models Aedes aegypti development based on temperature limits
+        # T_min = 13.3 C, T_max = 39.2 C are standard biological bounds for Aedes aegypti
+        T_min, T_max = 13.3, 39.2
+        
+        # Clip temperature to avoid calculating the square root of a negative number
+        temp_clipped = self.df['temperature'].clip(lower=T_min, upper=T_max)
+        
+        # We drop the arbitrary scaling constant 'c' because LightGBM is scale-invariant
+        self.df['briere_thermal_curve'] = temp_clipped * (temp_clipped - T_min) * np.sqrt(T_max - temp_clipped)
+        
+        print(f"Created EWMA and Briere thermal curve features")
         
     def create_historical_features(self, df, train_indices=None, test_indices=None):
         """
@@ -219,9 +313,9 @@ class ImprovedDengueMLModels:
                 location_data['cases_lag_7'] = location_data['total_active_cases'].shift(7).fillna(0)
                 location_data['cases_lag_30'] = location_data['total_active_cases'].shift(30).fillna(0)
                 
-                # Create rolling averages
-                location_data['cases_avg_7'] = location_data['total_active_cases'].rolling(7, min_periods=1).mean()
-                location_data['cases_avg_30'] = location_data['total_active_cases'].rolling(30, min_periods=1).mean()
+                # Create rolling averages (SHIFTED to prevent data leakage)
+                location_data['cases_avg_7'] = location_data['total_active_cases'].shift(1).rolling(7, min_periods=1).mean().fillna(0)
+                location_data['cases_avg_30'] = location_data['total_active_cases'].shift(1).rolling(30, min_periods=1).mean().fillna(0)
                 
                 # Get the original indices in the main dataframe
                 original_indices = location_data.index
@@ -621,6 +715,9 @@ class ImprovedDengueMLModels:
             'rainfall_cumul_14d', 'rainfall_cumul_28d',
             'temp_x_humidity', 'temp_x_rainfall', 'humidity_x_rainfall',
             'breeding_favorable',
+            # --- NEW PHASE 1 FEATURES ---
+            'rainfall_ewma_14d', 'temp_ewma_7d', 'humidity_ewma_7d',
+            'briere_thermal_curve'
         ]
         print(f"Weather + geography features: {len(model2_features)} total features")
         
@@ -658,8 +755,39 @@ class ImprovedDengueMLModels:
         print(f"\nTarget distribution: median={y2_train.median():.0f}, "
               f"mean={y2_train.mean():.2f}, skew={y2_train.skew():.2f}")
         
+        # ---------------------------------------------------------
+        # THE HYBRID STACKING ENSEMBLE
+        # ---------------------------------------------------------
+        # 1. Define the base estimators (our two champions)
+        base_estimators = [
+            ('xgb_poisson', xgb.XGBRegressor(
+                objective='count:poisson', n_estimators=200, max_depth=8,
+                learning_rate=0.05, subsample=0.8, colsample_bytree=0.8,
+                reg_alpha=0.1, reg_lambda=1.0, random_state=42, verbosity=0
+            )),
+            ('lgb_poisson', lgb.LGBMRegressor(
+                objective='poisson', n_estimators=200, max_depth=8,
+                learning_rate=0.05, subsample=0.8, colsample_bytree=0.8,
+                reg_alpha=0.1, reg_lambda=1.0, random_state=42, verbose=-1
+            ))
+        ]
+        
+        # 2. Define the meta-learner to combine their predictions
+        # Ridge regression is standard for stacking as it prevents overfitting the meta-weights
+        meta_learner = Ridge(alpha=1.0, random_state=42)
+        
+        # 3. Create the Stacking model
+        stacking_model = StackingRegressor(
+            estimators=base_estimators,
+            final_estimator=meta_learner,
+            cv=5, # Uses 5-fold CV to generate clean out-of-fold predictions for the meta-learner
+            n_jobs=-1
+        )
+        
         # Define models — prioritize count-appropriate objectives
         models = {
+            'Stacking Ensemble (XGB+LGBM)': stacking_model, # <--- NEW HYBRID MODEL
+            'Two-Stage Hurdle': TwoStageHurdleModel(hurdle_threshold=2), # <--- NEW MODEL
             'XGBoost (Poisson)': xgb.XGBRegressor(
                 objective='count:poisson', n_estimators=200, max_depth=8,
                 learning_rate=0.05, subsample=0.8, colsample_bytree=0.8,
@@ -692,6 +820,8 @@ class ImprovedDengueMLModels:
         }
         
         tree_models = {
+            'Stacking Ensemble (XGB+LGBM)', # <--- ADD HERE
+            'Two-Stage Hurdle', # <--- ADD HERE
             'Random Forest', 'Gradient Boosting',
             'XGBoost (Poisson)', 'XGBoost (Squared)',
             'LightGBM (Poisson)', 'LightGBM (Tweedie)', 'LightGBM (Squared)',
@@ -788,12 +918,17 @@ class ImprovedDengueMLModels:
         best_tuned_r2 = model2_results[best_model2_name]['r2']
         best_tuned_model = model2_results[best_model2_name]['model']
         best_tuned_name = best_model2_name
+
+        # Define the Time-Series Split
+        tscv = TimeSeriesSplit(n_splits=5)
         
         for name, config in tuning_configs.items():
-            print(f"\nTuning {name} (50 iterations, 5-fold CV on training set)...")
+            print(f"\nTuning {name} (50 iterations, 5-fold TimeSeries CV on training set)...")
             search = RandomizedSearchCV(
                 config['estimator'], config['params'],
-                n_iter=50, cv=5, scoring='r2',
+                n_iter=50, 
+                cv=tscv,  # <--- CHANGED FROM cv=5 to cv=tscv
+                scoring='r2',
                 random_state=42, n_jobs=-1
             )
             search.fit(X2_train, y2_train)
