@@ -1,1 +1,44 @@
-{"model1_features": ["centroid_x", "centroid_y", "location_cluster", "month", "day_of_year", "is_hotspot", "cases_lag_1", "cases_lag_7", "cases_lag_30", "cases_avg_7", "cases_avg_30"], "model2_features": ["centroid_x", "centroid_y", "humidity", "temperature", "rainfall", "month", "day_of_year", "week_of_year", "location_cluster", "state_encoded", "is_hotspot", "rainfall_lag_7", "humidity_lag_7", "temperature_lag_7", "rainfall_cumul_14d", "rainfall_cumul_28d", "temp_x_humidity", "temp_x_rainfall", "humidity_x_rainfall", "breeding_favorable", "rainfall_ewma_14d", "temp_ewma_7d", "humidity_ewma_7d", "briere_thermal_curve"]}
+{
+  "model1_features": [
+    "centroid_x",
+    "centroid_y",
+    "location_cluster",
+    "month",
+    "day_of_year",
+    "is_hotspot",
+    "state_encoded",
+    "density_cluster",
+    "bbox_area",
+    "cases_lag_1",
+    "cases_lag_7",
+    "cases_lag_30",
+    "cases_avg_7",
+    "cases_avg_30"
+  ],
+  "model2_features": [
+    "centroid_x",
+    "centroid_y",
+    "humidity",
+    "temperature",
+    "rainfall",
+    "month",
+    "day_of_year",
+    "week_of_year",
+    "location_cluster",
+    "state_encoded",
+    "is_hotspot",
+    "rainfall_lag_7",
+    "humidity_lag_7",
+    "temperature_lag_7",
+    "rainfall_cumul_14d",
+    "rainfall_cumul_28d",
+    "temp_x_humidity",
+    "temp_x_rainfall",
+    "humidity_x_rainfall",
+    "breeding_favorable",
+    "rainfall_ewma_14d",
+    "temp_ewma_7d",
+    "humidity_ewma_7d",
+    "briere_thermal_curve"
+  ]
+}

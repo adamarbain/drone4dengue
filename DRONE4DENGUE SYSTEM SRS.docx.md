@@ -68,7 +68,36 @@ Faculty of Computer Science & Information Technology
 
 [APPENDIX A: Glossary	67](#appendix-a:-glossary)
 
+# **APPENDIX A: Glossary** {#appendix-a:-glossary}
+
+* **DRONE4DENGUE** – The overall system name for the dengue monitoring and drone surveillance platform.
+* **SRS** – System Requirements Specifications document.
+* **Admin Panel (client-admin)** – The web-based administrative interface used by system administrators to manage dengue-related data, hotspots, drone missions, and user accounts.
+* **Mobile App (client-mobile)** – The mobile application used by field users/public for reporting dengue cases, viewing hotspot maps, and receiving alerts.
+* **Dengue Hotspot** – A geographic area identified as having a high concentration of dengue cases or mosquito breeding grounds.
+* **UAT** – User Acceptance Testing; a phase of testing where end-users validate system functionality against requirements.
+* **CI/CD** – Continuous Integration / Continuous Deployment; automated build and deployment pipelines configured via CircleCI and GitHub workflows.
+* **CircleCI** – The CI/CD platform used by the project for automated testing and deployment workflows.
+* **Docker** – Containerization platform used for packaging and deploying the system services (as defined in [docker-compose.yml](docker-compose.yml)).
+* **Daily Scrap Dengue Data** – An automated data scraping module ([daily-scrap-dengue-data/](daily-scrap-dengue-data/)) that periodically collects dengue case data from external sources.
+* **GeoJSON** – A format for encoding geographic data structures, used for representing dengue hotspot boundaries and drone flight paths.
+* **Firebase** – Google Cloud service used for authentication and push notifications in the mobile client.
+* **API** – Application Programming Interface; the backend endpoints that the admin panel and mobile app communicate with.
+
 [APPENDIX B: Records and Information Fields	68](#appendix-b:-records-and-information-fields)
+
+# **APPENDIX B: Records and Information Fields** {#appendix-b:-records-and-information-fields}
+
+| Record/Entity | Key Information Fields | Description |
+| :---- | :---- | :---- |
+| **User Account** | User ID, Name, Email, Password (hashed), Role (Admin/Field User), Created Date | Stores registered user information for both admin panel and mobile app. |
+| **Dengue Case Report** | Report ID, Location (latitude, longitude), Date Reported, Severity Level, Status, Reporter User ID, Description | Individual dengue case reports submitted via the mobile app or admin panel. |
+| **Dengue Hotspot** | Hotspot ID, Area Name, Coordinates/Boundary (GeoJSON), Risk Level, Active Status, Last Updated | Geographic zones identified as dengue risk areas. |
+| **Drone Mission** | Mission ID, Assigned Drone ID, Target Hotspot ID, Mission Status, Start Time, End Time, Created By (Admin ID) | Records of drone surveillance missions assigned to specific hotspots. |
+| **Scraped Dengue Data** | Scrape ID, Source URL, Date Scraped, Location, Case Count, Data Payload | Data automatically collected by the daily-scrap-dengue-data module from external health data sources. |
+| **Notification/Alert** | Alert ID, Target User(s), Message Content, Alert Type, Sent Date, Read Status | Push notifications and alerts sent to mobile app users regarding dengue outbreaks or drone activity. |
+| **Drone** | Drone ID, Model, Status (Available/In-Mission/Maintenance), Last Known Location, Battery Level | Registry of drones available for surveillance missions. |
+| **Audit Log** | Log ID, Action Type, Performed By (User ID), Timestamp, Details | System audit trail recording administrative actions and data changes. |
 
 [**APPENDIX C: Addendum	69**](#heading=)
 

@@ -6824,3 +6824,605 @@ server closed the connection unexpectedly
 2026-03-04 09:02:13,880 - INFO - Final statistics: {'total_records': 25276, 'geocoded_records': 25276, 'pending_records': 0, 'error_records': 0}
 2026-03-04 09:02:13,880 - INFO - To resume from where left off, use resume_from_id: ffe04c7a-9af2-4621-b80a-86495d6c461b
 2026-03-04 09:02:13,880 - INFO - Database connection closed
+2026-03-05 11:37:13,354 - INFO - Configuration:
+2026-03-05 11:37:13,355 - INFO -   Batch size: 100
+2026-03-05 11:37:13,355 - INFO -   Delay between calls: 1.5s
+2026-03-05 11:37:13,355 - INFO -   Resume from ID: Start from beginning
+2026-03-05 11:37:13,571 - INFO - Successfully connected to database
+2026-03-05 11:37:13,571 - INFO - ============================================================
+2026-03-05 11:37:13,572 - INFO - STARTING BULK REVERSE GEOCODING
+2026-03-05 11:37:13,573 - INFO - ============================================================
+2026-03-05 11:37:13,619 - INFO - Initial state: {'total_records': 25540, 'geocoded_records': 25276, 'pending_records': 264, 'error_records': 0}
+2026-03-05 11:37:13,663 - INFO - Found 100 records to geocode
+2026-03-05 11:37:13,671 - INFO - Processing record 006724c9-cee6-4f74-a245-e2e65c213a12: APPT KRISTAL BUKIT INDAH,EMERALD HILL CONDO BKT INDAH (3.1577559408447224, 101.7743969212671)
+2026-03-05 11:37:14,364 - INFO - Processing record 01d4a956-c85c-4816-946d-97f168d3fefe: TAMAN MAZNAH 03 (3.027246914435374, 101.47758888075508)
+2026-03-05 11:37:16,147 - INFO - Processing record 0378e1a4-fa6d-4560-aa0e-f40182c7d7ff: JALAN HENTIAN 1 HENTIAN KAJANG,RESIDENSI MUTIARA @ KAJANG 2 (2.9565128590885394, 101.79367462953644)
+2026-03-05 11:37:19,242 - INFO - Processing record 037fd0c9-7e49-4d3a-98f0-a1901fadde65: E6. BL PJU 9 SD 13 APT SRI MERANTI (1) [A,B,C,D,E,F,G] (3.194502822999993, 101.602403911)
+2026-03-05 11:37:19,685 - INFO - Process interrupted by user
+2026-03-05 11:37:19,727 - INFO - ============================================================
+2026-03-05 11:37:19,728 - INFO - BULK REVERSE GEOCODING COMPLETED
+2026-03-05 11:37:19,728 - INFO - ============================================================
+2026-03-05 11:37:19,728 - INFO - Total processing time: 0.00 hours
+2026-03-05 11:37:19,728 - INFO - Records processed in this run: 0
+2026-03-05 11:37:19,729 - INFO - Final statistics: {'total_records': 25540, 'geocoded_records': 25279, 'pending_records': 261, 'error_records': 0}
+2026-03-05 11:37:19,729 - INFO - Database connection closed
+2026-03-05 11:38:46,431 - INFO - Configuration:
+2026-03-05 11:38:46,432 - INFO -   Batch size: 100
+2026-03-05 11:38:46,432 - INFO -   Delay between calls: 1.5s
+2026-03-05 11:38:46,432 - INFO -   Resume from ID: Start from beginning
+2026-03-05 11:38:46,586 - INFO - Successfully connected to database
+2026-03-05 11:38:46,587 - INFO - ============================================================
+2026-03-05 11:38:46,587 - INFO - STARTING BULK REVERSE GEOCODING
+2026-03-05 11:38:46,587 - INFO - ============================================================
+2026-03-05 11:38:46,626 - INFO - Initial state: {'total_records': 25540, 'geocoded_records': 25279, 'pending_records': 261, 'error_records': 0}
+2026-03-05 11:38:46,653 - INFO - Found 100 records to geocode
+2026-03-05 11:38:46,653 - INFO - Processing record 037fd0c9-7e49-4d3a-98f0-a1901fadde65: E6. BL PJU 9 SD 13 APT SRI MERANTI (1) [A,B,C,D,E,F,G] (3.194502822999993, 101.602403911)
+2026-03-05 11:38:47,288 - INFO - [OK] Successfully geocoded 037fd0c9-7e49-4d3a-98f0-a1901fadde65: Surau Al-Ukhuwah, Persiaran Meranti, PJU 9, Bandar Sri Damansara, Petaling Jaya, Petaling, Selangor, 52200, Malaysia
+2026-03-05 11:38:47,290 - INFO - Processing record 06226a53-79a8-42e7-8efc-54219230cbf1: TAMAN SERI SARI (5.33266512154305, 100.27738599051656)
+2026-03-05 11:38:49,112 - INFO - [OK] Successfully geocoded 06226a53-79a8-42e7-8efc-54219230cbf1: Persiaran Paya Terubong, Relau, Bukit Jambul, Timur Laut, George Town, Pulau Pinang, 11950, Malaysia
+2026-03-05 11:38:49,113 - INFO - Processing record 06d3ec61-c695-49fd-9f42-66e663de3d7f: DESA SRI PUTERI (BLOK D, E, F),PPR DESA TUN RAZAK (3.0818603168327128, 101.715037086829)
+2026-03-05 11:38:51,392 - INFO - [OK] Successfully geocoded 06d3ec61-c695-49fd-9f42-66e663de3d7f: Pusat Pemulihan Penagihan Narkotik Sungai Besi, Pintasan PPR Seri Malaysia–Terminal Bersepadu Selatan, Bandar Tun Razak, Salak Selatan, Kuala Lumpur, 57100, Malaysia
+2026-03-05 11:38:51,408 - INFO - Processing record 09fdf039-f593-4b68-ac6d-234892776fc1: KUARTERS INSTITUSI PENDIDIKAN KG JAWA,TAMAN MENARA MAJU 03 (3.023573432581252, 101.4632973192375)
+2026-03-05 11:38:53,236 - INFO - [OK] Successfully geocoded 09fdf039-f593-4b68-ac6d-234892776fc1: Bandaraya Klang, Klang, Selangor, 41000, Malaysia
+2026-03-05 11:38:53,236 - INFO - Processing record 0ab7d534-a837-4639-b014-bf6091263e3d: CENDERAKASIH (5.974216597911767, 116.11184835221763)
+2026-03-05 11:38:55,080 - INFO - [OK] Successfully geocoded 0ab7d534-a837-4639-b014-bf6091263e3d: Taman Amansutra Phase 1, Kota Kinabalu, Bahagian Pantai Barat, Sabah, 88845, Malaysia
+2026-03-05 11:38:55,080 - INFO - Processing record 0b6b1630-4fbc-4bae-8e27-1394e1a6c6ca: E13. SS 17/1,E13. SS 19/1 (3.07626695137083, 101.57821419882916)
+2026-03-05 11:38:57,024 - INFO - [OK] Successfully geocoded 0b6b1630-4fbc-4bae-8e27-1394e1a6c6ca: Jalan SS 19/1F, SS 19, Pusat Bandar Subang Jaya, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 47200, Malaysia
+2026-03-05 11:38:57,024 - INFO - Processing record 0c8ce610-64e2-4d9e-a193-9aafaf183ccc: TMN LAPANGAN MELODI (4.554639631999976, 101.10659115099998)
+2026-03-05 11:38:58,856 - INFO - [OK] Successfully geocoded 0c8ce610-64e2-4d9e-a193-9aafaf183ccc: Dataran Rapat Baru 19, Taman Lapangan Melodi, Majlis Bandaraya Ipoh, Kinta, Perak, 31350, Malaysia
+2026-03-05 11:38:58,856 - INFO - Processing record 0fdd5f5e-e15a-4901-961b-5f2690256f94: E17. TMN BKT SERDANG 11 (VILLA PARK 1 CONDO) BLOK A, B, C,E17. TMN BKT SERDANG 13 (ORKID) (3.042932235936417, 101.68865682720232)
+2026-03-05 11:39:01,119 - INFO - [OK] Successfully geocoded 0fdd5f5e-e15a-4901-961b-5f2690256f94: Jalan Cemara, Taman Bukit Serdang Seksyen 13, Bukit Serdang, Seri Kembangan, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 57000, Malaysia
+2026-03-05 11:39:01,120 - INFO - Processing record 1256a455-e084-4a26-91d8-8443a76b76a7: E10. BG SEK 17 (TERES 2) [JLN 17/3,17/5,17/8,17/9,17/10,17/12,17/14,17/16],E2. SEKSYEN 17 (FLAT JLN 17/2 @ 17/24 @ 17/26 : BLOK 1- 10) (3.120796681237802, 101.63447726869514)
+2026-03-05 11:39:02,892 - INFO - [OK] Successfully geocoded 1256a455-e084-4a26-91d8-8443a76b76a7: 334, Jalan 17/6, Seksyen 17, Petaling Jaya, Petaling, Selangor, 46400, Malaysia
+2026-03-05 11:39:02,892 - INFO - Processing record 13a6a1ae-75f6-4b43-8699-3ee59f048cfb: JALAN TUN RAZAK (WISMA INDAH),PPR LAKSAMANA (A/B/C) (3.133384624447117, 101.72020595299038)
+2026-03-05 11:39:04,705 - INFO - [OK] Successfully geocoded 13a6a1ae-75f6-4b43-8699-3ee59f048cfb: Jalan Cochrane, Maluri, Cheras, Kuala Lumpur, 55720, Malaysia
+2026-03-05 11:39:04,734 - INFO - Progress: 10/100 in batch, Total: 25289/25540 overall
+2026-03-05 11:39:04,734 - INFO - Processing record 13eb549c-c381-4853-beb1-13150c80b8ce: KG.SINOMPURU,TAMAN BAKTI IKHLAS (6.03400591893662, 116.1749273248803)
+2026-03-05 11:39:06,460 - INFO - [OK] Successfully geocoded 13eb549c-c381-4853-beb1-13150c80b8ce: Menggatal, Kota Kinabalu, Bahagian Pantai Barat, Sabah, Malaysia
+2026-03-05 11:39:06,463 - INFO - Processing record 166c916c-fa5f-4544-ab20-0a91772f6aa0: E8. BU SS 20 (1) [JLN SS 20/1 - SS 20/20] (3.131821859260272, 101.62667897854794)
+2026-03-05 11:39:08,292 - INFO - [OK] Successfully geocoded 166c916c-fa5f-4544-ab20-0a91772f6aa0: Jalan SS 20/10, SS 20, Petaling Jaya, Petaling, Selangor, 47308, Malaysia
+2026-03-05 11:39:08,294 - INFO - Processing record 189fa47b-fa44-43a2-b599-83398dc9b428: KG CHANGKAT Z1,KG CHANGKAT Z2,KG CHANGKAT Z3 (3.224295096346592, 101.70528019596024)
+2026-03-05 11:39:10,132 - INFO - [OK] Successfully geocoded 189fa47b-fa44-43a2-b599-83398dc9b428: Lorong Changkat Ria, Gombak, Majlis Perbandaran Selayang, Gombak, Selangor, 65100, Malaysia
+2026-03-05 11:39:10,134 - INFO - Processing record 19a36290-6acc-4c0d-a99d-0c47a43fe30f: APARTMENT MUTIARA MAGNA (BLOK B) (3.211324480310808, 101.63934727749998)
+2026-03-05 11:39:12,388 - INFO - [OK] Successfully geocoded 19a36290-6acc-4c0d-a99d-0c47a43fe30f: Jalan Metro 1, Kepong, Kuala Lumpur, 52100, Malaysia
+2026-03-05 11:39:12,396 - INFO - Processing record 1aa2fdf6-5783-4cd1-b555-5115b76b8b6c: E10. BG SEK 5 TMN PETALING (2) [5/43,5/45,5/47,5/48,5/49,5/49A,5/50,5/52,5/53] (3.0876510537394384, 101.65370234657044)
+2026-03-05 11:39:14,637 - INFO - [OK] Successfully geocoded 1aa2fdf6-5783-4cd1-b555-5115b76b8b6c: Jalan Gasing, Taman Petaling, Seksyen 5, Petaling Jaya, Petaling, Selangor, 46000, Malaysia
+2026-03-05 11:39:14,637 - INFO - Processing record 1ba41070-f4ca-4e36-ac0b-637cfe125b82: KELUMPUK PINANG,RESIDENSI SKYSIERRA THE VALLEY SETIAWANGSA (3.1780765946592187, 101.74730118798882)
+2026-03-05 11:39:16,433 - INFO - [OK] Successfully geocoded 1ba41070-f4ca-4e36-ac0b-637cfe125b82: Jalan Taman Setiawangsa, Setiawangsa, Kuala Lumpur, 54200, Malaysia
+2026-03-05 11:39:16,433 - INFO - Processing record 1c84886b-b4e1-43f9-b4ae-1330f3055696: TAMAN ALAM NYATA 01,TAMAN KAPAR RIA (3.131496250733337, 101.38251243882422)
+2026-03-05 11:39:18,633 - INFO - [OK] Successfully geocoded 1c84886b-b4e1-43f9-b4ae-1330f3055696: Jalan Dato Tahir Manan 56, Taman Sentosa Kapar, Kapar, Bandaraya Klang, Klang, Selangor, 42200, Malaysia
+2026-03-05 11:39:18,634 - INFO - Processing record 1cae72db-5f99-430e-b69f-6d69b207556f: AMAYA MALURI SERVICE APARTMENT,RESIDENSI LA VILE TAMAN MALURI,TAMAN MALURI (JALAN JEJAKA 2,3,4,5,7,9),TAMAN MALURI (JALAN JEJAKA),TAMAN MALURI(JALAN JEJAKA) (3.1269470412594607, 101.72934035150811)
+2026-03-05 11:39:20,472 - INFO - [OK] Successfully geocoded 1cae72db-5f99-430e-b69f-6d69b207556f: Jalan Jejaka 2, Maluri, Cheras, Kuala Lumpur, 51500, Malaysia
+2026-03-05 11:39:20,473 - INFO - Processing record 1d7d61aa-3b6d-4138-abee-4f871c57292b: E4. SEKSYEN U7 (TUDM SUBANG B : CF 10 - CF 14),E4. SEKSYEN U7 (TUDM SUBANG D : BLOK F1 - F9 & BLOK E1 & E2) (3.1138821928554896, 101.54667509889596)
+2026-03-05 11:39:22,628 - INFO - [OK] Successfully geocoded 1d7d61aa-3b6d-4138-abee-4f871c57292b: Jalan U8/72, Seksyen U7, Shah Alam, Petaling, Selangor, 40150, Malaysia
+2026-03-05 11:39:22,630 - INFO - Processing record 1dda5aac-af51-4e5c-b505-23b43d3b85d8: BANDARAN SINSURAN (5.9800435030927135, 116.0724712621126)
+2026-03-05 11:39:24,468 - INFO - [OK] Successfully geocoded 1dda5aac-af51-4e5c-b505-23b43d3b85d8: Clothes and Shoes, Ruang Sinsuran 3, Kota Kinabalu, Bahagian Pantai Barat, Sabah, 88675, Malaysia
+2026-03-05 11:39:24,501 - INFO - Progress: 20/100 in batch, Total: 25299/25540 overall
+2026-03-05 11:39:24,503 - INFO - Processing record 1e0fe606-adee-49a1-a231-478d3d0020ed: CHE LONG (5.5042374670434775, 102.72980087381984)
+2026-03-05 11:39:26,609 - INFO - [OK] Successfully geocoded 1e0fe606-adee-49a1-a231-478d3d0020ed: Kampung Bukit Pepari, Bandar Permaisuri, Setiu, Terengganu, Malaysia
+2026-03-05 11:39:26,610 - INFO - Processing record 1e1ab513-651b-47a5-8b32-9e45cfd4349d: APPT SRI IMPIAN UP,APPT SRI KAYANGAN UP (3.2104012644971407, 101.7800327361143)
+2026-03-05 11:39:28,873 - INFO - [OK] Successfully geocoded 1e1ab513-651b-47a5-8b32-9e45cfd4349d: Jalan UP 2/1, Ukay Perdana, Ulu Kelang, Majlis Perbandaran Ampang Jaya, Gombak, Selangor, 54200, Malaysia
+2026-03-05 11:39:28,874 - INFO - Processing record 20c44dac-6f57-4409-b028-f2c5cff4db39: PANGSAPURI DAMAI RESIDENSI SEKSYEN 3 BANDAR BARU BANGI (2.9379047816133346, 101.78102796538)
+2026-03-05 11:39:31,125 - INFO - [OK] Successfully geocoded 20c44dac-6f57-4409-b028-f2c5cff4db39: Jalan 3/38A, Pangsapuri Damai Residensi Bangi, Seksyen 3, Bandar Baru Bangi, Majlis Perbandaran Kajang, Hulu Langat, Selangor, 43650, Malaysia
+2026-03-05 11:39:31,125 - INFO - Processing record 2144ca50-622b-484a-b926-3810cbb84e07: BLOK L1-L8 PANDAN JAYA (3.132315655437907, 101.74048635957516)
+2026-03-05 11:39:32,957 - INFO - [OK] Successfully geocoded 2144ca50-622b-484a-b926-3810cbb84e07: Jalan Pandan 3/10, Flat Pandan Jaya, Pandan Indah, Ampang, Majlis Perbandaran Ampang Jaya, Hulu Langat, Selangor, 51500, Malaysia
+2026-03-05 11:39:32,959 - INFO - Processing record 22d2649d-c255-4626-889c-451e168ae9ea: SRI WANGSARIA CONDO (3.1351459417253498, 101.6652761385986)
+2026-03-05 11:39:34,721 - INFO - [OK] Successfully geocoded 22d2649d-c255-4626-889c-451e168ae9ea: Jalan Terasek, Bukit Bandaraya, Bangsar, Kuala Lumpur, 59100, Malaysia
+2026-03-05 11:39:34,721 - INFO - Processing record 22e4c1c7-2be5-4872-84db-c2acde99e126: RESIDENCE  KERINCHI,VISTA ANGKASA (BLOK 1 & 2) (3.11231460206024, 101.66250544882531)
+2026-03-05 11:39:36,492 - INFO - [OK] Successfully geocoded 22e4c1c7-2be5-4872-84db-c2acde99e126: Caffeine Craft, Jalan Kerinchi, Pantai Dalam, Kuala Lumpur, 59200, Malaysia
+2026-03-05 11:39:36,493 - INFO - Processing record 235ccf5d-2642-429a-802a-cade8847fd74: TAMAN SEREMBAN JAYA FASA 10 (2.6696759735129896, 101.98694847810388)
+2026-03-05 11:39:38,701 - INFO - [OK] Successfully geocoded 235ccf5d-2642-429a-802a-cade8847fd74: Sungai Gadut, Seremban, Negeri Sembilan, 71450, Malaysia
+2026-03-05 11:39:38,701 - INFO - Processing record 24602794-4eb9-421a-bd8b-da5668bf4df7: JALAN SP 2 TAMAN SEGAR PERDANA,JALAN SP 5 TAMAN SEGAR PERDANA (3.0940230865365845, 101.76121268375611)
+2026-03-05 11:39:40,985 - INFO - [OK] Successfully geocoded 24602794-4eb9-421a-bd8b-da5668bf4df7: Jalan Segar Perdana, Taman Segar Perdana, Cheras, Majlis Perbandaran Kajang, Hulu Langat, Selangor, 56100, Malaysia
+2026-03-05 11:39:40,985 - INFO - Processing record 271d1cc7-c1c3-4309-b1dc-9da77b460e14: KEM PGA CHERAS 1 (BLOK G1,G2,G3,G4,G5) (3.0824522299342143, 101.75361902882236)
+2026-03-05 11:39:43,105 - INFO - [OK] Successfully geocoded 271d1cc7-c1c3-4309-b1dc-9da77b460e14: Markas Briged Tengah Pasukan Gerakan Am, Jalan KOOP Cuepacs 1, Taman Koperasi Cuepacs Fasa 1, Cheras, Majlis Perbandaran Kajang, Hulu Langat, Selangor, 43200, Malaysia
+2026-03-05 11:39:43,108 - INFO - Processing record 28a9bca5-ad5e-4562-8653-271c4333870c: TAMAN MAWAR FASA 4 (5.845995242121796, 118.03021444042948)
+2026-03-05 11:39:44,957 - INFO - [OK] Successfully geocoded 28a9bca5-ad5e-4562-8653-271c4333870c: Lorong Mawar 33, Taman Mawar, Sandakan, Sandakan District, Bahagian Sandakan, Sabah, Malaysia
+2026-03-05 11:39:44,995 - INFO - Progress: 30/100 in batch, Total: 25309/25540 overall
+2026-03-05 11:39:44,996 - INFO - Processing record 28b57852-93c1-4b11-a2d1-858319bd8d86: E1. SEKSYEN 16 (APT SURIA AVENUE),E1. SEKSYEN 16 (FLAT A : BLOK 1 - 4, BLOK 9 - 16),E1. SEKSYEN 16 (FLAT C : BLOK 17 - 26),E1. SEKSYEN 16 (KAW PERINDUSTRIAN A : JLN 16/1 - 16/8 & PERSIARAN KEMAJUAN),E1. SEKSYEN 16 (PANGSAPURI ANGGERIK INDAH) (3.05901654019087, 101.50578226319918)
+2026-03-05 11:39:46,781 - INFO - [OK] Successfully geocoded 28b57852-93c1-4b11-a2d1-858319bd8d86: Jalan Sempadan 16/7, Flat PKNS, Seksyen 16, Shah Alam, Petaling, Selangor, 40200, Malaysia
+2026-03-05 11:39:46,782 - INFO - Processing record 29fc25fd-c0bf-4f44-89a2-6e7c58250a0f: TMN SUNLIGHT (4.575369126424657, 101.07259829538356)
+2026-03-05 11:39:49,049 - INFO - [OK] Successfully geocoded 29fc25fd-c0bf-4f44-89a2-6e7c58250a0f: Lorong Chengai, Kampung Temiang, Kampung Kuala Pari, Majlis Bandaraya Ipoh, Kinta, Perak, 31650, Malaysia
+2026-03-05 11:39:49,050 - INFO - Processing record 2a90e793-6bce-4c1e-bc5b-8b060ac94afc: E13. TMN PINGGIRAN USJ 2 (SRI KAYAN) (3.051185366979731, 101.56149141808108)
+2026-03-05 11:39:50,889 - INFO - [OK] Successfully geocoded 2a90e793-6bce-4c1e-bc5b-8b060ac94afc: Taman Pinggiran USJ 2, Taman Pinggiran USJ, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 47600, Malaysia
+2026-03-05 11:39:50,890 - INFO - Processing record 2b22e0dc-8ec3-4f77-8c3b-9fa4a65fa531: JALAN CHEMOR (TITIWANGSA SENTRAL KONDOMINIUM),JALAN LUMUT,KAMPUNG BARU (ASRAMA PICOMS RAJA ABDULLAH),KAMPUNG BARU (KG PERIUK 1),KAMPUNG BARU (KG. ATAS B),KAMPUNG BARU (PLAZA RAH),KUARTERS HOSPITAL KUALA LUMPUR (3.1690182155546465, 101.70148048142896)
+2026-03-05 11:39:52,934 - INFO - [OK] Successfully geocoded 2b22e0dc-8ec3-4f77-8c3b-9fa4a65fa531: Jalan Masjid, Chow Kit, Sentul, Kuala Lumpur, 50586, Malaysia
+2026-03-05 11:39:52,934 - INFO - Processing record 2b70e115-7c57-430f-8559-538ccc4c44a2: APPT TAMAN PINGGIRAN CEMPAKA,JALAN CEMPAKA 8(B),14-22 TAMAN CEMPAKA (3.1366636066946127, 101.74851101539524)
+2026-03-05 11:39:54,741 - INFO - [OK] Successfully geocoded 2b70e115-7c57-430f-8559-538ccc4c44a2: Jalan Cempaka 22, Taman Cempaka, Pandan Indah, Ampang, Majlis Perbandaran Ampang Jaya, Hulu Langat, Selangor, 51500, Malaysia
+2026-03-05 11:39:54,742 - INFO - Processing record 2d350416-a0f2-4251-ba0f-886493cf2a9d: B_INDAHPURA BLOK KENANGA C (1.6425148161917786, 103.61390307163012)
+2026-03-05 11:39:56,529 - INFO - [OK] Successfully geocoded 2d350416-a0f2-4251-ba0f-886493cf2a9d: Restaurant Hainan Hojiak Corner, Jalan Kenanga 29/18, Indahpura Central, Bandar Indahpura, Kulai, Johor, 81000, Malaysia
+2026-03-05 11:39:56,530 - INFO - Processing record 2e470c66-1ed1-4c8a-af0a-aa35145c03e9: KG. SENDIL (5.902951675568861, 116.04960600139522)
+2026-03-05 11:39:58,369 - INFO - [OK] Successfully geocoded 2e470c66-1ed1-4c8a-af0a-aa35145c03e9: Putatan, Bahagian Pantai Barat, Sabah, 88220, Malaysia
+2026-03-05 11:39:58,370 - INFO - Processing record 2ec2ad06-5776-45ac-ad4e-84f147a0a981: SEKSYEN 32 (APARTMENT RIMAU PERDANA),SEKSYEN 32 (PANGSAPURI KEMUNING IDAMAN) (3.0019242648376623, 101.52259751126624)
+2026-03-05 11:40:00,193 - INFO - [OK] Successfully geocoded 2ec2ad06-5776-45ac-ad4e-84f147a0a981: Seksyen 32, Shah Alam, Klang, Selangor, 40460, Malaysia
+2026-03-05 11:40:00,195 - INFO - Processing record 2edf2a98-9c2a-4c82-b44c-07edcd72732e: E6. BL PJU 10 APT SAUJANA 1 (A,B,C,D,E,F,L,M),E6. BL PJU 10 APT SELASIH,E6. BL PJU 9 SD 12,E6. BL PJU 9 SD 12 FLAT SRI CEMPAKA,E6. BL PJU 9 SD 13 APT SRI MERANTI (1) [A,B,C,D,E,F,G],E6. BL PJU 9 SD 13 APT SRI MERANTI (2) [H,J,K,L,M,N,P,Q,R] (3.192893986715569, 101.60006441938324)
+2026-03-05 11:40:02,173 - INFO - [OK] Successfully geocoded 2edf2a98-9c2a-4c82-b44c-07edcd72732e: Jalan PJU 10/1C, Damansara Damai, PJU 10, Petaling Jaya, Petaling, Selangor, 47930, Malaysia
+2026-03-05 11:40:02,174 - INFO - Processing record 2f60478b-f6bd-41fd-8434-8ee6bc0eb0a5: KUARTERS PENDIDIKAN TAMAN KAJANG UTAMA (2.972530306319999, 101.79718965651334)
+2026-03-05 11:40:04,406 - INFO - [OK] Successfully geocoded 2f60478b-f6bd-41fd-8434-8ee6bc0eb0a5: Taman Kajang Utama, Kajang 2, Majlis Perbandaran Kajang, Hulu Langat, Selangor, 43000, Malaysia
+2026-03-05 11:40:04,440 - INFO - Progress: 40/100 in batch, Total: 25319/25540 overall
+2026-03-05 11:40:04,440 - INFO - Processing record 2f6c3fdf-804a-44dd-a305-0a4d19ca1fa2: KG. MERDEKA 2 (1.849746733421384, 102.9386158765472)
+2026-03-05 11:40:06,578 - INFO - [OK] Successfully geocoded 2f6c3fdf-804a-44dd-a305-0a4d19ca1fa2: Kampung Merdeka, Batu Pahat, Johor, 83000, Malaysia
+2026-03-05 11:40:06,578 - INFO - Processing record 3058f268-564f-4419-a522-fa5dec42efc0: FLAT SRI PAHANG (3.1298401208378404, 101.6766214187027)
+2026-03-05 11:40:08,833 - INFO - [OK] Successfully geocoded 3058f268-564f-4419-a522-fa5dec42efc0: Jalan Bangsar Utama 5, Bukit Bangsar, Bangsar, Kuala Lumpur, 59000, Malaysia
+2026-03-05 11:40:08,833 - INFO - Processing record 30a90a1c-65d2-46b2-86ae-9de94292d452: BDR TASIK PUTERI FASA 6,BDR TASIK PUTERI FASA 6 (ZON C),BDR TASIK PUTERI FASA 6 (ZON D) (3.276976830429414, 101.48006188291764)
+2026-03-05 11:40:10,657 - INFO - [OK] Successfully geocoded 30a90a1c-65d2-46b2-86ae-9de94292d452: Jalan 6/4, Blok 8B Balti, Bandar Tasik Puteri, Majlis Perbandaran Selayang, Gombak, Selangor, 48020, Malaysia
+2026-03-05 11:40:10,658 - INFO - Processing record 310d440b-136e-4593-a93b-f0f8a2b1c84f: TAMAN GEMILANG (3.0923058668310817, 101.74142480138512)
+2026-03-05 11:40:12,514 - INFO - [OK] Successfully geocoded 310d440b-136e-4593-a93b-f0f8a2b1c84f: 2, Jalan Mutiara Timur 1, Taman Mutiara, Cheras, Kuala Lumpur, 56100, Malaysia
+2026-03-05 11:40:12,515 - INFO - Processing record 3111f2e7-f7a4-4095-b121-ddfe01c84e35: TAMAN BAKTI IKHLAS,TAMAN BAKTI IKHLAS 2 (6.016803724816993, 116.1362796927451)
+2026-03-05 11:40:14,346 - INFO - [OK] Successfully geocoded 3111f2e7-f7a4-4095-b121-ddfe01c84e35: Menggatal, Kota Kinabalu, Bahagian Pantai Barat, Sabah, 88450, Malaysia
+2026-03-05 11:40:14,347 - INFO - Processing record 31659c11-efdc-4722-969e-19e338df2b55: TMN GEMBIRA,TMN GEMBIRA_FLAT HAJAH FATIMAH (1.5225345264969312, 103.7435172941902)
+2026-03-05 11:40:16,596 - INFO - [OK] Successfully geocoded 31659c11-efdc-4722-969e-19e338df2b55: Jalan Riang 19, Taman Gembira, Tebrau, Johor Bahru, Johor, 80350, Malaysia
+2026-03-05 11:40:16,596 - INFO - Processing record 324498ca-e7b1-4558-9a98-68ce3751f878: KETAPANG VILLA TAMAN NIRWANA (3.1475665798480583, 101.74849082009894)
+2026-03-05 11:40:18,374 - INFO - [OK] Successfully geocoded 324498ca-e7b1-4558-9a98-68ce3751f878: Jalan Pandan Luas, Taman Ampang Hilir, Kampung Pandan Dalam, Ampang, Majlis Perbandaran Ampang Jaya, Hulu Langat, Selangor, 68000, Malaysia
+2026-03-05 11:40:18,374 - INFO - Processing record 3370691d-5535-471f-b6e4-d06324837595: KG BARU SENGKANG (1.6893143606967769, 103.57240509814838)
+2026-03-05 11:40:20,585 - INFO - [OK] Successfully geocoded 3370691d-5535-471f-b6e4-d06324837595: Jalan Sengkang 3, Kampung Baru Sengkang, Sengkang, Kulai, Johor, 81030, Malaysia
+2026-03-05 11:40:20,586 - INFO - Processing record 35832d9e-a69a-465d-8297-370453ed05d9: ANTOLOB (5.427089491957747, 116.17204341328171)
+2026-03-05 11:40:22,330 - INFO - [OK] Successfully geocoded 35832d9e-a69a-465d-8297-370453ed05d9: Antolob, Keningau, Bahagian Pedalaman, Sabah, Malaysia
+2026-03-05 11:40:22,331 - INFO - Processing record 36129d77-9c5c-45e8-ae57-8c2ecec60d88: TTDI (JALAN RAHIM KAJAI (28-80), LORONG RAHIM KAJAI 3,4,5,6,7),TTDI (JALAN RAHIM KAJAI, LORONG RAHIM KAJAI 8-14) (3.156703483670968, 101.62019082449676)
+2026-03-05 11:40:24,582 - INFO - [OK] Successfully geocoded 36129d77-9c5c-45e8-ae57-8c2ecec60d88: Jalan 3/71B, Pinggiran TTDI, Kuala Lumpur, 47820, Malaysia
+2026-03-05 11:40:24,617 - INFO - Progress: 50/100 in batch, Total: 25329/25540 overall
+2026-03-05 11:40:24,617 - INFO - Processing record 3631d9de-e73a-43f3-ae9f-070318b9419f: DANAU IMPIAN KONDO (3.099416731601355, 101.68865751317568)
+2026-03-05 11:40:26,342 - INFO - [OK] Successfully geocoded 3631d9de-e73a-43f3-ae9f-070318b9419f: Jalan 109F, Taman Danau Desa, Taman Desa, Kuala Lumpur, 58100, Malaysia
+2026-03-05 11:40:26,343 - INFO - Processing record 375c95e8-ee7a-4783-8399-a56a1dcccd40: APPT IMPIAN INDAH (3.249424484770271, 101.56354992402026)
+2026-03-05 11:40:28,573 - INFO - [OK] Successfully geocoded 375c95e8-ee7a-4783-8399-a56a1dcccd40: Saujana Akasia, Kuang, Majlis Perbandaran Selayang, Gombak, Selangor, 47000, Malaysia
+2026-03-05 11:40:28,575 - INFO - Processing record 38ea4e0c-c81e-4dec-8bd6-147f84a5fc0f: JALAN IMPIAN MURNI 2&3 SAUJANA IMPIAN (3.0159177934966896, 101.78952952801323)
+2026-03-05 11:40:30,738 - INFO - [OK] Successfully geocoded 38ea4e0c-c81e-4dec-8bd6-147f84a5fc0f: Saujana Impian, Majlis Perbandaran Kajang, Hulu Langat, Selangor, 43000, Malaysia
+2026-03-05 11:40:30,738 - INFO - Processing record 3a1a2b68-4cd4-4ac3-9380-3e357e73a9e4: JALAN DAGANG 1/1-1/11 TAMAN DAGANG (3.1503870810120462, 101.75890500479518)
+2026-03-05 11:40:33,007 - INFO - [OK] Successfully geocoded 3a1a2b68-4cd4-4ac3-9380-3e357e73a9e4: Jalan Dagang 1/3, Taman Dagang, Ampang, Majlis Perbandaran Ampang Jaya, Hulu Langat, Selangor, 68000, Malaysia
+2026-03-05 11:40:33,007 - INFO - Processing record 3ae638c3-52dd-4a4f-a0dc-55b0952ea5fe: TMN MUTIARA RINI_JLN UTAMA 34-46 (1.5201564797837863, 103.63674881261484)
+2026-03-05 11:40:34,826 - INFO - [OK] Successfully geocoded 3ae638c3-52dd-4a4f-a0dc-55b0952ea5fe: Jalan Utama 38, Rini Heights, Mutiara Rini, Skudai, Iskandar Puteri, Johor Bahru, Johor, 81380, Malaysia
+2026-03-05 11:40:34,826 - INFO - Processing record 3bbe12a1-70a5-4b95-bbe1-c9f33f5dd1de: AMAN SIARA,APPT GARDEN VILLE (3.2714724300343336, 101.64926791714592)
+2026-03-05 11:40:36,670 - INFO - [OK] Successfully geocoded 3bbe12a1-70a5-4b95-bbe1-c9f33f5dd1de: Jalan Amansiara 1/1, Taman Amansiara, Majlis Perbandaran Selayang, Gombak, Selangor, 48000, Malaysia
+2026-03-05 11:40:36,671 - INFO - Processing record 3caa5c6e-76b9-434f-88c9-bfacf98d376c: JALAN KHOO HYE KEAT (5.406820064146498, 100.28308056113374)
+2026-03-05 11:40:38,506 - INFO - [OK] Successfully geocoded 3caa5c6e-76b9-434f-88c9-bfacf98d376c: Jalan Khoo Hye Keat, Hye Keat Estate, Timur Laut, George Town, Pulau Pinang, 11500, Malaysia
+2026-03-05 11:40:38,506 - INFO - Processing record 3cffd5b6-73fc-45c5-845e-dfa5e4e3a1ec: TAMAN SERULING EMAS B (5.211712237487179, 100.5059299081641)
+2026-03-05 11:40:40,453 - INFO - [OK] Successfully geocoded 3cffd5b6-73fc-45c5-845e-dfa5e4e3a1ec: Taman Seruling Emas, Kampung Permatang Ara, Seberang Perai Selatan, Seberang Perai, Pulau Pinang, 14200, Malaysia
+2026-03-05 11:40:40,454 - INFO - Processing record 3e8fa5a1-4dcc-4019-a9c9-031c7469674c: E2. SEKSYEN 19 (FLAT A JLN 19/15 : BLOK 1 - 5) (3.0510425570000166, 101.535762787)
+2026-03-05 11:40:42,602 - INFO - [OK] Successfully geocoded 3e8fa5a1-4dcc-4019-a9c9-031c7469674c: Surau Hamiddean, Jalan Nelayan, Seksyen 19, Shah Alam, Petaling, Selangor, 40300, Malaysia
+2026-03-05 11:40:42,602 - INFO - Processing record 3ea162c0-0313-4623-9e24-75c3875f82e6: APARTMENT M VERTICA RESIDENSI (BLOK A,B) (3.1188334520529817, 101.7269551534106)
+2026-03-05 11:40:44,430 - INFO - [OK] Successfully geocoded 3ea162c0-0313-4623-9e24-75c3875f82e6: 7-Eleven, Jalan Cheras, Pudu Ulu, Cheras, Kuala Lumpur, 51500, Malaysia
+2026-03-05 11:40:44,462 - INFO - Progress: 60/100 in batch, Total: 25339/25540 overall
+2026-03-05 11:40:44,463 - INFO - Processing record 3f48767b-7773-4dbd-9f86-05ac9995aad5: TMN KOTA MASAI_JLN CERMAI (1.4756944396754972, 103.94518362766225)
+2026-03-05 11:40:46,278 - INFO - [OK] Successfully geocoded 3f48767b-7773-4dbd-9f86-05ac9995aad5: Jalan Cermai 16, Taman Kota Masai, Pasir Gudang, Johor Bahru, Johor, 81700, Malaysia
+2026-03-05 11:40:46,278 - INFO - Processing record 3f54d6fb-d8eb-4f66-ab46-9c46e5435b74: TAMAN KINTAMAN,TAMAN SENTOSA 19,TAMAN SENTOSA 26 (3.003192796954548, 101.46911359815456)
+2026-03-05 11:40:48,467 - INFO - [OK] Successfully geocoded 3f54d6fb-d8eb-4f66-ab46-9c46e5435b74: Jalan Dato Yusuf Shahbudin 14, Bandar Sentosa, Bandaraya Klang, Klang, Selangor, 41200, Malaysia
+2026-03-05 11:40:48,467 - INFO - Processing record 408abec2-1195-4648-8c0b-6c5cf74f2092: E11. SRI SS 7 (TERES 8) [JLN SS 7/1, 7/3 , 7/3A , 7/5],E11. SRI SS 7 (TERES 9) [JLN SS 7/6 , 7/8 , 7/9, 7/12 , 7/14 , 7/16 , 7/18] (3.0917431672830213, 101.60442259031448)
+2026-03-05 11:40:50,282 - INFO - [OK] Successfully geocoded 408abec2-1195-4648-8c0b-6c5cf74f2092: Jalan SS 7/16, SS 7, Kelana Jaya, Petaling Jaya, Petaling, Selangor, 43701, Malaysia
+2026-03-05 11:40:50,283 - INFO - Processing record 413a73cd-aae1-4057-97d5-6ef6e499fded: KAW.RUMAH HIJAU,KAWASAN RUMAH HIJAU,TAMAN SRI HIJAU (4.839072269155689, 100.73589451259885)
+2026-03-05 11:40:52,143 - INFO - [OK] Successfully geocoded 413a73cd-aae1-4057-97d5-6ef6e499fded: Jalan Kancil, Taman Sri Hijau, Kampung Jambu, Taiping, Larut, Matang dan Selama, Perak, 34000, Malaysia
+2026-03-05 11:40:52,143 - INFO - Processing record 41ff3dfb-c475-4a5e-8426-f623e8c0573c: E1. SEKSYEN 16 (FLAT A : BLOK 1 - 4, BLOK 9 - 16),E1. SEKSYEN 8 (FLAT B : BLOK 11 - 22 ),E1. SEKSYEN 8 (TERES A : JLN 8/1 - 8/13) (3.0905035358220854, 101.50685923347238)
+2026-03-05 11:40:54,290 - INFO - [OK] Successfully geocoded 41ff3dfb-c475-4a5e-8426-f623e8c0573c: Seksyen 8, Shah Alam, Petaling, Selangor, 40604, Malaysia
+2026-03-05 11:40:54,292 - INFO - Processing record 4266abd9-2c2b-4d13-98be-87b6fbc583ca: TAMAN SETIAWANGSA (KALEIDOSCOPE RESIDENSI) (3.190725307102733, 101.75659997515751)
+2026-03-05 11:40:56,058 - INFO - [OK] Successfully geocoded 4266abd9-2c2b-4d13-98be-87b6fbc583ca: Jalan 1/56, Setiawangsa, Kuala Lumpur, 54200, Malaysia
+2026-03-05 11:40:56,059 - INFO - Processing record 42cac92b-8509-4aab-9f27-8bc4897b64de: E17. TMN SERDANG PERDANA SP 5 (RUMAH KEDAI JLN SP 5/1 - JLN SP 5/5),E17. TMN SERDANG RAYA 4 (JLN SR 4) (3.038489258921953, 101.70573359558536)
+2026-03-05 11:40:58,386 - INFO - [OK] Successfully geocoded 42cac92b-8509-4aab-9f27-8bc4897b64de: Lebuhraya Utara–Selatan, Seri Kembangan, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 43300, Malaysia
+2026-03-05 11:40:58,389 - INFO - Processing record 430471af-d0e7-4141-ab8b-dce94719ab3d: LANDUNG AYANG LAUT (6.884855063258505, 116.83916586706802)
+2026-03-05 11:41:00,757 - INFO - [OK] Successfully geocoded 430471af-d0e7-4141-ab8b-dce94719ab3d: Jalan Landong Ayang II, Kudat, Bahagian Kudat, Sabah, 89058, Malaysia
+2026-03-05 11:41:00,757 - INFO - Processing record 45e55c20-35e6-4162-a2eb-95214889c6ad: KAMPUNG RAJA UDA 04,KAMPUNG RAJA UDA 05 (3.013025219585366, 101.40904654016464)
+2026-03-05 11:41:02,578 - INFO - [OK] Successfully geocoded 45e55c20-35e6-4162-a2eb-95214889c6ad: Lorong Orkid, Kampung Raja Uda, Pandamaran, Pelabuhan Klang, Bandaraya Klang, Klang, Selangor, 42000, Malaysia
+2026-03-05 11:41:02,580 - INFO - Processing record 4631df21-9ab0-4e27-b73b-2240c600f56e: E6. BL PJU 9 SD 12 FLAT SRI CEMPAKA (3.195450176999998, 101.605165156)
+2026-03-05 11:41:04,823 - INFO - [OK] Successfully geocoded 4631df21-9ab0-4e27-b73b-2240c600f56e: Jalan Cempaka SD 12/4D, PJU 9, Bandar Sri Damansara, Petaling Jaya, Petaling, Selangor, 52200, Malaysia
+2026-03-05 11:41:04,857 - INFO - Progress: 70/100 in batch, Total: 25349/25540 overall
+2026-03-05 11:41:04,857 - INFO - Processing record 4822e087-fef7-4241-ab11-20ffd32f7625: JALAN PUNCAK 3 TAMAN PUNCAK SAUJANA,TAMAN SAUJANA SURIA (3.013924278845239, 101.80871758664286)
+2026-03-05 11:41:06,962 - INFO - [OK] Successfully geocoded 4822e087-fef7-4241-ab11-20ffd32f7625: Jalan Puncak Saujana 3/1F, Saujana Damai, Taman Puncak Saujana, Majlis Perbandaran Kajang, Hulu Langat, Selangor, 43000, Malaysia
+2026-03-05 11:41:06,962 - INFO - Processing record 48ab49f3-394e-4bec-a3b6-5d2536b5d560: TAMAN BUKIT CHEDANG (JALAN MERANTI) (2.697164874791412, 101.92798016297546)
+2026-03-05 11:41:09,479 - INFO - [OK] Successfully geocoded 48ab49f3-394e-4bec-a3b6-5d2536b5d560: Jalan Meranti 2, Taman Bukit Chedang, Rasah, Seremban, Negeri Sembilan, 70300, Malaysia
+2026-03-05 11:41:09,480 - INFO - Processing record 4aca2ca5-8203-4f97-b741-8597578cdc32: TMN MAKMUR (1.6636347661266644, 103.61359360599332)
+2026-03-05 11:41:11,250 - INFO - [OK] Successfully geocoded 4aca2ca5-8203-4f97-b741-8597578cdc32: Jalan Makmur 13, Taman Makmur, Kulai, Johor, 81000, Malaysia
+2026-03-05 11:41:11,252 - INFO - Processing record 4c4971a1-0030-4745-91ce-868c1a90f639: TAMAN JINJANG BARU (RUMAH KOS RENDAH BLOK 1-6),TAMAN JINJANG BARU (RUMAH KOS RENDAH BLOK 7-12) (3.205961195687859, 101.659078347763)
+2026-03-05 11:41:13,427 - INFO - [OK] Successfully geocoded 4c4971a1-0030-4745-91ce-868c1a90f639: Jalan 11/32, Kampung Baru Jinjang Selatan, Jinjang, Kepong, Kuala Lumpur, 52000, Malaysia
+2026-03-05 11:41:13,429 - INFO - Processing record 4e0f388f-e4f2-4ea4-9a42-0e375af9a9b6: JALAN SP4 BSP ZON 2,PANGSAPURI IMPIAN, BSP (ZON 1-6),PANGSAPURI IMPIAN, BSP (ZON 7-12),PANGSAPURI SERI SAUJANA, BSP (BLOK A-F) (2.95457551315607, 101.58253983990174)
+2026-03-05 11:41:15,253 - INFO - [OK] Successfully geocoded 4e0f388f-e4f2-4ea4-9a42-0e375af9a9b6: Rumah Pangsa Impian Saujana Putra, Bandar Saujana Putra, Kuala Langat, Selangor, 42610, Malaysia
+2026-03-05 11:41:15,254 - INFO - Processing record 4eb99378-ebdf-4447-b7e9-719da268e7c4: PALM COURT CONDOMINIUM (BLOK A,B,C,D),SUASANA LOFT,TAI KWONG MANSION, JLN BERHALA (BERSEBELAHAN TONG WENG MANSION),TONGSOON MANSION (3.129693377889865, 101.68625220414096)
+2026-03-05 11:41:17,013 - INFO - [OK] Successfully geocoded 4eb99378-ebdf-4447-b7e9-719da268e7c4: Sekolah Menengah Kebangsaan Vivekananda, Jalan Rozario, Brickfields, Kuala Lumpur, 50470, Malaysia
+2026-03-05 11:41:17,013 - INFO - Processing record 4fca3d80-e1ee-4e13-a451-8b9afad84265: E12. TM SEK 51A FLAT IMPIAN BAIDURI (3.09469961100001, 101.62331593200004)
+2026-03-05 11:41:18,960 - INFO - [OK] Successfully geocoded 4fca3d80-e1ee-4e13-a451-8b9afad84265: Jalan 22/49, Taman Lean Seng, Seksyen 51A, Petaling Jaya, Petaling, Selangor, 47300, Malaysia
+2026-03-05 11:41:18,960 - INFO - Processing record 52652374-9a18-41ff-9bf3-928679896343: FLAT TAMAN SERI BEREMBANG,PANGSAPURI SAMUDERA 2 SRI BEREMBANG (2.99398500883784, 101.39932305791352)
+2026-03-05 11:41:20,915 - INFO - [OK] Successfully geocoded 52652374-9a18-41ff-9bf3-928679896343: Jalan Berembang, Pelabuhan Klang, Bandaraya Klang, Klang, Selangor, 42009, Malaysia
+2026-03-05 11:41:20,915 - INFO - Processing record 526716ea-d5fd-4000-af3e-1ee663180a9d: KG. CENDERAMATA,SETINGGAN KG.CENDERAMATA 2, LIKAS (6.000996962977775, 116.1169284957722)
+2026-03-05 11:41:23,095 - INFO - [OK] Successfully geocoded 526716ea-d5fd-4000-af3e-1ee663180a9d: 8, Lorong Kemajuan 2, Taman Kemajuan, Likas, Kota Kinabalu, Bahagian Pantai Barat, Sabah, 88400, Malaysia
+2026-03-05 11:41:23,096 - INFO - Processing record 534a0533-7780-405d-91f1-3c4299bf5d07: TAMAN DESA BAIDURI (1.6639545366760573, 103.584129897)
+2026-03-05 11:41:24,906 - INFO - [OK] Successfully geocoded 534a0533-7780-405d-91f1-3c4299bf5d07: Jalan Desa Baiduri 5/1, Taman Kota Kulai, Kulai, Johor, 81000, Malaysia
+2026-03-05 11:41:24,945 - INFO - Progress: 80/100 in batch, Total: 25359/25540 overall
+2026-03-05 11:41:24,945 - INFO - Processing record 5358ecdf-df24-4764-9677-0a215dc3bd61: PPR SRI ALAM B (BLOK 6 - BLOK 9) (3.1261096200000225, 101.70739213899998)
+2026-03-05 11:41:27,058 - INFO - [OK] Successfully geocoded 5358ecdf-df24-4764-9677-0a215dc3bd61: 4, Jalan 1/78, Pudu, Kuala Lumpur, 57000, Malaysia
+2026-03-05 11:41:27,059 - INFO - Processing record 54cad054-56aa-493d-8b7a-ef898bec17de: E13. SS 17/1 (3.077062840999986, 101.579789452)
+2026-03-05 11:41:28,899 - INFO - [OK] Successfully geocoded 54cad054-56aa-493d-8b7a-ef898bec17de: Jalan SS 17/1A, SS 17, Pusat Bandar Subang Jaya, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 47500, Malaysia
+2026-03-05 11:41:28,899 - INFO - Processing record 56369ff8-52fd-4957-8b0c-78654f708031: E11. SRI SS 5C (TERES 1) [JLN SS 5C/1],E11. SRI SS 5C (TERES 7) [SS 5C/9 , 5C/11 , 5C/13] (3.1026317939936328, 101.6008058819172)
+2026-03-05 11:41:31,242 - INFO - [OK] Successfully geocoded 56369ff8-52fd-4957-8b0c-78654f708031: Jalan SS 6/3, SS 6, Kelana Jaya, Petaling Jaya, Petaling, Selangor, 47302, Malaysia
+2026-03-05 11:41:31,243 - INFO - Processing record 5853b482-7d49-41f8-9787-6d9c9e771947: E3. SEKSYEN 26 (KG BARU HICOM : JLN SUNGAI LIMAU 26/36),E3. SEKSYEN 26 (PANGSAPURI ANGGERIK- BLOK 1,2,3) (3.031904542331123, 101.54783525371523)
+2026-03-05 11:41:33,498 - INFO - [OK] Successfully geocoded 5853b482-7d49-41f8-9787-6d9c9e771947: Jalan Sungai Limau 26/36, Seksyen 26, Shah Alam, Petaling, Selangor, 40400, Malaysia
+2026-03-05 11:41:33,499 - INFO - Processing record 5a8ddc63-35ee-44c6-b057-67a0a8074cc8: APPT PANDAN HEIGHT PANDAN PERDANA,JALAN BUNGA MELATI 6-8 TAMAN SERAYA,JALAN MAWAR 5-19A TAMAN MAWAR (3.113729337950818, 101.7586929053224)
+2026-03-05 11:41:35,455 - INFO - [OK] Successfully geocoded 5a8ddc63-35ee-44c6-b057-67a0a8074cc8: 16, Jalan Bunga Melati 4, Taman Seraya, Ampang, Majlis Perbandaran Ampang Jaya, Hulu Langat, Selangor, 56100, Malaysia
+2026-03-05 11:41:35,455 - INFO - Processing record 5a96b4ad-ae02-46e8-abe8-53060546fd24: TAMAN SRI RANTAU 05 (3.054574528802816, 101.40249690255632)
+2026-03-05 11:41:37,214 - INFO - [OK] Successfully geocoded 5a96b4ad-ae02-46e8-abe8-53060546fd24: Bandaraya Klang, Klang, Selangor, 42100, Malaysia
+2026-03-05 11:41:37,215 - INFO - Processing record 5ed28790-9c88-4e53-b1fb-9afabae8332a: TMN SERI RAPAT (4.567164321085367, 101.11043679908538)
+2026-03-05 11:41:40,971 - INFO - [OK] Successfully geocoded 5ed28790-9c88-4e53-b1fb-9afabae8332a: Hala Rapat Baru 13, Taman Seri Rapat, Gunung Rapat, Majlis Bandaraya Ipoh, Kinta, Perak, 31350, Malaysia
+2026-03-05 11:41:40,972 - INFO - Processing record 5f3928db-1b53-4756-9d83-6075e4fbecfd: KG BARU BERCHAM (4.639591852613499, 101.12863162690796)
+2026-03-05 11:41:43,427 - INFO - [OK] Successfully geocoded 5f3928db-1b53-4756-9d83-6075e4fbecfd: Pasar Bercham, Jalan Bercham, Kampung Baru Bercham, Majlis Bandaraya Ipoh, Kinta, Perak, 31400, Malaysia
+2026-03-05 11:41:43,427 - INFO - Processing record 61974f83-e5ea-4a0c-9c07-f72e1cf5ce89: TAMAN ENG ANN 05 (3.061123459287504, 101.45775185063124)
+2026-03-05 11:41:45,700 - INFO - [OK] Successfully geocoded 61974f83-e5ea-4a0c-9c07-f72e1cf5ce89: Jalan Serindit, Taman Eng Ann, Bandaraya Klang, Klang, Selangor, 41300, Malaysia
+2026-03-05 11:41:45,702 - INFO - Processing record 62f5480a-6be6-4575-92c5-604a214347f5: TAMAN SEJATI (5.893015559911949, 118.05540576948428)
+2026-03-05 11:41:48,139 - INFO - [OK] Successfully geocoded 62f5480a-6be6-4575-92c5-604a214347f5: Lorong Sejati 9, Taman Sejati, Batu 7 1/2, Sandakan, Sandakan District, Bahagian Sandakan, Sabah, 90716, Malaysia
+2026-03-05 11:41:48,173 - INFO - Progress: 90/100 in batch, Total: 25369/25540 overall
+2026-03-05 11:41:48,174 - INFO - Processing record 63aa0b83-bf5d-4dae-a1da-39758444986f: E6. BL PJU 8 EMPIRE CITY (HALO SUNDAY) BLOK A & B,E6. BL PJU 8 EMPIRE CITY (TOWER M) BLOK M (3.1680582431312514, 101.613788618575)
+2026-03-05 11:41:51,407 - INFO - [OK] Successfully geocoded 63aa0b83-bf5d-4dae-a1da-39758444986f: PJU 8, Mutiara Damansara, Petaling Jaya, Petaling, Selangor, 47820, Malaysia
+2026-03-05 11:41:51,407 - INFO - Processing record 65445774-0a5b-486f-8b47-99769ecb7982: KG JIBOI BARU,RUMAH RAKYAT SIKAMAT 2 (2.736235968303571, 101.9724891827232)
+2026-03-05 11:41:53,775 - INFO - [OK] Successfully geocoded 65445774-0a5b-486f-8b47-99769ecb7982: Jalan Jiboi Baru 4, Taman Kayu Manis, Kampung Jiboi Baru, Seremban, Negeri Sembilan, 70400, Malaysia
+2026-03-05 11:41:53,775 - INFO - Processing record 655fec4f-0fb3-41c9-92be-1b129461bdd8: LA COTTAGE,PUTRA PERDANA,PUTRA PERDANA FASA 13 (2.9465113923533357, 101.59879019138)
+2026-03-05 11:41:55,615 - INFO - [OK] Successfully geocoded 655fec4f-0fb3-41c9-92be-1b129461bdd8: LaCottage, Taman Putra Perdana, Sepang, Selangor, 42610, Malaysia
+2026-03-05 11:41:55,615 - INFO - Processing record 662c6d3e-ff84-4c33-b497-73097947c95b: E9. KT SS 3(TERES 5)[JLN SS 3/29,33,35,37,64,64A,66,68,70,72,74,76,78] (3.0987993750057456, 101.6120306191724)
+2026-03-05 11:41:57,497 - INFO - [OK] Successfully geocoded 662c6d3e-ff84-4c33-b497-73097947c95b: Jalan SS 3/70, Taman Universiti, SS 3, Petaling Jaya, Petaling, Selangor, 47300, Malaysia
+2026-03-05 11:41:57,497 - INFO - Processing record 6663a78b-b7b7-45d5-9838-a178f22322b7: APPT SRI IXORA TAMAN SEPAKAT INDAH,APPT SRI TANJUNG SEKSYEN 7 BANDAR BARU BANGI,JALAN 4/12 SEKSYEN 4 BANDAR BARU BANGI,JALAN 4/4 SEKSYEN 4 BANDAR BARU BANGI,JALAN KAJANG MEWAH 1-9 TAMAN KAJANG MEWAH & JALAN KAJANG PUTRA 1 (2.969481932101989, 101.77988586965424)
+2026-03-05 11:41:59,621 - INFO - [OK] Successfully geocoded 6663a78b-b7b7-45d5-9838-a178f22322b7: Jalan 7/3D, Seksyen 7, Bandar Baru Bangi, Majlis Perbandaran Kajang, Hulu Langat, Selangor, 43650, Malaysia
+2026-03-05 11:41:59,622 - INFO - Processing record 66a3cb70-aa5c-43e9-acbe-835a240cc9d1: APPT JALAN 6C/11 SEKSYEN 16 BANDAR BARU BANGI,APPT JALAN 6C/2 SEKSYEN 16 BANDAR BARU BANGI,APPT JALAN 6C/7 SEKSYEN 16 BANDAR BARU BANGI,JALAN 1/7 SEKSYEN 1 BANDAR BARU BANGI (2.946006512131276, 101.76511947516217)
+2026-03-05 11:42:01,472 - INFO - [OK] Successfully geocoded 66a3cb70-aa5c-43e9-acbe-835a240cc9d1: Jalan 1/9, Seksyen 1, Majlis Perbandaran Kajang, Hulu Langat, Selangor, 43650, Malaysia
+2026-03-05 11:42:01,472 - INFO - Processing record 6736f68e-0f14-4171-a96b-1bae8906036a: JALAN DAHLIA BB,JALAN MELATI BB (3.4010384186027385, 101.55554262026028)
+2026-03-05 11:42:03,508 - INFO - [OK] Successfully geocoded 6736f68e-0f14-4171-a96b-1bae8906036a: 19, Jalan Teratai 14, Taman Teratai, Bandar Bukit Beruntung, Bukit Beruntung, Hulu Selangor, Selangor, 48300, Malaysia
+2026-03-05 11:42:03,510 - INFO - Processing record 67403ba1-3116-4135-b8bd-fefe2a9d62bf: K/B PASIR PINJI,K/B PASIR PINJI 1,TMN HOOVER,TMN MARGOSA, PASIR PUTEH (4.577772400144781, 101.08405375465657)
+2026-03-05 11:42:05,353 - INFO - [OK] Successfully geocoded 67403ba1-3116-4135-b8bd-fefe2a9d62bf: 1506, Jalan Sultan Azlan Shah, Pasir Pinji, Majlis Bandaraya Ipoh, Kinta, Perak, 31650, Malaysia
+2026-03-05 11:42:05,356 - INFO - Processing record 684931f1-766c-4ba9-ae2e-80c36de0b909: TMN INDAHPURA BLOK MELATI,TMN INDAHPURA BLOK MELATI 2 (1.6512258467037046, 103.59366486338888)
+2026-03-05 11:42:07,620 - INFO - [OK] Successfully geocoded 684931f1-766c-4ba9-ae2e-80c36de0b909: Jalan Melati 13, Rumah Mampu Biaya, Bandar Indahpura, Kulai, Johor, 81000, Malaysia
+2026-03-05 11:42:07,621 - INFO - Processing record 696e6dbc-58fd-43fa-af2e-bc91a25ea853: E13. USJ 15(SBG PERDANA GOODYEAR COURT 10B)BLOK AR,AS,AT,AU,AV (3.058734713786667, 101.60083504920664)
+2026-03-05 11:42:09,756 - INFO - [OK] Successfully geocoded 696e6dbc-58fd-43fa-af2e-bc91a25ea853: Jalan USJ 1/15, USJ 1, UEP Subang Jaya, Puchong, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 47500, Malaysia
+2026-03-05 11:42:09,790 - INFO - Progress: 100/100 in batch, Total: 25379/25540 overall
+2026-03-05 11:42:09,809 - INFO - Batch completed: 100 records in 203.2s
+2026-03-05 11:42:09,811 - INFO - Overall progress: 25379/25540 (161 remaining)
+2026-03-05 11:42:09,811 - INFO - Estimated time remaining: 0.1 hours
+2026-03-05 11:42:11,874 - INFO - Found 100 records to geocode
+2026-03-05 11:42:11,874 - INFO - Processing record 6c46659c-a810-4a9f-9689-1be42b221770: E13. USJ 3/2,E13. USJ 5/1 (3.05804148914726, 101.5766901534178)
+2026-03-05 11:42:12,232 - INFO - [OK] Successfully geocoded 6c46659c-a810-4a9f-9689-1be42b221770: Jalan USJ 4/1K, USJ 4, UEP Subang Jaya, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 47610, Malaysia
+2026-03-05 11:42:12,234 - INFO - Processing record 6d24a092-4ab7-4c1b-b5b7-de8d6a8cafd3: D' ALPINIA,PANGSAPURI D' ALPINIA (2.9772245545503333, 101.65614202160404)
+2026-03-05 11:42:14,460 - INFO - [OK] Successfully geocoded 6d24a092-4ab7-4c1b-b5b7-de8d6a8cafd3: Sepang, Selangor, 47110, Malaysia
+2026-03-05 11:42:14,461 - INFO - Processing record 6e741e7d-1220-4067-8a23-f39ebb7cfd06: CL LORONG PEARL VIEW (5.385271349901409, 100.39444026323945)
+2026-03-05 11:42:16,444 - INFO - [OK] Successfully geocoded 6e741e7d-1220-4067-8a23-f39ebb7cfd06: Lorong Kurau 25, Taman Chai Leng, Seberang Jaya, Bukit Mertajam, Seberang Perai Tengah, Seberang Perai, Pulau Pinang, 14000, Malaysia
+2026-03-05 11:42:16,444 - INFO - Processing record 6ed381f0-bfc3-4924-a0e1-fcae741f595c: TMN DESA TEBRAU_APT TEBRAU CITY RESIDENCE (1.5503927053356157, 103.79487253034246)
+2026-03-05 11:42:18,248 - INFO - [OK] Successfully geocoded 6ed381f0-bfc3-4924-a0e1-fcae741f595c: Jalan Harmonium 24/2, Tebrau City Residences, Johor Bahru, Johor, 81800, Malaysia
+2026-03-05 11:42:18,249 - INFO - Processing record 706cf7bb-f813-44dc-8450-555d8850f3d4: MEDAN 88,TAMAN CEMPAKA (2.808417384506248, 101.73736200733126)
+2026-03-05 11:42:20,140 - INFO - [OK] Successfully geocoded 706cf7bb-f813-44dc-8450-555d8850f3d4: Kampung Giching Hulu, Bandar Baru Salak Tinggi, Sepang, Selangor, 43900, Malaysia
+2026-03-05 11:42:20,140 - INFO - Processing record 707badce-f881-4b8e-a984-4bd3368db792: E5. SEKSYEN U5 (PANGSAPURI MUTIARA SUBANG : BLOK 1 - 7) (3.180033723000008, 101.53742366)
+2026-03-05 11:42:21,932 - INFO - [OK] Successfully geocoded 707badce-f881-4b8e-a984-4bd3368db792: Seksyen U5, Subang Bestari, Shah Alam, Petaling, Selangor, 40150, Malaysia
+2026-03-05 11:42:21,932 - INFO - Processing record 709957b1-6708-489d-9bc7-341d5f2f9539: TAMAN ANGSAMAS (FASA 2) (2.6493239013846144, 101.92459791970516)
+2026-03-05 11:42:23,776 - INFO - [OK] Successfully geocoded 709957b1-6708-489d-9bc7-341d5f2f9539: Jalan Gunung Datok 15, Taman Angsamas, Seremban, Negeri Sembilan, 70300, Malaysia
+2026-03-05 11:42:23,777 - INFO - Processing record 70cb3e06-e09c-4c6e-8b17-c6bb0b554207: BANDAR MANJALARA (RUMAH KEDAI - JALAN 3/62A),VILLA MANJA (JLN MANJA 1,2,3,4,5) (3.1924585044999985, 101.63062935148191)
+2026-03-05 11:42:25,932 - INFO - [OK] Successfully geocoded 70cb3e06-e09c-4c6e-8b17-c6bb0b554207: 69, Jalan 11/62A, Bandar Menjalara, Kepong, Kuala Lumpur, 52200, Malaysia
+2026-03-05 11:42:25,932 - INFO - Processing record 710119ae-3631-4c68-a58c-67f381ebeb9b: GUM-GUM BATU 16 (5.895399364132911, 117.92059063064558)
+2026-03-05 11:42:28,180 - INFO - [OK] Successfully geocoded 710119ae-3631-4c68-a58c-67f381ebeb9b: Batu 16, Kg. Gum Gum, Sandakan District, Bahagian Sandakan, Sabah, Malaysia
+2026-03-05 11:42:28,181 - INFO - Processing record 7109f7d1-d65f-4a8d-bc89-55d1a715ca4b: TMN BUKIT INDAH_JLN INDAH 10/ (1.4786610801568625, 103.65265508073205)
+2026-03-05 11:42:30,020 - INFO - [OK] Successfully geocoded 7109f7d1-d65f-4a8d-bc89-55d1a715ca4b: Jalan Indah 10/11, Taman Bukit Indah, Bukit Indah, Iskandar Puteri, Johor Bahru, Johor, 81200, Malaysia
+2026-03-05 11:42:30,054 - INFO - Progress: 10/100 in batch, Total: 25389/25540 overall
+2026-03-05 11:42:30,055 - INFO - Processing record 7116ea93-bb97-4846-9d86-48ee031e7bf4: APPT TAMAN PRIMA CEMPAKA (2.976655522816904, 101.81840571551407)
+2026-03-05 11:42:31,851 - INFO - [OK] Successfully geocoded 7116ea93-bb97-4846-9d86-48ee031e7bf4: Taman Anggerik Perdana, Majlis Perbandaran Kajang, Hulu Langat, Selangor, 43000, Malaysia
+2026-03-05 11:42:31,852 - INFO - Processing record 73712608-daae-4f16-b65a-eec604c7f385: APARTMENT ERISTANA SERI PRISTANA,SERI PRISTANA FASA 5 (3.212633905417179, 101.47268043379754)
+2026-03-05 11:42:34,016 - INFO - [OK] Successfully geocoded 73712608-daae-4f16-b65a-eec604c7f385: Jalan SP 5/1, Seri Pristana, Bandar Saujana Utama, Kuala Selangor, Selangor, 42300, Malaysia
+2026-03-05 11:42:34,021 - INFO - Processing record 73e4a21b-b0df-4179-ac54-6db928bfe6d0: APT TG PUTERI RESORT (1.4457418574228176, 103.9360617396443)
+2026-03-05 11:42:35,860 - INFO - [OK] Successfully geocoded 73e4a21b-b0df-4179-ac54-6db928bfe6d0: Kampung Pasir Putih, Johor Bahru, Johor, 81707, Malaysia
+2026-03-05 11:42:35,861 - INFO - Processing record 780fc6f5-952d-431f-a94c-d45cfb537b07: KOMPLEKS KUARTERS BOMBA CHERAS, JALAN MIDAH 1 (3.1075583632602743, 101.72984821978768)
+2026-03-05 11:42:37,700 - INFO - [OK] Successfully geocoded 780fc6f5-952d-431f-a94c-d45cfb537b07: Jalan Midah 1, Bandar Tun Razak, Cheras, Kuala Lumpur, 56000, Malaysia
+2026-03-05 11:42:37,701 - INFO - Processing record 78b0f912-8504-409e-91fb-9ddb97e47a13: PPR HILIRAN AMPANG (3.1475665798480583, 101.74849082009894)
+2026-03-05 11:42:39,234 - INFO - [OK] Successfully geocoded 78b0f912-8504-409e-91fb-9ddb97e47a13: Jalan Pandan Luas, Taman Ampang Hilir, Kampung Pandan Dalam, Ampang, Majlis Perbandaran Ampang Jaya, Hulu Langat, Selangor, 68000, Malaysia
+2026-03-05 11:42:39,235 - INFO - Processing record 7915222a-4e4f-4113-a7e4-c8a5102ebf5b: JU52 KG. PISANG (4.27995849099363, 117.88303027696178)
+2026-03-05 11:42:41,188 - INFO - [OK] Successfully geocoded 7915222a-4e4f-4113-a7e4-c8a5102ebf5b: Kampung Sentosa, Tawau, Bahagian Tawau, Sabah, 91007, Malaysia
+2026-03-05 11:42:41,188 - INFO - Processing record 7947c779-0e09-40b6-9324-c8b0b5953d1c: TAMAN SRI PETALING B2-JLN 6/149L,JLN 8/149L,JLN 10/149L,JLN 12/149L,JLN 15/149L (3.0693128507746485, 101.68160304256338)
+2026-03-05 11:42:43,315 - INFO - [OK] Successfully geocoded 7947c779-0e09-40b6-9324-c8b0b5953d1c: Jalan 8/149L, Zone P, Taman OUG, Kuala Lumpur, 57000, Malaysia
+2026-03-05 11:42:43,315 - INFO - Processing record 79574af7-7edd-4fe6-9840-db2269d579b7: KEPAYAN RIDGE BLOK B,SURIAN RESIDENCE (5.926957958608433, 116.07166294232532)
+2026-03-05 11:42:45,379 - INFO - [OK] Successfully geocoded 79574af7-7edd-4fe6-9840-db2269d579b7: Jalan Kepayan Kobusak, Donggongon, Penampang, Bahagian Pantai Barat, Sabah, 89560, Malaysia
+2026-03-05 11:42:45,381 - INFO - Processing record 79d4cada-5d87-48b3-a58f-189ad7e8b842: TMN SRI BAHANG (5.917958536887323, 116.08981379876056)
+2026-03-05 11:42:47,556 - INFO - [OK] Successfully geocoded 79d4cada-5d87-48b3-a58f-189ad7e8b842: Lorong Sri Bahang 1, Taman Palm Villa, Donggongon, Penampang, Bahagian Pantai Barat, Sabah, 89507, Malaysia
+2026-03-05 11:42:47,557 - INFO - Processing record 7a0fad39-3ac0-454f-b924-428d7bcdcbd7: KG SIMPANG 3 (JALAN DEWAN),TMN  HARMONIS,TMN GREENWOOD (3.233487681024813, 101.71030538533996)
+2026-03-05 11:42:49,785 - INFO - [OK] Successfully geocoded 7a0fad39-3ac0-454f-b924-428d7bcdcbd7: Gombak, Majlis Perbandaran Selayang, Gombak, Selangor, 53100, Malaysia
+2026-03-05 11:42:49,819 - INFO - Progress: 20/100 in batch, Total: 25399/25540 overall
+2026-03-05 11:42:49,819 - INFO - Processing record 7a3683e4-e3a0-4d02-8d65-5aabc5b65ac7: APPT BEREMBANG INDAH,KG BEREMBANG (3.1650247401027385, 101.73824725766438)
+2026-03-05 11:42:51,624 - INFO - [OK] Successfully geocoded 7a3683e4-e3a0-4d02-8d65-5aabc5b65ac7: Ulu Kelang, Majlis Perbandaran Ampang Jaya, Gombak, Selangor, 50538, Malaysia
+2026-03-05 11:42:51,627 - INFO - Processing record 7a416c42-8e9b-4269-9126-497086bb851f: TMN SKUDAI BARU_JLN HANG TUAH 37-41 (1.5202261204246597, 103.65426286465753)
+2026-03-05 11:42:53,880 - INFO - [OK] Successfully geocoded 7a416c42-8e9b-4269-9126-497086bb851f: Jalan Hang Tuah 37, Taman Skudai Baru 2, Skudai, Iskandar Puteri, Johor Bahru, Johor, 81380, Malaysia
+2026-03-05 11:42:53,881 - INFO - Processing record 7a5fd07e-ccfe-44e7-91e2-bc16ece67ab5: E2. SEKSYEN 19 (FLAT A JLN 19/15 : BLOK 1 - 5),E2. SEKSYEN 19 (FLAT B JLN 19/15 : BLOK 6 - 8),E2. SEKSYEN 19 (TERES B : JLN 19/4 - 19/7B),E2. SEKSYEN 20 (APT SURI PUTERI),E2. SEKSYEN 20 (TERES A : JLN 20/2 - 20/6) (3.0518583723898303, 101.533765346726)
+2026-03-05 11:42:55,744 - INFO - [OK] Successfully geocoded 7a5fd07e-ccfe-44e7-91e2-bc16ece67ab5: Sekolah Menengah Kebangsaan Seksyen 19, Jalan Sauh 19/44, Seksyen 19, Shah Alam, Petaling, Selangor, 40300, Malaysia
+2026-03-05 11:42:55,745 - INFO - Processing record 7b2c8227-4644-4092-b0ed-10e2c1565ae6: E9. KT SEK 21 (TERES 1) [JLN 21/1,1A,2,3,4,5,6,7,8,9,9A,10,10A,11,11A,11B,13,15],E9. KT SS 1 RUMAH PANGSA SRI AMAN (3.1089029326858943, 101.62209129517947)
+2026-03-05 11:42:57,980 - INFO - [OK] Successfully geocoded 7b2c8227-4644-4092-b0ed-10e2c1565ae6: Gerai Makanan & Minuman Jalan 21/19A, Jalan 21/19A, SEA Park, Seksyen 21, Petaling Jaya, Petaling, Selangor, 46300, Malaysia
+2026-03-05 11:42:57,980 - INFO - Processing record 7bdf6e64-5bb2-46df-8a48-45d0c057f9b2: TMN U_KEBANGSAAN JLN 29- JLN 68 (1.5311365635066667, 103.62874952077333)
+2026-03-05 11:42:59,929 - INFO - [OK] Successfully geocoded 7bdf6e64-5bb2-46df-8a48-45d0c057f9b2: Jalan Kebangsaan 45, Taman Universiti, Iskandar Puteri, Johor Bahru, Johor, 81380, Malaysia
+2026-03-05 11:42:59,930 - INFO - Processing record 7ccd3afb-0608-470b-bf1b-fc9b305ee0ad: TAMAN PERINDUSTRIAN PULAU INDAH 02,TAMAN PERINDUSTRIAN PULAU INDAH 11 (2.9619748905062515, 101.33049895405624)
+2026-03-05 11:43:02,073 - INFO - [OK] Successfully geocoded 7ccd3afb-0608-470b-bf1b-fc9b305ee0ad: Jalan Sungai Pinang 5/6, Kampung Sungai Pinang, Bandaraya Klang, Klang, Selangor, Malaysia
+2026-03-05 11:43:02,074 - INFO - Processing record 7defbec0-2f15-4440-8861-856ff4595a78: E15. TMN PUCHONG PERDANA  (JLN TERATAI),E15. TMN PUCHONG PERDANA (JLN PERDANA 2),E15. TMN PUCHONG PERDANA 1 (JLN MAWAR) (3.006017758230772, 101.60735956324616)
+2026-03-05 11:43:04,035 - INFO - [OK] Successfully geocoded 7defbec0-2f15-4440-8861-856ff4595a78: Jalan Teratai 3, Puchong Indah, Puchong Perdana, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 47150, Malaysia
+2026-03-05 11:43:04,035 - INFO - Processing record 7f9a7227-da05-4d39-a085-caf62a6fa5bf: JALAN CEMPAKA 1B, BS,JALAN CEMPAKA BS,JALAN JEJARUM 2, BS,JALAN JEJARUM 5 & 6, BS,JLN. JENJARUM, BKT SENTOSA (3.404467310251209, 101.56994673993718)
+2026-03-05 11:43:05,860 - INFO - [OK] Successfully geocoded 7f9a7227-da05-4d39-a085-caf62a6fa5bf: Bandar Bukit Sentosa Fasa 1, Bukit Sentosa, Hulu Selangor, Selangor, 48300, Malaysia
+2026-03-05 11:43:05,860 - INFO - Processing record 7f9cf20f-94d7-4ce3-bbcf-46c3478674e0: JALAN SP7 (TAMAN CORAL) (2.9386943338243263, 101.585789821277)
+2026-03-05 11:43:08,019 - INFO - [OK] Successfully geocoded 7f9cf20f-94d7-4ce3-bbcf-46c3478674e0: Jalan SP 7/14, Kuala Langat, Selangor, 42610, Malaysia
+2026-03-05 11:43:08,019 - INFO - Processing record 803b6010-f7ea-4095-982f-14fcdc563eeb: PUTRA PERDANA FASA 03,PUTRA PERDANA FASA 03 A,PUTRA PERDANA FASA 03 B (2.939157974344498, 101.62128576763637)
+2026-03-05 11:43:09,856 - INFO - [OK] Successfully geocoded 803b6010-f7ea-4095-982f-14fcdc563eeb: Jalan Putra Perdana 3/18, Cluster 3, Taman Putra Perdana, Sepang, Selangor, 47130, Malaysia
+2026-03-05 11:43:09,891 - INFO - Progress: 30/100 in batch, Total: 25409/25540 overall
+2026-03-05 11:43:09,891 - INFO - Processing record 807904d0-6e14-4330-8698-3fef9131ee7f: KAMPUNG BARU (3.1678109632402243, 113.052788876419)
+2026-03-05 11:43:11,688 - INFO - [OK] Successfully geocoded 807904d0-6e14-4330-8698-3fef9131ee7f: Bintulu, Bahagian Bintulu, Sarawak, 97000, Malaysia
+2026-03-05 11:43:11,690 - INFO - Processing record 829836a2-d8f3-479c-9e72-e49e4031eb6d: JALAN RAKAN 1-8 TAMAN RAKAN (3.0342379106956527, 101.7816558912733)
+2026-03-05 11:43:13,544 - INFO - [OK] Successfully geocoded 829836a2-d8f3-479c-9e72-e49e4031eb6d: Jalan Rakan 5, Taman Rakan, Cheras, Majlis Perbandaran Kajang, Hulu Langat, Selangor, 43200, Malaysia
+2026-03-05 11:43:13,545 - INFO - Processing record 82ebee32-b9e1-4956-8928-f3ce9eab9d41: TANJUNG KAPOR ZON 3 (6.903094910582189, 116.85161679659588)
+2026-03-05 11:43:15,804 - INFO - [OK] Successfully geocoded 82ebee32-b9e1-4956-8928-f3ce9eab9d41: Jalan Kg Tg Kapor Pengaraban, Kudat, Bahagian Kudat, Sabah, 89058, Malaysia
+2026-03-05 11:43:15,805 - INFO - Processing record 8414263e-543f-44eb-80e1-0aa4526955e9: E5. SEKSYEN U5(PANGSAPURI SERI PELANGI :BLOK 1-3 & RUMAH PANGSA SERI MURNI : B4) (3.170881149981132, 101.535463732805)
+2026-03-05 11:43:18,048 - INFO - [OK] Successfully geocoded 8414263e-543f-44eb-80e1-0aa4526955e9: Jalan Musytari AN U5/AN, Subang Galaksi, Seksyen U5, Subang Bestari, Shah Alam, Petaling, Selangor, 40160, Malaysia
+2026-03-05 11:43:18,049 - INFO - Processing record 858d69ff-a3a1-4650-bbaa-b233ed90b4aa: TAMAN SELESA ( DAMAI),TAMAN SEPUTIH,TAMAN SINAR BARU (5.965988308768885, 116.09232642987556)
+2026-03-05 11:43:20,095 - INFO - [OK] Successfully geocoded 858d69ff-a3a1-4650-bbaa-b233ed90b4aa: Lorong Sempurna 1, Taman Damai, Damai, Kota Kinabalu, Bahagian Pantai Barat, Sabah, 88902, Malaysia
+2026-03-05 11:43:20,096 - INFO - Processing record 861d20e3-eceb-40ec-96af-043882a9f97f: APARTMENT DESA PALMA (2.811874428922537, 101.7602010644366)
+2026-03-05 11:43:22,456 - INFO - [OK] Successfully geocoded 861d20e3-eceb-40ec-96af-043882a9f97f: Bayu 1, Seremban, Negeri Sembilan, 71800, Malaysia
+2026-03-05 11:43:22,457 - INFO - Processing record 86a4661a-c5f1-4a9c-8dc5-f88a4c95cf89: TAMAN JASMIN (JALAN JASMIN 1-8, JALAN JASMIN 21-25) (2.6905780679437497, 101.99300181174374)
+2026-03-05 11:43:24,319 - INFO - [OK] Successfully geocoded 86a4661a-c5f1-4a9c-8dc5-f88a4c95cf89: Jalan Jasmin 3, Seremban, Negeri Sembilan, 70450, Malaysia
+2026-03-05 11:43:24,320 - INFO - Processing record 8730fdb1-3a87-4ec4-801e-54bff043cb09: JK02 TMN. SEMARAK LOJI,JK38 KOLEJ VOKASIONAL TAWAU,JK91 TAMAN SEMARAK SAWIT (4.297433311272278, 117.88927761120296)
+2026-03-05 11:43:26,152 - INFO - [OK] Successfully geocoded 8730fdb1-3a87-4ec4-801e-54bff043cb09: Taman Semarak, Tawau, Bahagian Tawau, Sabah, 91007, Malaysia
+2026-03-05 11:43:26,154 - INFO - Processing record 8960a09a-50f8-4835-b835-11ebb0693e95: APPT BERINGIN GOMBAK PERMAI,APPT PERMAI GOMBAK PERMAI,TMN GOMBAK PERMAI (3.252349439491528, 101.6868558882034)
+2026-03-05 11:43:28,085 - INFO - [OK] Successfully geocoded 8960a09a-50f8-4835-b835-11ebb0693e95: Batu Caves, Majlis Perbandaran Selayang, Gombak, Selangor, 68100, Malaysia
+2026-03-05 11:43:28,086 - INFO - Processing record 8983bd71-b917-4e4e-bbec-c2bd2ca77a59: E13. USJ 5/1 (3.052818173999981, 101.57813419399996)
+2026-03-05 11:43:30,241 - INFO - [OK] Successfully geocoded 8983bd71-b917-4e4e-bbec-c2bd2ca77a59: Jalan USJ 5/1G, USJ 5, UEP Subang Jaya, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 47610, Malaysia
+2026-03-05 11:43:30,275 - INFO - Progress: 40/100 in batch, Total: 25419/25540 overall
+2026-03-05 11:43:30,276 - INFO - Processing record 89d12186-fa4e-40b8-bd14-c1d1dbf8980e: TMN TAMPOI INDAH 2_JLN TITIWANGSA 5-13 (1.5071453055526316, 103.68588030960528)
+2026-03-05 11:43:31,989 - INFO - [OK] Successfully geocoded 89d12186-fa4e-40b8-bd14-c1d1dbf8980e: Jalan Titiwangsa 9, Riverria, Johor Bahru, Johor, 79150, Malaysia
+2026-03-05 11:43:31,989 - INFO - Processing record 89d80d2d-3cb5-4424-a0a6-1a9be87e530e: TABUAN DAYAK (1.5277526706918625, 110.36250502168603)
+2026-03-05 11:43:33,921 - INFO - [OK] Successfully geocoded 89d80d2d-3cb5-4424-a0a6-1a9be87e530e: Kuching, Bahagian Kuching, Sarawak, 93000, Malaysia
+2026-03-05 11:43:33,922 - INFO - Processing record 8c1b5f6e-aa77-4140-804c-0767873a4631: E7. KD PJU 5 SEK 7 APT LILY (3.172674571424837, 101.57377051602614)
+2026-03-05 11:43:35,764 - INFO - [OK] Successfully geocoded 8c1b5f6e-aa77-4140-804c-0767873a4631: Jalan Nuri 7/1B, PJU 5, Kota Damansara, Petaling Jaya, Petaling, Selangor, 47810, Malaysia
+2026-03-05 11:43:35,767 - INFO - Processing record 8c745336-c291-4d3f-870d-d43e79fa8664: JALAN INDAH 1-3 KAMPUNG AMPANG INDAH (3.1367763116265857, 101.7844126840696)
+2026-03-05 11:43:37,617 - INFO - [OK] Successfully geocoded 8c745336-c291-4d3f-870d-d43e79fa8664: Jalan A1/10, Kampung Ampang Indah, Ampang, Majlis Perbandaran Ampang Jaya, Hulu Langat, Selangor, 43100, Malaysia
+2026-03-05 11:43:37,618 - INFO - Processing record 8dab53d0-b350-41a5-8993-c3f8f0f472a6: BDR SIBER,TMN LAPANGAN MELODI,TMN MELODI (4.55356574796552, 101.1055658246552)
+2026-03-05 11:43:39,968 - INFO - [OK] Successfully geocoded 8dab53d0-b350-41a5-8993-c3f8f0f472a6: Jalan Rapat Baru (Taman Seri Berjaya), Taman Lapangan Melodi, Majlis Bandaraya Ipoh, Kinta, Perak, 31350, Malaysia
+2026-03-05 11:43:39,972 - INFO - Processing record 8e5ac6af-89c7-4219-a193-781cc5bc5b43: APPT JALAN 6C/11 SEKSYEN 16 BANDAR BARU BANGI (2.946617133000018, 101.76271057000002)
+2026-03-05 11:43:42,317 - INFO - [OK] Successfully geocoded 8e5ac6af-89c7-4219-a193-781cc5bc5b43: Jalan 6C/11, Seksyen 16, Majlis Perbandaran Kajang, Hulu Langat, Selangor, 43650, Malaysia
+2026-03-05 11:43:42,317 - INFO - Processing record 8fd317c8-cf35-4584-9aaa-f37bace7ff3b: TAMAN ALAM JAYA (SAUJANA MAWAR) (3.255122567520269, 101.4466696096419)
+2026-03-05 11:43:44,160 - INFO - [OK] Successfully geocoded 8fd317c8-cf35-4584-9aaa-f37bace7ff3b: Jalan TAJ 1/4, Taman Alam Jaya, Bandar Puncak Alam, Kuala Selangor, Selangor, 42300, Malaysia
+2026-03-05 11:43:44,160 - INFO - Processing record 90cee64e-e929-488d-bda6-6f38fd6c9c08: TMN. BROLEH (1.8633849827945224, 102.97737522865752)
+2026-03-05 11:43:46,009 - INFO - [OK] Successfully geocoded 90cee64e-e929-488d-bda6-6f38fd6c9c08: Jalan Rusa, Taman Broleh, Batu Pahat, Johor, 83000, Malaysia
+2026-03-05 11:43:46,009 - INFO - Processing record 913e1ebf-641b-4827-8bdf-009fcb417c1e: TAMAN MANSIANG,TAMAN SRI BARU (6.023148596523807, 116.1591054575578)
+2026-03-05 11:43:47,846 - INFO - [OK] Successfully geocoded 913e1ebf-641b-4827-8bdf-009fcb417c1e: 31, Lorong Seribaru, Taman Sungai Mas, Menggatal, Kota Kinabalu, Bahagian Pantai Barat, Sabah, 88450, Malaysia
+2026-03-05 11:43:47,846 - INFO - Processing record 92ce1cda-32a3-4e4f-8cb9-416252b0d8b5: TAMAN YAYASAN (PERMATA) (2.8677888579939737, 101.49439586138554)
+2026-03-05 11:43:49,697 - INFO - [OK] Successfully geocoded 92ce1cda-32a3-4e4f-8cb9-416252b0d8b5: Jalan Permata 5, Taman Yayasan, Taman Seri Jarum, Jenjarom, Kuala Langat, Selangor, 42600, Malaysia
+2026-03-05 11:43:49,735 - INFO - Progress: 50/100 in batch, Total: 25429/25540 overall
+2026-03-05 11:43:49,735 - INFO - Processing record 945dd961-1b84-401c-badd-a75fe330d924: PANGSAPURI LANGAT MURNI (2.8013249581095905, 101.66346774171232)
+2026-03-05 11:43:51,846 - INFO - [OK] Successfully geocoded 945dd961-1b84-401c-badd-a75fe330d924: Jalan Murni 2/1, Taman Langat Murni, Kampung RTB Bukit Changgang, Kuala Langat, Selangor, 42700, Malaysia
+2026-03-05 11:43:51,847 - INFO - Processing record 954f72d0-d1c8-40f5-a5a4-3524d71572e2: TAMAN MAKA (5.8273313428662, 102.148476213669)
+2026-03-05 11:43:54,093 - INFO - [OK] Successfully geocoded 954f72d0-d1c8-40f5-a5a4-3524d71572e2: Tanah Merah, Kelantan, 17500, Malaysia
+2026-03-05 11:43:54,094 - INFO - Processing record 974e5553-75c5-4c22-a2e4-631f135b9c77: E11. SRI PJS 5 FLAT DESA MENTARI (BLOK 7 , 8),E11. SRI PJS 5 FLAT DESA RIA (G,J,K,L,M,N,O,P),E11. SRI PJS 5 TMN DESA RIA (TERES 1) [JLN PJS 5/9 , 5/9A , 5/14 , 5/16 ],E11. SRI PJS 5 TMN DESA RIA (TERES 1) [JLN PJS 5/9 , 5/9A , 5/14 , 5/16],E11. SRI PJS 5 TMN DESA RIA (TERES 2) [JLN PJS 5/8 , 5/10 , 5/12 , 5/12A],E12. TM PJS 2 APPT TAMAN MEDAN JAYA,E12. TM PJS 2C APT MEDAN CAHAYA 1 (BLOK A , B , C),E12. TM PJS 2C APT MEDAN CAHAYA 3 (BLOK G , H),E12. TM PJS 2C FLAT DESA MENTARI (BLOK 9 , 10),E12. TM PJS 2C TMN MEDAN (TERES 1) [JLN PJS 2C/2,2C/7,2C/7A,2C/7B,2C/9,2C/12,14],E12. TM PJS 2C TMN MEDAN (TERES 2) [JLN PJS 2C/12,14,16,16A-C,18,19,20,21,22],E12. TM PJS 2C TMN MEDAN (TERES 3) [JLN PJS 2C/3,2C/11M,2C/11N,2C/13,2C/15],E12. TM PJS 2C TMN MEDAN (TERES 4) [JLN PJS 2C/11,2C/11A,B,C,D,F,G,H,J,K,L,28,2],E12. TM PJS 2C TMN MEDAN (TERES 5) [JLN PJS 2C/5,1,2,4,6,8,10,PJS 2/2,1],E12. TM PJS 2D FLAT DESA MENTARI (BLOK 11),E12. TM PJS 2D TMN MEDAN (TERES 2) [JLN PJS 2D/2,4,5,6,7,8,8C,8D,9,10,11,12,14],E12. TM PJS 3 APT SURIA,E12. TM PJS 3 FLAT DESA PERANSANG 2 (BLOK C , D) [JLN PJS 3/52],E12. TM PJS 3 FLAT DESA PERANSANG 4 (BLOK G , H) [JLN PJS 3/52],E12. TM PJS 3 TMN BUANA PERDANA (JLN PJS 3/23 -3/29 ),E12. TM PJS 3 TMN MEDAN BARU (TERES 4) [JLN MEDAN 16,18,19,20,21,22,23],E12. TM PJS4 TMN INDAH JAYA(TERES 1)[JLN PJS 4/8,10,12,16,18,20,22A,25,27,27A,B],E12. TM PJS4 TMN INDAH JAYA(TERES 2)[JLN PJS 4/2,4,8,9,10,19,19A,21,21A],E12. TM SEK 51 [LORONG TANDANG A & B, JLN 51/203 , 51/204A , 51/204B] (3.079067677990016, 101.62738802082364)
+2026-03-05 11:43:55,881 - INFO - [OK] Successfully geocoded 974e5553-75c5-4c22-a2e4-631f135b9c77: Balairaya PJS 20/11, Jalan PJS 2D/11, PJS 2, Petaling Jaya Selatan, Petaling Jaya, Petaling, Selangor, 46150, Malaysia
+2026-03-05 11:43:55,881 - INFO - Processing record 9929230a-221d-4726-a75a-71ff0c0f2196: PANORAMA RESIDENCE CONDOMINIUM,TAMAN BULLION MEWAH ( JALAN BULLION MEWAH 1-12) (3.216835379377484, 101.69035826033776)
+2026-03-05 11:43:58,094 - INFO - [OK] Successfully geocoded 9929230a-221d-4726-a75a-71ff0c0f2196: Jalan Bullion Mewah, Kampung Padang Balang, Kuala Lumpur, 51100, Malaysia
+2026-03-05 11:43:58,095 - INFO - Processing record 9994a6f4-40f3-4014-9c78-ef717c990160: APARTMENT SRI MUTIARA,PPR SRI ALAM A (BLOK 1 - BLOK 5),PPR SRI ALAM B (BLOK 6 - BLOK 9),PPR SRI ALAM C (BLOK 10 - BLOK 12) (3.1264189708311103, 101.70740527872888)
+2026-03-05 11:43:59,938 - INFO - [OK] Successfully geocoded 9994a6f4-40f3-4014-9c78-ef717c990160: 4, Jalan 1/78, Pudu, Kuala Lumpur, 57000, Malaysia
+2026-03-05 11:43:59,938 - INFO - Processing record 9bc13698-703d-48bc-87f6-4878f5242f23: APARTMENT SAFIRA,KUARTERS IPD SEREMBAN (2.684146236333333, 101.9173638881195)
+2026-03-05 11:44:02,190 - INFO - [OK] Successfully geocoded 9bc13698-703d-48bc-87f6-4878f5242f23: Persiaran S2/E1, Garden Homes, Seremban 2, Seremban, Negeri Sembilan, 70300, Malaysia
+2026-03-05 11:44:02,191 - INFO - Processing record 9e850579-64ea-4971-853d-887531668ec8: JLN KOLOMBONG,KEPAYAN RUMAH MURAH,KEPAYAN RUMAH MURAH PH. 1,TAMAN ATLANTY,TAMAN BINTANG,TAMAN BUNGA RAYA,TAMAN KEPAYAN RIDGE,TAMAN LIDO,TAMAN SENI BINA,TAMAN SRI KEPAYAN PH 8,TAMAN SRI KEPAYAN PH. 7 (5.93805790757859, 116.07049352897266)
+2026-03-05 11:44:04,437 - INFO - [OK] Successfully geocoded 9e850579-64ea-4971-853d-887531668ec8: Lorong Sri Kepayan 17, Taman Sri Kepayan, Lido, Kota Kinabalu, Bahagian Pantai Barat, Sabah, 88200, Malaysia
+2026-03-05 11:44:04,439 - INFO - Processing record 9f847951-d0d1-4317-a8ec-ab5613314f60: E12. TM PJS 2D FLAT DESA MENTARI (BLOK 11) (3.076355078000006, 101.633338676)
+2026-03-05 11:44:06,770 - INFO - [OK] Successfully geocoded 9f847951-d0d1-4317-a8ec-ab5613314f60: Hab Taman Medan, Jalan PJS 3/2, PJS 2, Petaling Jaya Selatan, Petaling Jaya, Petaling, Selangor, 46050, Malaysia
+2026-03-05 11:44:06,770 - INFO - Processing record a07e7a93-c4fc-4075-9442-7e5cd3501550: APT MAWAR PRIMA BERUNTUNG,JALAN MAWAR 2B PRIMA BERUNTUNG (3.4005938402628235, 101.54230665682051)
+2026-03-05 11:44:08,946 - INFO - [OK] Successfully geocoded a07e7a93-c4fc-4075-9442-7e5cd3501550: 71, Jalan Mawar 2B/1, Mawar Gardens, Prima Beruntung, Bukit Beruntung, Hulu Selangor, Selangor, 48010, Malaysia
+2026-03-05 11:44:08,949 - INFO - Processing record a09bc24e-9eb8-44c8-8995-04438835431b: KONDOMINIUM LANGAT JAYA BATU 9 CHERAS (3.069842616774648, 101.77955683856338)
+2026-03-05 11:44:10,785 - INFO - [OK] Successfully geocoded a09bc24e-9eb8-44c8-8995-04438835431b: Jalan Datok Alias, Taman Cheras Intan, Kampung Melaka, Kampung Bukit Raya, Majlis Perbandaran Kajang, Hulu Langat, Selangor, 43200, Malaysia
+2026-03-05 11:44:10,819 - INFO - Progress: 60/100 in batch, Total: 25439/25540 overall
+2026-03-05 11:44:10,819 - INFO - Processing record a20a8f31-fe79-4f41-a3e0-60ec560ab797: JALAN KENCANA 9,11,13,15,17,19,21,23,25,27,36/2,37/2 & JALAN P. INDAH 3/4E&3/4D (3.1199407498767107, 101.75104603499317)
+2026-03-05 11:44:13,041 - INFO - [OK] Successfully geocoded a20a8f31-fe79-4f41-a3e0-60ec560ab797: Jalan Kencana 9, Pandan Indah, Ampang, Majlis Perbandaran Ampang Jaya, Hulu Langat, Selangor, 55300, Malaysia
+2026-03-05 11:44:13,042 - INFO - Processing record a2b60c81-6ac2-4150-a321-f50301f87756: E15. TMN SAUJANA PUCHONG SP 10,E15. TMN SAUJANA PUCHONG SP 7 (3.001078426490099, 101.64008654860396)
+2026-03-05 11:44:14,986 - INFO - [OK] Successfully geocoded a2b60c81-6ac2-4150-a321-f50301f87756: Jalan SP 7/9, Taman Saujana Puchong, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 47100, Malaysia
+2026-03-05 11:44:14,986 - INFO - Processing record a4d027e6-733d-4fc3-a631-68815800c22c: PPR PINGGIRAN 1 (BLOK A,B,C,D,E,F) (3.047097115280254, 101.65314865134395)
+2026-03-05 11:44:17,237 - INFO - [OK] Successfully geocoded a4d027e6-733d-4fc3-a631-68815800c22c: Jalan Impian Indah, Kuala Lumpur, 47180, Malaysia
+2026-03-05 11:44:17,237 - INFO - Processing record a6a0e355-6c8c-450b-ab09-e90f090466d9: E15. TMN PUCHONG PERDANA (JLN PERDANA 2) (3.007667781000009, 101.606819153)
+2026-03-05 11:44:19,489 - INFO - [OK] Successfully geocoded a6a0e355-6c8c-450b-ab09-e90f090466d9: Jalan Perdana 2/1, Puchong Indah, Puchong Perdana, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 47150, Malaysia
+2026-03-05 11:44:19,492 - INFO - Processing record a8d07752-767b-49bd-8405-bd55cc4f4a1a: E7. KD PJU 5 SEK 4 (TERES 1) (JLN 4/7,7A,7B,8,8A),E7. KD PJU 5 SEK 4 D'SHIRE 61 (3.152800910449368, 101.58433375315822)
+2026-03-05 11:44:21,753 - INFO - [OK] Successfully geocoded a8d07752-767b-49bd-8405-bd55cc4f4a1a: Jalan Camar 4/8, PJU 5, Kota Damansara, Petaling Jaya, Petaling, Selangor, 47810, Malaysia
+2026-03-05 11:44:21,753 - INFO - Processing record a8f1b9e1-5321-46c1-a700-94818fa1c918: TMN KEMPAS UTAMA_JLN KEMPAS UTAMA 1/ (ZON 1) (1.5579534964074075, 103.71026269867902)
+2026-03-05 11:44:23,612 - INFO - [OK] Successfully geocoded a8f1b9e1-5321-46c1-a700-94818fa1c918: Jalan Kempas Utaman 1/8, Taman Kempas Utama, Johor Bahru, Johor, 81100, Malaysia
+2026-03-05 11:44:23,613 - INFO - Processing record a9d8b08c-9269-4745-b285-89863fbd367b: SEMBILANG, MASJID SEMBILANG (5.401331062852348, 100.39964487474496)
+2026-03-05 11:44:25,429 - INFO - [OK] Successfully geocoded a9d8b08c-9269-4745-b285-89863fbd367b: Pintas Semilang 10, Taman Sembilang, Seberang Jaya, Permatang Pauh, Seberang Perai Tengah, Seberang Perai, Pulau Pinang, 13500, Malaysia
+2026-03-05 11:44:25,429 - INFO - Processing record aa76a48a-d951-477d-b93d-2a679ad4f80c: CRESCENT 1,CYBERJAYA,CRESCENT 2,CYBERJAYA,CYBERIA CONDOMINIUM,CYBERIA SMARTHOME,SOLSTICE CONDOMINIUM, CYBERJAYA,THE ARC CONDO (2.9243084104268764, 101.6388730270988)
+2026-03-05 11:44:27,212 - INFO - [OK] Successfully geocoded aa76a48a-d951-477d-b93d-2a679ad4f80c: Cyberia Bomba Emergeny Lane, Cyberia Smarthomes, Cyber 11, Cyberjaya, Sepang, Selangor, 63000, Malaysia
+2026-03-05 11:44:27,213 - INFO - Processing record ab07ec18-7419-47ae-913e-794083df1713: TTDI (PERSIARAN ZAABA (145-244),TTDI (PERSIARAN ZAABA 193-215, LORONG ZAABA 2-138) (3.145646720251537, 101.62347392267483)
+2026-03-05 11:44:29,733 - INFO - [OK] Successfully geocoded ab07ec18-7419-47ae-913e-794083df1713: 222, Persiaran Zaaba, Taman Tun Dr Ismail, Kuala Lumpur, 60000, Malaysia
+2026-03-05 11:44:29,733 - INFO - Processing record ac2d9342-2007-47ec-9cab-d14aa872eede: TAMAN ARIF (5.925476530262502, 102.24145842895624)
+2026-03-05 11:44:32,019 - INFO - [OK] Successfully geocoded ac2d9342-2007-47ec-9cab-d14aa872eede: Kok Lanas, Kampung Dendang, Kota Bharu, Kelantan, 16450, Malaysia
+2026-03-05 11:44:32,064 - INFO - Progress: 70/100 in batch, Total: 25449/25540 overall
+2026-03-05 11:44:32,065 - INFO - Processing record ac3fe375-f22b-48ed-8420-b9b3cc6d3962: E17. TMN SERDANG PERDANA (PERDANA SELATAN - SOUTH CITY CONDO),E17. TMN SERDANG PERDANA (PERDANA SELATAN APARTMENT) (3.0296415485167776, 101.7106054325168)
+2026-03-05 11:44:33,813 - INFO - [OK] Successfully geocoded ac3fe375-f22b-48ed-8420-b9b3cc6d3962: Mishaltit, Persiaran Serdang Perdana, Serdang Perdana, Seri Kembangan, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 43300, Malaysia
+2026-03-05 11:44:33,814 - INFO - Processing record ac637e13-e1db-42e2-b058-a1c1ed41fab6: TAMAN TINOSAN BT.4.5 (5.863045866930378, 118.07364355343036)
+2026-03-05 11:44:35,682 - INFO - [OK] Successfully geocoded ac637e13-e1db-42e2-b058-a1c1ed41fab6: Lorong Tinosan 5, Taman Tinosan, Batu 5, Sandakan, Sandakan District, Bahagian Sandakan, Sabah, 90716, Malaysia
+2026-03-05 11:44:35,682 - INFO - Processing record acd59de9-f08c-45cc-ba9c-c412a3970204: TAMAN MERPATI RENDAH (5.893345095220779, 118.04528962001297)
+2026-03-05 11:44:37,513 - INFO - [OK] Successfully geocoded acd59de9-f08c-45cc-ba9c-c412a3970204: Lorong Merpati Rendah 2, Taman Merpati, Batu 7 1/2, Sandakan, Sandakan District, Bahagian Sandakan, Sabah, 90716, Malaysia
+2026-03-05 11:44:37,514 - INFO - Processing record ad3e0aa1-fceb-44b2-9156-17c6f02c3c0b: ENSING TIMUR (1.515936115014562, 110.31140324711652)
+2026-03-05 11:44:39,970 - INFO - [OK] Successfully geocoded ad3e0aa1-fceb-44b2-9156-17c6f02c3c0b: Choice Marketplace MJC, Persiaran Bandar Baru Batu Kawah, Batu Kawah New Township, Kuching, Bahagian Kuching, Sarawak, 93000, Malaysia
+2026-03-05 11:44:39,971 - INFO - Processing record ae8b75c5-df2c-47bf-a103-8a0316ba36ee: E9. KT SS 2 (4) [JLN SS 2/72,74,74A, 2/75-2/87,2/89,2/91, 2/93],E9. KT SS 2 (KEN DAMANSARA KONDO 3) (3.12264096661728, 101.62591248122222)
+2026-03-05 11:44:41,817 - INFO - [OK] Successfully geocoded ae8b75c5-df2c-47bf-a103-8a0316ba36ee: Jalan SS 2/74, SS 2, Petaling Jaya, Petaling, Selangor, 57300, Malaysia
+2026-03-05 11:44:41,818 - INFO - Processing record aebd145b-95ef-4f87-ac5f-aedcbaa84e48: APT SERI TEROMPET BB (3.4198708904709667, 101.57426729486453)
+2026-03-05 11:44:43,613 - INFO - [OK] Successfully geocoded aebd145b-95ef-4f87-ac5f-aedcbaa84e48: Apartment Seri Terompet, Bukit Beruntung, Hulu Selangor, Selangor, 48300, Malaysia
+2026-03-05 11:44:43,613 - INFO - Processing record b10e9d17-5799-4896-b327-b67b33295a07: E2. SEKSYEN 17 (TERES A1 : JLN 17/3 - 17/12) (3.042755265107381, 101.4990909052886)
+2026-03-05 11:44:45,622 - INFO - [OK] Successfully geocoded b10e9d17-5799-4896-b327-b67b33295a07: Jalan Kelisa 17/4, Taman Baru, Seksyen 17, Shah Alam, Petaling, Selangor, 40200, Malaysia
+2026-03-05 11:44:45,623 - INFO - Processing record b12a6c08-ada0-4bee-8413-d9ff1820a13f: TMN. SOGA ZON A (1.836196769806666, 102.93863248174002)
+2026-03-05 11:44:47,446 - INFO - [OK] Successfully geocoded b12a6c08-ada0-4bee-8413-d9ff1820a13f: Taman Soga / Taman Dagang, Batu Pahat, Johor, 83000, Malaysia
+2026-03-05 11:44:47,447 - INFO - Processing record b17347d1-053d-4088-b934-63969cf69f73: E4. SEKSYEN U8 (TERES Q : JLN U8/76 - U8/78),KAMPUNG SUNGAI UDANG 18,KAMPUNG SUNGAI UDANG 21,TAMAN UDANG PUTIH 01 (3.0405696272873577, 101.4133336100728)
+2026-03-05 11:44:49,698 - INFO - [OK] Successfully geocoded b17347d1-053d-4088-b934-63969cf69f73: Lorong Mohd Salleh, Bandaraya Klang, Klang, Selangor, 41250, Malaysia
+2026-03-05 11:44:49,699 - INFO - Processing record b2028f69-7d73-4f78-86b2-d8072ba0ae6b: E5. SEKSYEN U6 (KG MELAYU SUBANG A : JLN BUKIT BADAK),E5. SEKSYEN U6 (TAMAN SUBANG BARU) (3.154201459262501, 101.52624741168124)
+2026-03-05 11:44:51,594 - INFO - [OK] Successfully geocoded b2028f69-7d73-4f78-86b2-d8072ba0ae6b: Jalan 5A, Seksyen U6, Subang, Shah Alam, Petaling, Selangor, 40800, Malaysia
+2026-03-05 11:44:51,624 - INFO - Progress: 80/100 in batch, Total: 25459/25540 overall
+2026-03-05 11:44:51,624 - INFO - Processing record b234c9d5-aef1-4223-bc88-0ad687f25c4f: APARTMENT SENTUL,FLAT DANAU KOTA ( BLOK D & E),FLAT SRI PANGKOR (SENTUL UTARA),JALAN GOMBAK(MH PLATINUM RESIDENCE),JALAN SENTUL RIA 1 - LORONG SENTUL JAYA 1,KONDOMINIUM SENTUL UTAMA,KONDOMINIUM SETAPAK RIA,KONDOMINIUM THE HAMILTON,KONDOMINIUM VILLA WANGSAMAS,PA DESA REJANG (BLOK A,B,C,D),PA DESA REJANG (BLOK G,H,J,K),PELANGI INDAH CONDOMINIUM,PPR PEKAN BATU,PRIMA SETAPAK KONDOMINIUM 2 (JALAN GOMBAK SEJAHTERA),RESIDENSI BAYU ANDAMAN (JALAN DATO SENU),RESIDENSI SERI RIANA,RESIDENSI SKY AWANI 4 SETAPAK,RESIDENSI SKYWORLD ASCENDA,RESIDENSI WANGSAMAS,SEK 2 WANGSA MAJU ( MENARA ALPHA KONDOMINIUM),SEK 4 WANGSA MAJU (BLOK B),SEKSYEN 10 WANGSA MAJU (IRAMA WANGSA),SENTUL PASAR (LORONG SENTUL BAHAGIA 4),TAMAN AIR PANAS (JLN AYER TASEK),TAMAN DANAU KOTA (KONDOMINIUM PLATINUM VIC LAKE 15),TAMAN DATO SENU (JALAN DATO SENU 1-5),TAMAN KOK LIAN(JALAN RUNGKUP),TAMAN KOSMO JAYA (JALAN SENTUL JAYA 1-2) & LORONG SENTUL JAYA 3-4,TAMAN RAINBOW (JALAN SUNGKAI, JALAN SELAMA),TAMAN SETAPAK JAYA E ( JLN REJANG 2, 3, 6, 4 ),TAMAN TERATAI MEWAH (JALAN 1/23F  - 5/23F),TAPAK BINA MILLA RESIDENCE SEKSYEN 10 WANGSA MAJU,TERATAI RESIDENCY SETAPAK (3.197100108448085, 101.7110205402182)
+2026-03-05 11:44:53,807 - INFO - [OK] Successfully geocoded b234c9d5-aef1-4223-bc88-0ad687f25c4f: Jalan Prima Setapak, Setapak, Kuala Lumpur, 53000, Malaysia
+2026-03-05 11:44:53,808 - INFO - Processing record b508576b-b59d-4cd4-9e60-7e791a8ad377: JALAN PUNCAK 3 TAMAN PUNCAK SAUJANA (3.01501992499999, 101.807504553)
+2026-03-05 11:44:55,875 - INFO - [OK] Successfully geocoded b508576b-b59d-4cd4-9e60-7e791a8ad377: Saujana Damai, Taman Puncak Saujana, Majlis Perbandaran Kajang, Hulu Langat, Selangor, 43000, Malaysia
+2026-03-05 11:44:55,876 - INFO - Processing record b7280ec1-ca98-4e3a-b290-cf28fcc08459: JALAN PANTAI MURNI 1-2,JALAN PANTAI MURNI 3-6,KONDO RAKYAT,SAVILLE @ AT THE PARK CONDO (3.103821797995097, 101.6638193545686)
+2026-03-05 11:44:58,094 - INFO - [OK] Successfully geocoded b7280ec1-ca98-4e3a-b290-cf28fcc08459: Jalan Pantai Murni 2, Pantai Dalam, Kuala Lumpur, 59200, Malaysia
+2026-03-05 11:44:58,096 - INFO - Processing record b7cee244-dfc5-4ef3-b670-d190f16a2929: APARTMENT NILAI 3 CASSIA (BLOK A,B,C),TAMAN DESA SERINGIN (JALAN DESA SERINGIN 1 - 4),TAMAN DESA SERINGIN (JALAN DESA SERINGIN 5 - 10) (2.857159345141413, 101.81139222927776)
+2026-03-05 11:45:00,555 - INFO - [OK] Successfully geocoded b7cee244-dfc5-4ef3-b670-d190f16a2929: Jalan Desa Seringin 4, Taman Desa Seringin, Seremban, Negeri Sembilan, 77188, Malaysia
+2026-03-05 11:45:00,555 - INFO - Processing record b95dfb87-73cb-4fdd-b414-cd3daef9478c: TAMAN DESA ROS (2.711353349416108, 101.97549298109396)
+2026-03-05 11:45:02,751 - INFO - [OK] Successfully geocoded b95dfb87-73cb-4fdd-b414-cd3daef9478c: Jalan Desa Ros 3, Taman Desa Ros, Ampangan, Seremban, Negeri Sembilan, 70400, Malaysia
+2026-03-05 11:45:02,751 - INFO - Processing record ba6d7aa6-b332-4112-820a-f5efaf5f7fd0: TAMAN MURNI (5.889356090674159, 118.06864462116852)
+2026-03-05 11:45:04,583 - INFO - [OK] Successfully geocoded ba6d7aa6-b332-4112-820a-f5efaf5f7fd0: Lorong Murni 4, PPR Taman Murni, Kampung Sungai Obar, Sandakan District, Bahagian Sandakan, Sabah, 90716, Malaysia
+2026-03-05 11:45:04,584 - INFO - Processing record ba7cbf82-3c8a-498d-8832-4863d752c203: FLAT SRI JOHOR B(BLOK25-35),JALAN CHAN SOW LIN,JALAN JELAWAT (PANGSAPURI PUTRA SURIA RESIDENSI),SALAK SELATAN (JLN EMAS, JLN BELERANG, JLN PERMATA & JLN INTAN) (3.115988421000002, 101.7140069788534)
+2026-03-05 11:45:06,354 - INFO - [OK] Successfully geocoded ba7cbf82-3c8a-498d-8832-4863d752c203: Jalan Empat, Kuala Lumpur, 55720, Malaysia
+2026-03-05 11:45:06,355 - INFO - Processing record bcfa38c8-be0d-4007-b72a-5ad0acaeb08e: APARTMENT SRI BAYU BANDAR ARMADA PUTRA,BANDAR ARMADA PUTRA 02,FLAT SAMUDERA BANDAR ARMADA PUTRA,FLAT SRI BAHTERA BANDAR ARMADA PUTRA (2.9800281634985986, 101.34550205773108)
+2026-03-05 11:45:08,182 - INFO - [OK] Successfully geocoded bcfa38c8-be0d-4007-b72a-5ad0acaeb08e: Jalan Sungai Chandong 14, Bandar Armada Putra, Bandaraya Klang, Klang, Selangor, Malaysia
+2026-03-05 11:45:08,183 - INFO - Processing record c17413d9-657a-4ebc-8ab0-ae0b2fd00904: E13. USJ 14 ( TERES ),E13. USJ 14 (SUBANG PERDANA GOODYEAR COURT 7),E13. USJ 15(SBG PERDANA GOODYEAR COURT 10B)BLOK AR,AS,AT,AU,AV,E13. USJ 6 (QTS GURU),E13. USJ 6/1 (SUBANG PERDANA GOODYEAR COURT 1) BLOK A,B,C,D,E,F,G,H,I,J,K,L,E13. USJ 6/1 (SUBANG PERDANA GOODYEAR COURT 2) BLOK M,N,O,P,Q,R,S,T,U,V,W,X,E13. USJ 8 (SUBANG PERDANA GOODYEAR COURT 3) (3.046194772268559, 101.5908393791026)
+2026-03-05 11:45:09,922 - INFO - [OK] Successfully geocoded c17413d9-657a-4ebc-8ab0-ae0b2fd00904: Court 5 Playground, Jalan USJ 8/2C, USJ 8, UEP Subang Jaya, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 47630, Malaysia
+2026-03-05 11:45:09,923 - INFO - Processing record c1ff4788-4cd9-432f-a4db-dbdf0808c567: E5. SEKSYEN U19 (KBSB : JLN INDUSTRI 8) (3.191377321430382, 101.57141581265188)
+2026-03-05 11:45:12,176 - INFO - [OK] Successfully geocoded c1ff4788-4cd9-432f-a4db-dbdf0808c567: Kampung Baru Sungai Buloh, Sungai Buloh, Shah Alam, Petaling, Selangor, 47930, Malaysia
+2026-03-05 11:45:12,213 - INFO - Progress: 90/100 in batch, Total: 25469/25540 overall
+2026-03-05 11:45:12,214 - INFO - Processing record c318f03a-1517-4cd1-9cf4-b54cd7108401: E11. SRI PJU 1A D'AMAN CRIMSON,E11. SRI PJU 1A PUSAT DAGANGAN NZX (3.1157175655609737, 101.59057594614632)
+2026-03-05 11:45:13,919 - INFO - [OK] Successfully geocoded c318f03a-1517-4cd1-9cf4-b54cd7108401: AO Two Parts Enterprise, Jalan PJU 1A/41B, NZX Commercial Centre, PJU 1A, Ara Damansara, Petaling Jaya, Petaling, Selangor, 47301, Malaysia
+2026-03-05 11:45:13,919 - INFO - Processing record c3cc5e87-007e-4a75-ae7a-69f8c627db91: E8. BU PJU 1 (4) - (JALAN PJU 1/11 - 1/24),E8. BU PJU 1 (MUTIARA ORIENTAL KONDO) (3.1256006028742087, 101.59784418034592)
+2026-03-05 11:45:15,815 - INFO - [OK] Successfully geocoded c3cc5e87-007e-4a75-ae7a-69f8c627db91: Jalan BM 1/9, Taman Bukit Mayang Mas, PJU 1, Petaling Jaya, Petaling, Selangor, 47410, Malaysia
+2026-03-05 11:45:15,815 - INFO - Processing record c3dec4ed-4f70-4fa5-bfb4-14028718909d: APPT GREEN SURIA TAMAN DESA BAIDURI,BLOK E-H PANGSAPURI TAMAN CHERAS UTAMA (3.044387365292209, 101.74652758249351)
+2026-03-05 11:45:17,967 - INFO - [OK] Successfully geocoded c3dec4ed-4f70-4fa5-bfb4-14028718909d: Bandar Damai Perdana, Cheras, Majlis Perbandaran Kajang, Hulu Langat, Selangor, 43200, Malaysia
+2026-03-05 11:45:17,967 - INFO - Processing record c6d8dc08-889a-46b6-bf65-e30600269543: FLAT TAMAN DESA BAKTI (3.242766686965984, 101.66287130891835)
+2026-03-05 11:45:20,106 - INFO - [OK] Successfully geocoded c6d8dc08-889a-46b6-bf65-e30600269543: Jalan 2/2B, Kuala Lumpur, Gombak, Selangor, 68100, Malaysia
+2026-03-05 11:45:20,107 - INFO - Processing record c6e256c9-2ac6-447c-8c17-2d3c9d3e78c9: JALAN LINTAS SIBUGA (5.861205177025317, 118.02830501922784)
+2026-03-05 11:45:22,390 - INFO - [OK] Successfully geocoded c6e256c9-2ac6-447c-8c17-2d3c9d3e78c9: Sandakan, Sandakan District, Bahagian Sandakan, Sabah, 90716, Malaysia
+2026-03-05 11:45:22,390 - INFO - Processing record c7d92ece-f304-45cb-b0ba-e046ed8887d6: E6. BL PJU 9 SD 13 APT SRI MERANTI (2) [H,J,K,L,M,N,P,Q,R] (3.1926946940000107, 101.60213905400002)
+2026-03-05 11:45:24,186 - INFO - [OK] Successfully geocoded c7d92ece-f304-45cb-b0ba-e046ed8887d6: Bani TomYam (Rada), Persiaran Meranti, PJU 9, Bandar Sri Damansara, Petaling Jaya, Petaling, Selangor, 52200, Malaysia
+2026-03-05 11:45:24,186 - INFO - Processing record c92186b3-9d00-4048-9e42-45593682b42e: PROGRAM PERUMAHAN RAKYAT (PPR) INTAN BAIDURI ( BLOK A,B,C ) (3.234063690827411, 101.654101016132)
+2026-03-05 11:45:26,307 - INFO - [OK] Successfully geocoded c92186b3-9d00-4048-9e42-45593682b42e: Taman Intan Baiduri, Kepong, Kuala Lumpur, 68100, Malaysia
+2026-03-05 11:45:26,307 - INFO - Processing record ca52297a-26b8-4e49-b50e-e6aa88a23c89: E7. KD PJU 3 PALM SPRING KONDO 1 (A,B,C),E7. KD PJU 3 PALM SPRING KONDO 2 (D,E,F) (3.1521249079071043, 101.5985475763224)
+2026-03-05 11:45:28,495 - INFO - [OK] Successfully geocoded ca52297a-26b8-4e49-b50e-e6aa88a23c89: Jalan PJU 3/29, Sunway Damansara, PJU 5, Mutiara Damansara, Petaling Jaya, Petaling, Selangor, 47810, Malaysia
+2026-03-05 11:45:28,495 - INFO - Processing record ca8745cb-7f8c-4764-af1d-55dd15d4f983: APT ALPHA ARENA TMN PUTRA PERDANA,APT KENANGA PUTRA PERDANA (2.9461572500886057, 101.61356762760128)
+2026-03-05 11:45:30,342 - INFO - [OK] Successfully geocoded ca8745cb-7f8c-4764-af1d-55dd15d4f983: 99 Speedmart, 68, Lingkungan Putra Perdana, Alpha Arena, Taman Putra Perdana, Sepang, Selangor, 47130, Malaysia
+2026-03-05 11:45:30,344 - INFO - Processing record cbe8cee7-e43f-4d98-9585-8ae6e08decc8: APPT PANDAN HEIGHT PANDAN PERDANA,DALLAS VILLA PANDAN HEIGHT,VISTA PERDANA CONDO PANDAN PERDANA (3.114119433483697, 101.73884883547282)
+2026-03-05 11:45:32,452 - INFO - [OK] Successfully geocoded cbe8cee7-e43f-4d98-9585-8ae6e08decc8: Jalan Perdana 2/26, Pandan Perdana, Ampang, Majlis Perbandaran Ampang Jaya, Hulu Langat, Selangor, 55300, Malaysia
+2026-03-05 11:45:32,489 - INFO - Progress: 100/100 in batch, Total: 25479/25540 overall
+2026-03-05 11:45:32,509 - INFO - Batch completed: 100 records in 200.7s
+2026-03-05 11:45:32,510 - INFO - Overall progress: 25479/25540 (61 remaining)
+2026-03-05 11:45:32,510 - INFO - Estimated time remaining: 0.0 hours
+2026-03-05 11:45:34,535 - INFO - Found 61 records to geocode
+2026-03-05 11:45:34,536 - INFO - Processing record cd13df82-fd17-47b3-b189-15e653b03d4f: APARTMENT CAMELIA COURT NILAI IMPIAN,APARTMENT KIARA COURT NILAI IMPIAN (2.8429018594496656, 101.80670671348992)
+2026-03-05 11:45:35,083 - INFO - [OK] Successfully geocoded cd13df82-fd17-47b3-b189-15e653b03d4f: Jalan Nilam 3, Nilai Impian, Seremban, Negeri Sembilan, 71800, Malaysia
+2026-03-05 11:45:35,083 - INFO - Processing record cd907ad6-3f18-47ce-b282-1efc4f7b34d5: BLOK D FLAT PANDAN RIA,JALAN 14C-E,15,15A & 16 KAMPUNG BARU AMPANG (3.1355182998490547, 101.75768586309434)
+2026-03-05 11:45:36,964 - INFO - [OK] Successfully geocoded cd907ad6-3f18-47ce-b282-1efc4f7b34d5: 1182, Jalan 16, Kampung Baru Ampang, Pandan Indah, Ampang, Majlis Perbandaran Ampang Jaya, Hulu Langat, Selangor, 68000, Malaysia
+2026-03-05 11:45:36,964 - INFO - Processing record cd9937a8-a5bb-4ffb-afd5-6e3720ee5eb4: JALAN HANG LEKIU,KUARTERS HOSPITAL KUALA LUMPUR (3.147847905659458, 101.69741297785946)
+2026-03-05 11:45:38,755 - INFO - [OK] Successfully geocoded cd9937a8-a5bb-4ffb-afd5-6e3720ee5eb4: 62, Jalan Tun H.S. Lee, Bukit Bintang, Kuala Lumpur, 50050, Malaysia
+2026-03-05 11:45:38,755 - INFO - Processing record ce470c21-c7a9-4527-bf53-ccc9ac922e45: TMN M RESIDENSI 2,TMN M RESIDENSI 2 (ALPINE) (3.3025695215581417, 101.50874839987208)
+2026-03-05 11:45:40,899 - INFO - [OK] Successfully geocoded ce470c21-c7a9-4527-bf53-ccc9ac922e45: Jalan MR 2/21, Alpine, Majlis Perbandaran Selayang, Gombak, Selangor, 48020, Malaysia
+2026-03-05 11:45:40,900 - INFO - Processing record ce721720-3c9c-49e1-adac-ec0d823e5fab: BDR UDA UTAMA_UDA UTAMA 6/ (1.4910392539999862, 103.67015697300002)
+2026-03-05 11:45:42,735 - INFO - [OK] Successfully geocoded ce721720-3c9c-49e1-adac-ec0d823e5fab: Jalan Uda Utama 6/2, Bandar Uda Utama, Iskandar Puteri, Johor Bahru, Johor, 79150, Malaysia
+2026-03-05 11:45:42,736 - INFO - Processing record cef00149-1319-43d3-bb99-5125e3fab81d: ALAM PERDANA (JALAN SIMFONI 4-6) (3.2487109469125004, 101.46493652891874)
+2026-03-05 11:45:44,495 - INFO - [OK] Successfully geocoded cef00149-1319-43d3-bb99-5125e3fab81d: Jalan Simfoni 4, Taman Alam Perdana, Bandar Puncak Alam, Kuala Selangor, Selangor, 42300, Malaysia
+2026-03-05 11:45:44,495 - INFO - Processing record cefdb38e-743a-49a7-b8d2-6947137b5906: APPT ASTANA SQUARE,RUMAH KEDAI TMN DAYA (3.2219747214999983, 101.6369451230875)
+2026-03-05 11:45:46,752 - INFO - [OK] Successfully geocoded cefdb38e-743a-49a7-b8d2-6947137b5906: Jalan Daya 12, Taman Daya, Majlis Perbandaran Selayang, Gombak, Selangor, 52100, Malaysia
+2026-03-05 11:45:46,752 - INFO - Processing record cf4d9e81-6eb1-488c-882f-7e92e34239d0: BANDAR TASEK MUTIARA SS1 A (5.282901046692307, 100.4839780005064)
+2026-03-05 11:45:49,075 - INFO - [OK] Successfully geocoded cf4d9e81-6eb1-488c-882f-7e92e34239d0: Lorong 5/SS 1, Bandar Tasek Mutiara, Simpang Ampat, Seberang Perai Selatan, Seberang Perai, Pulau Pinang, 14100, Malaysia
+2026-03-05 11:45:49,075 - INFO - Processing record cfcd27d1-cb8c-4fc6-9642-7d45f1c9e43d: E1. SEKSYEN 4 (TERES B : JLN 4/4 - 4/7) (3.0791910727548406, 101.50957084044516)
+2026-03-05 11:45:51,212 - INFO - [OK] Successfully geocoded cfcd27d1-cb8c-4fc6-9642-7d45f1c9e43d: Jalan Kundang 4/7D, Seksyen 4, Shah Alam, Petaling, Selangor, 40604, Malaysia
+2026-03-05 11:45:51,212 - INFO - Processing record cfe38df3-30ae-43ef-9c2a-4775e4dff844: SUNNY EST. GARDEN (5.854759493887324, 118.11784419469724)
+2026-03-05 11:45:53,379 - INFO - [OK] Successfully geocoded cfe38df3-30ae-43ef-9c2a-4775e4dff844: Lorong Sanny 3, Sanny Estate, Buli Sim Sim, Sandakan, Sandakan District, Bahagian Sandakan, Sabah, 90000, Malaysia
+2026-03-05 11:45:53,418 - INFO - Progress: 10/61 in batch, Total: 25489/25540 overall
+2026-03-05 11:45:53,418 - INFO - Processing record d18d844f-99a2-4d3e-871c-2f6cb97e0b01: 38 BIDARA CONDOMINIUM,CHANGKAT BUKIT BINTANG,JALAN ALOR,JALAN BABA DAN JALAN NYONYA,JALAN CHANGKAT,JALAN GALLOWAY,JALAN NAGASARI,JALAN SULTAN ISMAIL (RUMAH KEDAI NO 40 - NO 58),SUN COMPLEX JALAN IMBI,YOONG YOONG MANSION (3.143718970927538, 101.70899648711304)
+2026-03-05 11:45:55,712 - INFO - [OK] Successfully geocoded d18d844f-99a2-4d3e-871c-2f6cb97e0b01: Kaihomaru, Jalan Bintang, Bukit Bintang, Kuala Lumpur, 50200, Malaysia
+2026-03-05 11:45:55,713 - INFO - Processing record d2d8e4a4-18c5-46e1-8feb-1dd816741c74: THE PARK SKY RESIDENCE BUKIT JALIL (3.0529211229797317, 101.67239765962162)
+2026-03-05 11:46:01,508 - INFO - [OK] Successfully geocoded d2d8e4a4-18c5-46e1-8feb-1dd816741c74: 7-Eleven, Persiaran Jalil Utama, Bukit Jalil, Kuala Lumpur, 57000, Malaysia
+2026-03-05 11:46:01,508 - INFO - Processing record d2f19af8-df3d-4c98-9f3e-d27823a6d972: FLAT TAMAN SPPK JALAN DUTAMAS SEROJA,SEGAMBUT BAHAGIA TAMBAHAN (3.1855631864411755, 101.66023357171176)
+2026-03-05 11:46:03,717 - INFO - [OK] Successfully geocoded d2f19af8-df3d-4c98-9f3e-d27823a6d972: Jalan Segambut, Segambut, Kuala Lumpur, 51200, Malaysia
+2026-03-05 11:46:03,718 - INFO - Processing record d388e88f-6369-403b-bba4-24c381b84a2a: E16. TMN PUNCAK JALIL 7A (PUJ 7/1-7/8) (3.030057889876709, 101.67707561698629)
+2026-03-05 11:46:06,109 - INFO - [OK] Successfully geocoded d388e88f-6369-403b-bba4-24c381b84a2a: Jalan PUJ 7/2, PUJ 7, Puncak Jalil, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 43300, Malaysia
+2026-03-05 11:46:06,109 - INFO - Processing record d4de7fc4-f365-4622-9ef5-e6b72b3638ea: PPR SRI KERAMAT,TAMAN KETIAU (5.872853695891566, 116.06420667007228)
+2026-03-05 11:46:08,227 - INFO - [OK] Successfully geocoded d4de7fc4-f365-4622-9ef5-e6b72b3638ea: Putatan, Bahagian Pantai Barat, Sabah, 89500, Malaysia
+2026-03-05 11:46:08,228 - INFO - Processing record d58155c4-c349-40af-8087-8888731fb5bf: PPR PANTAI RIA (3.0970372490540528, 101.67114678162838)
+2026-03-05 11:46:10,384 - INFO - [OK] Successfully geocoded d58155c4-c349-40af-8087-8888731fb5bf: PPR Pantai Ria, Pantai Dalam, Kuala Lumpur, 59200, Malaysia
+2026-03-05 11:46:10,385 - INFO - Processing record d6d8d513-c859-4d1e-80c3-333e7f4b3369: TMN RIA,TMN SRI DERMAWAN (4.6266945505220125, 101.1222119394088)
+2026-03-05 11:46:12,167 - INFO - [OK] Successfully geocoded d6d8d513-c859-4d1e-80c3-333e7f4b3369: Lorong Tasek Timur 9, Taman Seri Dermawan, Taman Sri Kurau, Medan Ipoh, Majlis Bandaraya Ipoh, Kinta, Perak, 31400, Malaysia
+2026-03-05 11:46:12,168 - INFO - Processing record d96b85a6-c818-4236-893a-725ce81ec2a2: APPT CHERAS PERDANA TAMAN CHERAS PERDANA (3.043759623781692, 101.76728114354928)
+2026-03-05 11:46:14,100 - INFO - [OK] Successfully geocoded d96b85a6-c818-4236-893a-725ce81ec2a2: Lorong CP 3/11, Taman Cheras Perdana, Cheras, Majlis Perbandaran Kajang, Hulu Langat, Selangor, 43200, Malaysia
+2026-03-05 11:46:14,100 - INFO - Processing record d992b1dd-63b2-4a4f-a701-f00aaa043c96: E3. SEKSYEN 27 (TERES D - JLN 27/53 - 27/60) (3.013040750075344, 101.5660180686644)
+2026-03-05 11:46:15,823 - INFO - [OK] Successfully geocoded d992b1dd-63b2-4a4f-a701-f00aaa043c96: Jalan Tembaga 27/55, Seksyen 27, Shah Alam, Petaling, Selangor, 47650, Malaysia
+2026-03-05 11:46:15,824 - INFO - Processing record daf14e67-d68a-42b0-a123-b7209cc59e5d: E11. SRI PJS 10 (PST KOMERSIAL) [JLN PJS 10/1, 10/2, 10/4],E11. SRI PJS 10 (TERES 3) [JLN PJS 10/7C , 10/9A , 10/11A - 10/11D],E11. SRI PJS 10 APT SUBANG VILLE EHSAN,E11. SRI PJS 10 SURIA MAS  KONDO,E13. SS 12 (PERSIARAN WANGSA BAIDURI 1-4),E13. SS 12 PERSIARAN WANGSA BAIDURI - (SPRING VILLA & SUMMER VILLA CONDOMINIUM),E13. SS 12/1,E13. SS 12/2 (3.077935523000003, 101.60002001729296)
+2026-03-05 11:46:17,612 - INFO - [OK] Successfully geocoded daf14e67-d68a-42b0-a123-b7209cc59e5d: Persiaran Wangsa Baiduri 2, Taman Wangsa Baiduri, SS 12, Pusat Bandar Subang Jaya, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 47500, Malaysia
+2026-03-05 11:46:17,643 - INFO - Progress: 20/61 in batch, Total: 25499/25540 overall
+2026-03-05 11:46:17,643 - INFO - Processing record db65ae30-3906-4878-b983-7edf4ae42ec6: E17. TMN SERDANG PERDANA (PERDANA SELATAN - SOUTH CITY CONDO) (3.0288632080000184, 101.710534624)
+2026-03-05 11:46:19,433 - INFO - [OK] Successfully geocoded db65ae30-3906-4878-b983-7edf4ae42ec6: N-Com Malaysia Sdn. Bhd., B-09-01, Persiaran Serdang Perdana, Serdang Perdana, Seri Kembangan, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 43300, Malaysia
+2026-03-05 11:46:19,433 - INFO - Processing record deeee4d9-26de-4fbc-b6a4-7b6a0f01de10: KAW IND SEELONG JAYA_MPK,KG SEELONG JAYA_MPK (1.6166724979315048, 103.7157183849315)
+2026-03-05 11:46:21,235 - INFO - [OK] Successfully geocoded deeee4d9-26de-4fbc-b6a4-7b6a0f01de10: Kampung Seelong Jaya, Johor Bahru, Johor, Malaysia
+2026-03-05 11:46:21,236 - INFO - Processing record df4f88fa-a5bd-4376-a6cd-707762a81e0a: TAMAN SUNGAI KAPAR INDAH 06 (3.1012874756339857, 101.38117862975818)
+2026-03-05 11:46:23,192 - INFO - [OK] Successfully geocoded df4f88fa-a5bd-4376-a6cd-707762a81e0a: Jalan Sungai Kapar Indah 13B, Bandaraya Klang, Klang, Selangor, 42200, Malaysia
+2026-03-05 11:46:23,193 - INFO - Processing record dfbfa5b9-ffbc-4147-ae33-8764e0cb0a1a: TMN PULAI INDAH_JLN PULAI INDAH /15,TMN PULAI INDAH_JLN PULAI INDAH /9 (B),TMN PULAI INDAH_JLN PULAI INDAH /9 (C) (1.5408450980735922, 103.58737165644588)
+2026-03-05 11:46:25,480 - INFO - [OK] Successfully geocoded dfbfa5b9-ffbc-4147-ae33-8764e0cb0a1a: Jalan PI 2/13, Taman Pulai Indah 2, Iskandar Puteri, Johor Bahru, Johor, 61110, Malaysia
+2026-03-05 11:46:25,480 - INFO - Processing record e09d4e78-6d1f-4db2-9644-842bc57a9442: SEKSYEN 33 (KEMUNING UTAMA TERES E: JLN 33/34 - 33/39 E) (3.010725239945203, 101.54209954806848)
+2026-03-05 11:46:27,408 - INFO - [OK] Successfully geocoded e09d4e78-6d1f-4db2-9644-842bc57a9442: Jalan Kemuning Palma 33/36, Palma, Kemuning Utama, Shah Alam, Klang, Selangor, 40350, Malaysia
+2026-03-05 11:46:27,408 - INFO - Processing record e2d74144-867e-4868-a02c-ad1549f7e451: KG TINUSA 2 DARAT (A),KG TINUSA 2 DARAT (B),KG TINUSA 2 LAUT (A) (5.886964976668104, 118.09204077559052)
+2026-03-05 11:46:29,212 - INFO - [OK] Successfully geocoded e2d74144-867e-4868-a02c-ad1549f7e451: Jalan Kampung Tinosan 2, Kampung Tinusa 1, Kg. Tinusa 2, Sandakan District, Bahagian Sandakan, Sabah, 90716, Malaysia
+2026-03-05 11:46:29,212 - INFO - Processing record e329087b-6749-401b-8be5-487cc0c68a44: TAMAN SRI ANDALAS 19 (3.026575536085524, 101.45000329373026)
+2026-03-05 11:46:31,499 - INFO - [OK] Successfully geocoded e329087b-6749-401b-8be5-487cc0c68a44: Jalan Seri Sedeli 2, Bandaraya Klang, Klang, Selangor, 41000, Malaysia
+2026-03-05 11:46:31,500 - INFO - Processing record e3974693-9580-470e-acf4-41612659688b: E15. TMN PUCHONG INDAH 3 (JLN INDAH 3),E15. TMN PUCHONG PRIMA (ORKID@ANGGERIK) (3.012333375578615, 101.599369792283)
+2026-03-05 11:46:33,305 - INFO - [OK] Successfully geocoded e3974693-9580-470e-acf4-41612659688b: Persiaran Puchong Permai, Kampung Sri Langkas Tambahan, Puchong Perdana, Puchong, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 47150, Malaysia
+2026-03-05 11:46:33,306 - INFO - Processing record e3e8e558-d919-4ed2-b56a-3a9ffd9cc9e9: KG BARU (PLAZA RAH) (3.1670259429999987, 101.703287612)
+2026-03-05 11:46:35,123 - INFO - [OK] Successfully geocoded e3e8e558-d919-4ed2-b56a-3a9ffd9cc9e9: Public Bank, Jalan Raja Abdullah, Kampung Hujung Pasir, Kampung Bharu, Kuala Lumpur, 50300, Malaysia
+2026-03-05 11:46:35,125 - INFO - Processing record e57abef0-7fc5-499a-b675-4995a097a50c: JALAN JASMINE 3,KILANG APM, JLN JASMIN, BB (3.409426804537416, 101.55201175717688)
+2026-03-05 11:46:36,912 - INFO - [OK] Successfully geocoded e57abef0-7fc5-499a-b675-4995a097a50c: APM Plastics Sdn Bhd, 8, Jalan Jasmine 3, Kawasan Perindustrian Bukit Beruntung, Bukit Beruntung, Hulu Selangor, Selangor, 48300, Malaysia
+2026-03-05 11:46:36,942 - INFO - Progress: 30/61 in batch, Total: 25509/25540 overall
+2026-03-05 11:46:36,942 - INFO - Processing record e5cfaec5-8231-4021-9a30-ae0727734232: BDR UDA UTAMA_UDA UTAMA 6/,SMK BANDAR UDA UTAMA (1.4905143081167505, 103.67014100079186)
+2026-03-05 11:46:39,071 - INFO - [OK] Successfully geocoded e5cfaec5-8231-4021-9a30-ae0727734232: Jalan Uda Utama 6/8, Bandar Uda Utama, Iskandar Puteri, Johor Bahru, Johor, 79150, Malaysia
+2026-03-05 11:46:39,071 - INFO - Processing record e6d629b5-aa64-492d-b67d-7c59aec8533c: APPT ENGGANG (3.24667457659859, 101.64409693966196)
+2026-03-05 11:46:40,904 - INFO - [OK] Successfully geocoded e6d629b5-aa64-492d-b67d-7c59aec8533c: Jalan Bukit Idaman 6, Taman Bukit Idaman, Majlis Perbandaran Selayang, Gombak, Selangor, 68100, Malaysia
+2026-03-05 11:46:40,905 - INFO - Processing record e753e673-7478-4111-9c3e-61ebffa2d7c0: TAMAN JAYA UTAMA ZON 1 (2.910071879472392, 101.47285968625154)
+2026-03-05 11:46:42,853 - INFO - [OK] Successfully geocoded e753e673-7478-4111-9c3e-61ebffa2d7c0: Jalan Utama 25, Taman Jaya Utama, Teluk Panglima Garang, Kuala Langat, Selangor, 42600, Malaysia
+2026-03-05 11:46:42,853 - INFO - Processing record e78e5a60-b446-44a4-86a8-bf0a32c8a29d: RUMAH KEDAI JLN PUTRA 2-6 TMN PUTRA KAJANG (2.9785845285354826, 101.77301535908389)
+2026-03-05 11:46:45,208 - INFO - [OK] Successfully geocoded e78e5a60-b446-44a4-86a8-bf0a32c8a29d: Restoran 888, Jalan Putra 3, Taman Putra Kajang, Kampung Kwan Tung Baru, Majlis Perbandaran Kajang, Hulu Langat, Selangor, 43000, Malaysia
+2026-03-05 11:46:45,209 - INFO - Processing record ea0a29b9-9270-46dc-a6d5-80cc276a2028: E12. TM PJS 1 APT PETALING PERDANA 2 (BLOK I - P],E12. TM PJS 1 FLAT TMN PETALING UTAMA [JLN PJS 1/35],E12. TM PJS 1 PARK AVENUE KONDO,E12. TM PJS1 TMN PEJASA(TERES 1)[JLN JASA 24 ,JLN  PJS 1/47,1/54,A-B,PJS3/50-57] (3.075753154171051, 101.64694672760528)
+2026-03-05 11:46:47,477 - INFO - [OK] Successfully geocoded ea0a29b9-9270-46dc-a6d5-80cc276a2028: Jalan PJS 3/40, Taman Sri Manja, PJS 3, Petaling Jaya Selatan, Petaling Jaya, Petaling, Selangor, 46000, Malaysia
+2026-03-05 11:46:47,480 - INFO - Processing record ecacfc4e-1543-427b-ab2b-7d53a747bca3: BANDAR BUKIT RAJA 11,KAMPUNG BATU BELAH JALAN AMAN,KAMPUNG BATU BELAH LORONG AMAN 01,KUARTERS JKR BATU BELAH,TAMAN JALAN JASA 01,TAMAN SRI PEKAN (JALAN CENDANA 1-10) (3.077795335637288, 101.44046889052204)
+2026-03-05 11:46:49,628 - INFO - [OK] Successfully geocoded ecacfc4e-1543-427b-ab2b-7d53a747bca3: Jalan Haji Sirat, Taman Seri Pekan, Bandaraya Klang, Klang, Selangor, 41400, Malaysia
+2026-03-05 11:46:49,628 - INFO - Processing record edee8331-af60-4c1f-bf23-03dd2d9d0a42: APT TERATAI TBR BB (3.443031311000027, 101.55522155800004)
+2026-03-05 11:46:51,864 - INFO - [OK] Successfully geocoded edee8331-af60-4c1f-bf23-03dd2d9d0a42: Apartment Teratai, Bukit Beruntung, Hulu Selangor, Selangor, 48300, Malaysia
+2026-03-05 11:46:51,865 - INFO - Processing record edf0da62-f039-4bee-954b-9419f8cf1299: TMN PULAI UTAMA_JLN PULAI 43-45, 52-61,TMN PULAI UTAMA_JLN PULAI 62-74 (1.5442616055060974, 103.61492492985975)
+2026-03-05 11:46:54,000 - INFO - [OK] Successfully geocoded edf0da62-f039-4bee-954b-9419f8cf1299: Jalan Pulai 63, Taman Pulai Utama, Iskandar Puteri, Johor Bahru, Johor, 81110, Malaysia
+2026-03-05 11:46:54,001 - INFO - Processing record eeb55254-6305-4569-9afa-b3e21147b66a: LORONG TUN RAZAK (3.791726628450705, 101.85866603098592)
+2026-03-05 11:46:56,172 - INFO - [OK] Successfully geocoded eeb55254-6305-4569-9afa-b3e21147b66a: Raub, Pahang, 27670, Malaysia
+2026-03-05 11:46:56,173 - INFO - Processing record efa88deb-de97-4339-8c7d-3224007e4540: E13. SS 16/1 (SAUJANA RESIDENCY) (3.083010313095888, 101.58441238330822)
+2026-03-05 11:46:58,008 - INFO - [OK] Successfully geocoded efa88deb-de97-4339-8c7d-3224007e4540: Jalan SS 16/1, SS 16, Pusat Bandar Subang Jaya, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 47200, Malaysia
+2026-03-05 11:46:58,047 - INFO - Progress: 40/61 in batch, Total: 25519/25540 overall
+2026-03-05 11:46:58,047 - INFO - Processing record efe3d5a6-a330-41d3-a0e7-cdfb210fc4d9: TMN BAHAGIA (4.211198607295775, 100.68655452027464)
+2026-03-05 11:47:00,154 - INFO - [OK] Successfully geocoded efe3d5a6-a330-41d3-a0e7-cdfb210fc4d9: Jalan Bahagia 1, Taman Sitiawan, Sitiawan, Manjung, Perak, 32000, Malaysia
+2026-03-05 11:47:00,155 - INFO - Processing record f18d5820-bbb8-4648-8641-1c8e0dd19d75: E14. KG BUKIT LANCHONG (LORONG KELI) (2.980203809974358, 101.56233271785898)
+2026-03-05 11:47:02,330 - INFO - [OK] Successfully geocoded f18d5820-bbb8-4648-8641-1c8e0dd19d75: Kampung Bukit Lanchong, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 40400, Malaysia
+2026-03-05 11:47:02,331 - INFO - Processing record f1a4d3c2-0649-4763-8f8f-bb6c0705b57e: APPT KINABALU TAMAN IMPIAN EHSAN,BLOK A&B APPT TMN SETIA BALAKONG,JALAN 1-8&3(A) TAMAN DESA KARUNMAS,TAMAN BUKIT EMAS (3.008338662347265, 101.7527702141672)
+2026-03-05 11:47:04,154 - INFO - [OK] Successfully geocoded f1a4d3c2-0649-4763-8f8f-bb6c0705b57e: Jalan Sinaran 6, Taman Perindustrian Alfa Impian, Taman Impian Ihsan, Cheras, Majlis Perbandaran Kajang, Hulu Langat, Selangor, 43300, Malaysia
+2026-03-05 11:47:04,155 - INFO - Processing record f1f27fc8-17df-4c3f-8f8e-7620ce3c34c1: TAMAN SRI SENTOSA (BLOK 43,45,47,49,51,53),TAMAN SRI SENTOSA (BLOK 55,57,59,61,63,65) (3.075753154171051, 101.64694672760528)
+2026-03-05 11:47:05,681 - INFO - [OK] Successfully geocoded f1f27fc8-17df-4c3f-8f8e-7620ce3c34c1: Jalan PJS 3/40, Taman Sri Manja, PJS 3, Petaling Jaya Selatan, Petaling Jaya, Petaling, Selangor, 46000, Malaysia
+2026-03-05 11:47:05,682 - INFO - Processing record f1feed4e-bcb1-4275-96f7-67d1df671219: E1. SEKSYEN 11 (TERES B : JLN 11/4- 11/5),E1. SEKSYEN 14 (STUDIO FOURTEEN) (3.0734549625061724, 101.5228309589136)
+2026-03-05 11:47:07,945 - INFO - [OK] Successfully geocoded f1feed4e-bcb1-4275-96f7-67d1df671219: Persiaran Perbandaran, Seksyen 14, Shah Alam, Petaling, Selangor, 40604, Malaysia
+2026-03-05 11:47:07,945 - INFO - Processing record f20f0ffb-c4b5-4775-8ae1-b058ab7a2e48: E14. BT 13 KG TENGAH A (KEMPAS,TEMPINIS,TEMBUSU,KERANJI,RENGAS,MERANTI,JATI) (3.012558604327958, 101.58287150070429)
+2026-03-05 11:47:10,117 - INFO - [OK] Successfully geocoded f20f0ffb-c4b5-4775-8ae1-b058ab7a2e48: Jalan USJ 24/1C, USJ 24, UEP Subang Jaya, Majlis Bandaraya Subang Jaya, Petaling, Selangor, 47650, Malaysia
+2026-03-05 11:47:10,117 - INFO - Processing record f23c1dc2-238d-4699-b4ea-55c182928b91: AU5C TMN KERAMAT (ZON 1) (3.202624355634617, 101.75689973667308)
+2026-03-05 11:47:12,453 - INFO - [OK] Successfully geocoded f23c1dc2-238d-4699-b4ea-55c182928b91: Jalan AU 5C/12, Ulu Kelang, Majlis Perbandaran Ampang Jaya, Gombak, Selangor, 54200, Malaysia
+2026-03-05 11:47:12,455 - INFO - Processing record f41b64be-a238-4852-97ac-365c58cd9b20: KG BARU SALAK SELATAN A - JALAN 22, 23, 24, 26, 27, 27A, 27C (3.093320940656977, 101.70856227343604)
+2026-03-05 11:47:14,221 - INFO - [OK] Successfully geocoded f41b64be-a238-4852-97ac-365c58cd9b20: 627, Jalan 26, Kampung Baru Salak Selatan, Bandar Sri Permaisuri, Salak Selatan, Kuala Lumpur, 51020, Malaysia
+2026-03-05 11:47:14,221 - INFO - Processing record f4a8ccb1-6b7c-4c79-a2c2-ca06bb2636da: TB05 TG BT TGH BKT. KUKUSAN,TB32 TG BATU KG PUKAT LAUT (J IKAN) (4.273100344113711, 117.872053133301)
+2026-03-05 11:47:16,441 - INFO - [OK] Successfully geocoded f4a8ccb1-6b7c-4c79-a2c2-ca06bb2636da: Jalan Tanjung Batu Laut, Kampung Tanjung Batu Keramat, Tawau, Bahagian Tawau, Sabah, 91007, Malaysia
+2026-03-05 11:47:16,441 - INFO - Processing record f52d75a8-2c61-43bd-8461-7e8970ca618a: KG. SAMUGI (4.990627138746574, 116.48360097300684)
+2026-03-05 11:47:18,589 - INFO - [OK] Successfully geocoded f52d75a8-2c61-43bd-8461-7e8970ca618a: Kampung Saupi, Tetagas, Nabawan, Bahagian Pedalaman, Sabah, 89950, Malaysia
+2026-03-05 11:47:18,619 - INFO - Progress: 50/61 in batch, Total: 25529/25540 overall
+2026-03-05 11:47:18,619 - INFO - Processing record f604f187-02d5-48f4-9aab-95c2d3efa7b8: BANDAR BUKIT RAJA 01,BANDAR BUKIT RAJA 15 (3.089625549759494, 101.46450027087344)
+2026-03-05 11:47:20,720 - INFO - [OK] Successfully geocoded f604f187-02d5-48f4-9aab-95c2d3efa7b8: Jalan Mahligai 4A/KU2, Bandar Bukit Raja, Bandaraya Klang, Klang, Selangor, 41050, Malaysia
+2026-03-05 11:47:20,722 - INFO - Processing record f663956a-47a5-495d-8a5d-511e9f9de527: APT DAHLIA TBR BB,APT MAWAR TBR BB,APT TERATAI TBR BB,JALAN BUNGA RAYA 1, BUKIT BERUNTUNG,JALAN BUNGA RAYA 3, BUKIT BERUNTUNG,PERSIARAN TAMAN BUNGA RAYA,TAMAN ASTER TBR,TAMAN BUNGA RAYA,BUKIT BERUNTUNG (3.441909291988152, 101.54953826545972)
+2026-03-05 11:47:22,893 - INFO - [OK] Successfully geocoded f663956a-47a5-495d-8a5d-511e9f9de527: Taman Bunga Raya, Bukit Beruntung, Hulu Selangor, Selangor, 48300, Malaysia
+2026-03-05 11:47:22,893 - INFO - Processing record f6f91aad-4b05-45a8-b79e-5a28fbd690b7: SEKSYEN 25 (APARTMENT ALORA),SEKSYEN 25 (TERES F : JLN 25/46-25/59, JLN 25/115-25/118B) (3.0332391220572923, 101.53956858902082)
+2026-03-05 11:47:24,742 - INFO - [OK] Successfully geocoded f6f91aad-4b05-45a8-b79e-5a28fbd690b7: Jalan Tenang Satu 25/54A, Seksyen 25, Taman Sri Muda, Shah Alam, Klang, Selangor, 40400, Malaysia
+2026-03-05 11:47:24,743 - INFO - Processing record f721d31d-e4ef-496f-88e8-c840acf3e2f2: D'SANDS RESIDENCE,FLAT TAMAN GASING INDAH,KG PASIR BARU (3.085863046906249, 101.66442406218228)
+2026-03-05 11:47:27,136 - INFO - [OK] Successfully geocoded f721d31d-e4ef-496f-88e8-c840acf3e2f2: Big Burger Man, 17, Jalan Kampung Pasir, Petaling Estate, Taman OUG, Kuala Lumpur, 58200, Malaysia
+2026-03-05 11:47:27,138 - INFO - Processing record fa7db792-fb37-4a66-9e53-531c352c0a53: TMN SRI AUSTIN_JLN SRI AUSTIN 6/1-6/22 EAST ZONE (1.5827174236164403, 103.748223810363)
+2026-03-05 11:47:28,941 - INFO - [OK] Successfully geocoded fa7db792-fb37-4a66-9e53-531c352c0a53: Jalan Seri Austin 6/15, Seri Austin, Johor Bahru, Johor, 81100, Malaysia
+2026-03-05 11:47:28,941 - INFO - Processing record fb4348e0-9d73-4f99-9b7e-ab0097c7287e: K/B Jeram (4.385590830756577, 101.1548841179342)
+2026-03-05 11:47:31,189 - INFO - [OK] Successfully geocoded fb4348e0-9d73-4f99-9b7e-ab0097c7287e: Kampung Baru Jeram, Kampung Kuala Dipang, Kampung Jeram, Kampar, Perak, 31850, Malaysia
+2026-03-05 11:47:31,193 - INFO - Processing record fba549f6-9070-490d-84db-d40e27aff40d: PALM COURT CONDOMINIUM (BLOK A,B,C) (3.1298648129999838, 101.687711493)
+2026-03-05 11:47:33,546 - INFO - [OK] Successfully geocoded fba549f6-9070-490d-84db-d40e27aff40d: Pasar Malam Jalan Berhala, Jalan Berhala, Brickfields, Kuala Lumpur, 50470, Malaysia
+2026-03-05 11:47:33,547 - INFO - Processing record fe011c97-6ecb-4c7b-b643-f2e16da8567a: HATA SQUARE PANDAN MEWAH (3.126405485557821, 101.76412255991836)
+2026-03-05 11:47:35,697 - INFO - [OK] Successfully geocoded fe011c97-6ecb-4c7b-b643-f2e16da8567a: Jalan Mewah 1/1, Pandan Mewah, Kampung Tasik Tambahan, Ampang, Majlis Perbandaran Ampang Jaya, Hulu Langat, Selangor, 55300, Malaysia
+2026-03-05 11:47:35,697 - INFO - Processing record fe549183-223d-4352-a685-b704bba2016e: KONDOMINIUM SRI PUTRAMAS 1 ( BLOK A, B, C, D, E ) (3.180500175763163, 101.67301815376972)
+2026-03-05 11:47:37,537 - INFO - [OK] Successfully geocoded fe549183-223d-4352-a685-b704bba2016e: Jalan Putramas 1, Antah Tower, Segambut, Kuala Lumpur, 51200, Malaysia
+2026-03-05 11:47:37,541 - INFO - Processing record ff34cd06-d40f-46ed-9c74-3c7f7ebb9ee5: E12. TM SEK 51A FLAT IMPIAN BAIDURI (3.0945190314178044, 101.62157503156163)
+2026-03-05 11:47:39,789 - INFO - [OK] Successfully geocoded ff34cd06-d40f-46ed-9c74-3c7f7ebb9ee5: Jalan 51A/224, Seksyen 51A, Petaling Jaya, Petaling, Selangor, 46100, Malaysia
+2026-03-05 11:47:39,824 - INFO - Progress: 60/61 in batch, Total: 25539/25540 overall
+2026-03-05 11:47:39,824 - INFO - Processing record ffa91e2d-1684-43ca-87a0-2e2039bd7b3d: JALAN MERANTI (2.901184598901407, 101.52403315747888)
+2026-03-05 11:47:42,045 - INFO - [OK] Successfully geocoded ffa91e2d-1684-43ca-87a0-2e2039bd7b3d: Jalan Meranti, Jenjarom, Kuala Langat, Selangor, 42600, Malaysia
+2026-03-05 11:47:42,091 - INFO - Batch completed: 61 records in 127.5s
+2026-03-05 11:47:42,091 - INFO - Overall progress: 25540/25540 (0 remaining)
+2026-03-05 11:47:42,092 - INFO - Estimated time remaining: 0.0 hours
+2026-03-05 11:47:44,116 - INFO - No pending records found
+2026-03-05 11:47:44,116 - INFO - Found 0 records to geocode
+2026-03-05 11:47:44,117 - INFO - No more records to process
+2026-03-05 11:47:44,136 - INFO - ============================================================
+2026-03-05 11:47:44,136 - INFO - BULK REVERSE GEOCODING COMPLETED
+2026-03-05 11:47:44,136 - INFO - ============================================================
+2026-03-05 11:47:44,136 - INFO - Total processing time: 0.15 hours
+2026-03-05 11:47:44,137 - INFO - Records processed in this run: 261
+2026-03-05 11:47:44,138 - INFO - Final statistics: {'total_records': 25540, 'geocoded_records': 25540, 'pending_records': 0, 'error_records': 0}
+2026-03-05 11:47:44,138 - INFO - To resume from where left off, use resume_from_id: ffa91e2d-1684-43ca-87a0-2e2039bd7b3d
+2026-03-05 11:47:44,139 - INFO - Database connection closed

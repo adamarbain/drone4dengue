@@ -381,10 +381,10 @@ class DengueDataGeocoder:
                 
                 if geocode_data:
                     self.update_record(record_id, geocode_data, success=True)
-                    logger.info(f"✅ Successfully geocoded {record_id}: {geocode_data.get('displayName', 'N/A')}")
+                    logger.info(f"[OK] Successfully geocoded {record_id}: {geocode_data.get('displayName', 'N/A')}")
                 else:
                     self.update_record(record_id, {}, success=False, error="No geocoding data returned")
-                    logger.warning(f"❌ Failed to geocode {record_id}")
+                    logger.warning(f"[FAIL] Failed to geocode {record_id}")
                 
                 processed_count += 1
                 last_processed_id = record_id

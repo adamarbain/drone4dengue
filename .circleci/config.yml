@@ -92,12 +92,13 @@ jobs:
           name: Install system dependencies
           command: |
             sudo apt-get update
-            sudo apt-get install -y gdal-bin libgdal-dev python3-gdal
+            sudo apt-get install -y gdal-bin libgdal-dev
       - run:
           name: Install Python dependencies
           command: |
             python3 -m pip install --upgrade pip
             pip3 install requests pandas matplotlib geopandas shapely folium plotly pytz scikit-learn joblib seaborn psycopg2-binary
+            pip3 install GDAL==$(gdal-config --version)
       - save_python_cache
       - run:
           name: Run Daily Data Processing Script
