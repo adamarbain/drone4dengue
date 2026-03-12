@@ -63,8 +63,6 @@ class DenguePredictionService:
             "scaler1_historical_cases_improved.pkl",
             "scaler2_weather_based_improved.pkl",
             "model_features_improved.json",
-            "active_dengue.csv",
-            "dengue_hotspot.csv"
         ]
         
         missing_files = []
@@ -81,13 +79,25 @@ class DenguePredictionService:
         self.scaler1 = None
         self.scaler2 = None
         self.model_features = None
+
+        # Auxiliary artifacts from training
+        self.geo_lookup = None       # NN-based lookup for state_encoded, density_cluster, bbox_area
+        self.label_encoders = None   # LabelEncoders fitted during training
+        self.kmeans_model = None     # Saved KMeans model from training
+
+        # Model config flags (set by _load_features)
+        self.model1_needs_scaling = False
+        self.model2_needs_scaling = False
+        self.model1_log_target = False
+        self.model2_log_target = False
         
         # Initialize Model 3 (Breeding Area Detection)
         self.breeding_area_service = BreedingAreaDetectionService()
         
-        # Load models and scalers
+        # Load models, scalers, and auxiliary artifacts
         self._load_models()
         self._load_features()
+        self._load_auxiliary_artifacts()
         
     def _load_models(self):
         """Load the pre-trained models and scalers from daily-scrap-dengue-data directory"""
@@ -133,100 +143,208 @@ class DenguePredictionService:
             raise Exception(f"Failed to load required models: {str(e)}")
     
     def _load_features(self):
-        """Load model features configuration from daily-scrap-dengue-data directory"""
+        """Load model features configuration and model config flags"""
         try:
             features_path = os.path.join(self.models_dir, "model_features_improved.json")
             if os.path.exists(features_path):
                 with open(features_path, 'r') as f:
                     self.model_features = json.load(f)
                 logger.info(f"Model features loaded successfully from {features_path}")
+
+                # Read config flags saved by the training script
+                self.model1_needs_scaling = self.model_features.get('model1_needs_scaling', False)
+                self.model2_needs_scaling = self.model_features.get('model2_needs_scaling', False)
+                self.model1_log_target = self.model_features.get('model1_log_target', False)
+                self.model2_log_target = self.model_features.get('model2_log_target', False)
+
+                logger.info(f"Model 1 — features: {len(self.model_features.get('model1_features', []))}, "
+                            f"needs_scaling={self.model1_needs_scaling}, log_target={self.model1_log_target}")
+                logger.info(f"Model 2 — features: {len(self.model_features.get('model2_features', []))}, "
+                            f"needs_scaling={self.model2_needs_scaling}, log_target={self.model2_log_target}")
             else:
                 logger.warning(f"Features file not found: {features_path}")
-                # Fallback to default features
                 self.model_features = {
-                    "model1_features": ["centroid_x", "centroid_y", "location_cluster", "month", "day_of_year", "is_hotspot", "cases_lag_1", "cases_lag_7", "cases_lag_30", "cases_avg_7", "cases_avg_30"],
-                    "model2_features": ["centroid_x", "centroid_y", "humidity", "temperature", "rainfall", "month", "day_of_year", "location_cluster", "is_hotspot"]
+                    "model1_features": [
+                        "centroid_x", "centroid_y", "location_cluster", "month",
+                        "day_of_year", "is_hotspot", "state_encoded",
+                        "density_cluster", "bbox_area", "cases_lag_1",
+                        "cases_lag_7", "cases_lag_30", "cases_avg_7", "cases_avg_30"
+                    ],
+                    "model2_features": [
+                        "centroid_x", "centroid_y", "humidity", "temperature",
+                        "rainfall", "month", "day_of_year", "week_of_year",
+                        "location_cluster", "state_encoded", "is_hotspot",
+                        "rainfall_lag_7", "humidity_lag_7", "temperature_lag_7",
+                        "rainfall_cumul_14d", "rainfall_cumul_28d",
+                        "temp_x_humidity", "temp_x_rainfall",
+                        "humidity_x_rainfall", "breeding_favorable",
+                        "rainfall_ewma_14d", "temp_ewma_7d",
+                        "humidity_ewma_7d", "briere_thermal_curve"
+                    ]
                 }
-                logger.info("Using fallback default features")
+                logger.info("Using fallback default features (new model format)")
         except Exception as e:
             logger.error(f"Error loading features: {str(e)}")
             raise
+
+    def _load_auxiliary_artifacts(self):
+        """Load auxiliary artifacts saved by the training script (geo_lookup, kmeans, label_encoders)."""
+        import joblib
+
+        # Geo lookup (NN-based for state_encoded, density_cluster, bbox_area)
+        geo_path = os.path.join(self.models_dir, "geo_lookup.pkl")
+        if os.path.exists(geo_path):
+            try:
+                self.geo_lookup = joblib.load(geo_path)
+                logger.info("Geo lookup (NN) loaded successfully")
+            except Exception as e:
+                logger.warning(f"Failed to load geo_lookup.pkl: {e}")
+
+        # KMeans model
+        kmeans_path = os.path.join(self.models_dir, "kmeans_model.pkl")
+        if os.path.exists(kmeans_path):
+            try:
+                self.kmeans_model = joblib.load(kmeans_path)
+                logger.info("KMeans model loaded successfully")
+            except Exception as e:
+                logger.warning(f"Failed to load kmeans_model.pkl: {e}")
+
+        # Label encoders
+        le_path = os.path.join(self.models_dir, "label_encoders.pkl")
+        if os.path.exists(le_path):
+            try:
+                self.label_encoders = joblib.load(le_path)
+                logger.info(f"Label encoders loaded: {list(self.label_encoders.keys())}")
+            except Exception as e:
+                logger.warning(f"Failed to load label_encoders.pkl: {e}")
     
-    def _get_weather_data(self, latitude: float, longitude: float, target_date: Optional[datetime] = None) -> Dict[str, float]:
+    def _get_weather_data(self, latitude: float, longitude: float, target_date: Optional[datetime] = None) -> Dict:
         """
-        Fetch weather data for given coordinates using historical forecast API
-        Calculates 7-day averages for daily nowcasting
-        
-        Args:
-            latitude (float): Latitude coordinate
-            longitude (float): Longitude coordinate
-            target_date (Optional[datetime]): Target date for prediction (defaults to today)
-            
+        Fetch extended weather data (past 28 days) for given coordinates.
+        Computes current averages, lag-7 values, cumulative rainfall,
+        EWMA features, interaction features, and Brière thermal curve.
+
         Returns:
-            Dict containing 7-day average weather data (humidity, temperature, rainfall)
+            Dict with keys: temperature, humidity, rainfall (current 7-day avg)
+            plus all derived features needed by Model 2.
         """
         try:
             if target_date is None:
                 target_date = datetime.now()
-            
-            # Calculate date range for past 7 days
-            end_date = target_date - timedelta(days=3)  # Yesterday
-            start_date = end_date - timedelta(days=8)   # 7 days ago
-            
-            # Format dates for API
-            start_date_str = start_date.strftime('%Y-%m-%d')
-            end_date_str = end_date.strftime('%Y-%m-%d')
-            
-            # Use historical forecast API for past 7-day data
+
+            end_date = target_date - timedelta(days=1)
+            start_date = end_date - timedelta(days=29)  # 30 days total
+
             url = "https://historical-forecast-api.open-meteo.com/v1/forecast"
             params = {
                 "latitude": latitude,
                 "longitude": longitude,
-                "start_date": start_date_str,
-                "end_date": end_date_str,
+                "start_date": start_date.strftime('%Y-%m-%d'),
+                "end_date": end_date.strftime('%Y-%m-%d'),
                 "daily": "temperature_2m_mean,relative_humidity_2m_mean,precipitation_sum",
                 "timezone": "Asia/Singapore"
             }
-            
-            response = requests.get(url, params=params, timeout=10)
+
+            response = requests.get(url, params=params, timeout=15)
             response.raise_for_status()
-            
+
             data = response.json()
-            daily_data = data.get("daily", {})
-            
-            # Extract daily values
-            temperatures = daily_data.get("temperature_2m_mean", [])
-            humidities = daily_data.get("relative_humidity_2m_mean", [])
-            precipitations = daily_data.get("precipitation_sum", [])
-            
-            # Calculate 7-day averages
-            if temperatures and humidities and precipitations:
-                avg_temperature = sum(temperatures) / len(temperatures)
-                avg_humidity = sum(humidities) / len(humidities)
-                avg_precipitation = sum(precipitations) / len(precipitations)
-                
-                logger.info(f"Weather data for {latitude}, {longitude}: "
-                          f"Temp={avg_temperature:.1f}°C, "
-                          f"Humidity={avg_humidity:.1f}%, "
-                          f"Rainfall={avg_precipitation:.1f}mm (7-day avg)")
-                
-                return {
-                    "temperature": round(avg_temperature, 1),
-                    "humidity": round(avg_humidity, 1),
-                    "rainfall": round(avg_precipitation, 1)
-                }
-            else:
-                logger.warning("No daily weather data found in API response")
+            daily = data.get("daily", {})
+
+            temps = [v if v is not None else 0.0 for v in daily.get("temperature_2m_mean", [])]
+            humids = [v if v is not None else 0.0 for v in daily.get("relative_humidity_2m_mean", [])]
+            rains = [v if v is not None else 0.0 for v in daily.get("precipitation_sum", [])]
+
+            if not temps or not humids or not rains:
                 raise Exception("No daily weather data available")
-            
+
+            return self._compute_extended_weather(temps, humids, rains)
+
         except Exception as e:
-            logger.warning(f"Error fetching weather data: {str(e)}")
-            # Return default values if weather API fails
-            return {
-                "temperature": 25.0,
-                "humidity": 70.0,
-                "rainfall": 0.0
-            }
+            logger.warning(f"Error fetching weather data: {e}")
+            return self._default_weather()
+
+    @staticmethod
+    def _compute_extended_weather(temps: list, humids: list, rains: list) -> Dict:
+        """Derive all weather features from daily series (most-recent day last)."""
+        n = len(temps)
+
+        # Current values = average of most recent 7 days
+        recent = min(7, n)
+        temperature = sum(temps[-recent:]) / recent
+        humidity = sum(humids[-recent:]) / recent
+        rainfall = sum(rains[-recent:]) / recent
+
+        # Lag-7 values (value from 7 days before the most recent day)
+        idx7 = max(n - 8, 0)
+        temperature_lag_7 = temps[idx7] if n > 7 else temperature
+        humidity_lag_7 = humids[idx7] if n > 7 else humidity
+        rainfall_lag_7 = rains[idx7] if n > 7 else rainfall
+
+        # Cumulative rainfall
+        rainfall_cumul_14d = sum(rains[-14:]) if n >= 14 else sum(rains)
+        rainfall_cumul_28d = sum(rains[-28:]) if n >= 28 else sum(rains)
+
+        # EWMA features using pandas
+        rain_series = pd.Series(rains)
+        temp_series = pd.Series(temps)
+        humid_series = pd.Series(humids)
+
+        rainfall_ewma_14d = float(rain_series.ewm(span=14, adjust=False).mean().iloc[-1])
+        temp_ewma_7d = float(temp_series.ewm(span=7, adjust=False).mean().iloc[-1])
+        humidity_ewma_7d = float(humid_series.ewm(span=7, adjust=False).mean().iloc[-1])
+
+        # Interaction features (based on current averages)
+        temp_x_humidity = temperature * humidity
+        temp_x_rainfall = temperature * rainfall
+        humidity_x_rainfall = humidity * rainfall
+
+        breeding_favorable = int(
+            25.0 <= temperature <= 35.0
+            and humidity > 60.0
+            and rainfall > 0.0
+        )
+
+        # Brière thermal performance curve
+        T_min, T_max = 13.3, 39.2
+        t_clipped = max(T_min, min(temperature, T_max))
+        briere_thermal_curve = t_clipped * (t_clipped - T_min) * math.sqrt(T_max - t_clipped)
+
+        return {
+            "temperature": round(temperature, 2),
+            "humidity": round(humidity, 2),
+            "rainfall": round(rainfall, 2),
+            "temperature_lag_7": round(temperature_lag_7, 2),
+            "humidity_lag_7": round(humidity_lag_7, 2),
+            "rainfall_lag_7": round(rainfall_lag_7, 2),
+            "rainfall_cumul_14d": round(rainfall_cumul_14d, 2),
+            "rainfall_cumul_28d": round(rainfall_cumul_28d, 2),
+            "temp_x_humidity": round(temp_x_humidity, 2),
+            "temp_x_rainfall": round(temp_x_rainfall, 2),
+            "humidity_x_rainfall": round(humidity_x_rainfall, 2),
+            "breeding_favorable": breeding_favorable,
+            "rainfall_ewma_14d": round(rainfall_ewma_14d, 2),
+            "temp_ewma_7d": round(temp_ewma_7d, 2),
+            "humidity_ewma_7d": round(humidity_ewma_7d, 2),
+            "briere_thermal_curve": round(briere_thermal_curve, 4),
+        }
+
+    @staticmethod
+    def _default_weather() -> Dict:
+        """Return sensible defaults for all weather features."""
+        temp, hum, rain = 28.0, 75.0, 2.0
+        T_min, T_max = 13.3, 39.2
+        t_c = max(T_min, min(temp, T_max))
+        return {
+            "temperature": temp, "humidity": hum, "rainfall": rain,
+            "temperature_lag_7": temp, "humidity_lag_7": hum, "rainfall_lag_7": rain,
+            "rainfall_cumul_14d": rain * 14, "rainfall_cumul_28d": rain * 28,
+            "temp_x_humidity": temp * hum, "temp_x_rainfall": temp * rain,
+            "humidity_x_rainfall": hum * rain,
+            "breeding_favorable": 1,
+            "rainfall_ewma_14d": rain, "temp_ewma_7d": temp, "humidity_ewma_7d": hum,
+            "briere_thermal_curve": round(t_c * (t_c - T_min) * math.sqrt(T_max - t_c), 4),
+        }
     
     def _calculate_historical_features(self, historical_cases_data: Optional[List[Dict]], target_date: datetime) -> Dict[str, float]:
         """
@@ -354,39 +472,51 @@ class DenguePredictionService:
             return 0
     
     def _get_location_cluster(self, latitude: float, longitude: float) -> int:
-        """
-        Get location cluster for given coordinates
-        
-        Args:
-            latitude (float): Latitude coordinate
-            longitude (float): Longitude coordinate
-            
-        Returns:
-            int: Location cluster ID
-        """
+        """Get KMeans location cluster for given coordinates."""
         try:
-            # Load KMeans model if not already loaded
-            if not hasattr(self, 'kmeans'):
+            # Prefer the saved KMeans model from training
+            if self.kmeans_model is not None:
+                return int(self.kmeans_model.predict([[longitude, latitude]])[0])
+
+            # Fallback: fit on active_dengue.csv (legacy)
+            if not hasattr(self, '_kmeans_fallback'):
                 from sklearn.cluster import KMeans
-                # Load training data to fit KMeans
                 data_path = os.path.join(self.models_dir, "active_dengue.csv")
                 if os.path.exists(data_path):
                     df = pd.read_csv(data_path)
-                    # Normalize column names if needed
                     if 'centroid_x' not in df.columns and 'x' in df.columns:
                         df = df.rename(columns={'x': 'centroid_x', 'y': 'centroid_y'})
-                    self.kmeans = KMeans(n_clusters=10, random_state=42)
-                    self.kmeans.fit(df[['centroid_x', 'centroid_y']])
+                    self._kmeans_fallback = KMeans(n_clusters=10, random_state=42)
+                    self._kmeans_fallback.fit(df[['centroid_x', 'centroid_y']])
                 else:
-                    # Fallback: create a simple cluster based on coordinates
                     return int((longitude + latitude) * 100) % 10
-            
-            return int(self.kmeans.predict([[longitude, latitude]])[0])
-            
+
+            return int(self._kmeans_fallback.predict([[longitude, latitude]])[0])
+
         except Exception as e:
             logger.warning(f"Error getting location cluster: {e}")
-            # Fallback: create a simple cluster based on coordinates
             return int((longitude + latitude) * 100) % 10
+
+    def _get_geo_features(self, latitude: float, longitude: float) -> Dict[str, float]:
+        """
+        Look up geo-spatial features (state_encoded, density_cluster, bbox_area)
+        via nearest-neighbour lookup against training data coordinates.
+        """
+        defaults = {'state_encoded': 0, 'density_cluster': 0, 'bbox_area': 0.0}
+        if self.geo_lookup is None:
+            return defaults
+        try:
+            nn_model = self.geo_lookup['nn_model']
+            _, idx = nn_model.kneighbors([[longitude, latitude]])
+            i = idx[0][0]
+            return {
+                'state_encoded': int(self.geo_lookup['state_encoded'][i]),
+                'density_cluster': int(self.geo_lookup['density_cluster'][i]),
+                'bbox_area': float(self.geo_lookup['bbox_area'][i]),
+            }
+        except Exception as e:
+            logger.warning(f"Geo-lookup failed: {e}")
+            return defaults
     
     def get_historical_data_for_location(self, latitude: float, longitude: float, days_back: int = 30) -> List[Dict]:
         """
@@ -448,65 +578,85 @@ class DenguePredictionService:
     def _prepare_features(self, latitude: float, longitude: float, weather_data: Optional[Dict] = None, 
                          historical_cases_data: Optional[List[Dict]] = None, target_date: Optional[datetime] = None) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Prepare feature arrays for both models
-        
-        Args:
-            latitude (float): Latitude coordinate
-            longitude (float): Longitude coordinate
-            weather_data (Optional[Dict]): Weather data dictionary for Model 2
-            historical_cases_data (Optional[List[Dict]]): Historical cases data for Model 1
-            target_date (Optional[datetime]): Target date for prediction
-            
-        Returns:
-            Tuple of (model1_features, model2_features) as numpy arrays
+        Prepare feature arrays for both models.
+
+        Model 1 (14 features): centroid_x, centroid_y, location_cluster, month,
+            day_of_year, is_hotspot, state_encoded, density_cluster, bbox_area,
+            cases_lag_1, cases_lag_7, cases_lag_30, cases_avg_7, cases_avg_30
+
+        Model 2 (24 features): centroid_x, centroid_y, humidity, temperature,
+            rainfall, month, day_of_year, week_of_year, location_cluster,
+            state_encoded, is_hotspot, rainfall_lag_7, humidity_lag_7,
+            temperature_lag_7, rainfall_cumul_14d, rainfall_cumul_28d,
+            temp_x_humidity, temp_x_rainfall, humidity_x_rainfall,
+            breeding_favorable, rainfall_ewma_14d, temp_ewma_7d,
+            humidity_ewma_7d, briere_thermal_curve
         """
         if target_date is None:
             target_date = datetime.now()
-        
+
         current_month = target_date.month
         current_day_of_year = target_date.timetuple().tm_yday
-        
-        # Calculate historical features for Model 1
+        week_of_year = target_date.isocalendar()[1]
+
+        # Shared lookups
         historical_features = self._calculate_historical_features(historical_cases_data, target_date)
-        
-        # Check if location is a hotspot
         is_hotspot = self._is_location_hotspot(latitude, longitude)
-        
-        # Get location cluster
         location_cluster = self._get_location_cluster(latitude, longitude)
-        
-        # Model 1: Historical Cases Model (11 features)
+        geo = self._get_geo_features(latitude, longitude)
+
+        # Extended weather data (fetches 28-day daily series & computes all derived features)
+        if weather_data is None or "rainfall_lag_7" not in weather_data:
+            weather_data = self._get_weather_data(latitude, longitude, target_date)
+
+        # ── Model 1: Historical Cases (14 features) ───────────────────
         model1_features = [
             longitude,                                    # centroid_x
             latitude,                                     # centroid_y
-            location_cluster,                            # location_cluster
-            current_month,                               # month
-            current_day_of_year,                         # day_of_year
-            is_hotspot,                                  # is_hotspot
-            historical_features['cases_lag_1'],          # cases_lag_1
-            historical_features['cases_lag_7'],          # cases_lag_7
-            historical_features['cases_lag_30'],         # cases_lag_30
-            historical_features['cases_avg_7'],          # cases_avg_7
-            historical_features['cases_avg_30']          # cases_avg_30
+            location_cluster,                             # location_cluster
+            current_month,                                # month
+            current_day_of_year,                          # day_of_year
+            is_hotspot,                                   # is_hotspot
+            geo['state_encoded'],                         # state_encoded
+            geo['density_cluster'],                       # density_cluster
+            geo['bbox_area'],                             # bbox_area
+            historical_features['cases_lag_1'],           # cases_lag_1
+            historical_features['cases_lag_7'],           # cases_lag_7
+            historical_features['cases_lag_30'],          # cases_lag_30
+            historical_features['cases_avg_7'],           # cases_avg_7
+            historical_features['cases_avg_30'],          # cases_avg_30
         ]
-        
-        # Model 2: Weather-based Model (9 features)
-        if weather_data is None:
-            weather_data = self._get_weather_data(latitude, longitude, target_date)
-        
+
+        # ── Model 2: Weather-based (24 features) ──────────────────────
         model2_features = [
-            longitude,           # centroid_x
-            latitude,            # centroid_y
-            weather_data["humidity"],
-            weather_data["temperature"],
-            weather_data["rainfall"],
-            current_month,       # month
-            current_day_of_year, # day_of_year
-            location_cluster,    # location_cluster
-            is_hotspot           # is_hotspot
+            longitude,                                    # centroid_x
+            latitude,                                     # centroid_y
+            weather_data["humidity"],                      # humidity
+            weather_data["temperature"],                   # temperature
+            weather_data["rainfall"],                      # rainfall
+            current_month,                                # month
+            current_day_of_year,                          # day_of_year
+            week_of_year,                                 # week_of_year
+            location_cluster,                             # location_cluster
+            geo['state_encoded'],                         # state_encoded
+            is_hotspot,                                   # is_hotspot
+            weather_data["rainfall_lag_7"],                # rainfall_lag_7
+            weather_data["humidity_lag_7"],                # humidity_lag_7
+            weather_data["temperature_lag_7"],             # temperature_lag_7
+            weather_data["rainfall_cumul_14d"],            # rainfall_cumul_14d
+            weather_data["rainfall_cumul_28d"],            # rainfall_cumul_28d
+            weather_data["temp_x_humidity"],               # temp_x_humidity
+            weather_data["temp_x_rainfall"],               # temp_x_rainfall
+            weather_data["humidity_x_rainfall"],           # humidity_x_rainfall
+            weather_data["breeding_favorable"],            # breeding_favorable
+            weather_data["rainfall_ewma_14d"],             # rainfall_ewma_14d
+            weather_data["temp_ewma_7d"],                  # temp_ewma_7d
+            weather_data["humidity_ewma_7d"],              # humidity_ewma_7d
+            weather_data["briere_thermal_curve"],          # briere_thermal_curve
         ]
-        
-        return np.array(model1_features), np.array(model2_features)
+
+        logger.info(f"Prepared features — Model 1: {len(model1_features)}, Model 2: {len(model2_features)}")
+        return np.array(model1_features, dtype=np.float64), np.array(model2_features, dtype=np.float64)
     
     def predict_risk_with_breeding_areas(self, latitude: float, longitude: float, 
                                         weather_data: Optional[Dict] = None, 
@@ -749,18 +899,21 @@ class DenguePredictionService:
             if self.model1 and self.scaler1:
                 try:
                     logger.info(f"Model 1 features shape: {model1_features.shape}")
-                    logger.info(f"Model 1 features: {model1_features}")
-                    
-                    # Check if it's a tree-based model (like RandomForest)
-                    if hasattr(self.model1, 'feature_importances_'):
-                        # Tree-based model - no scaling needed
-                        model1_prediction = float(self.model1.predict(model1_features.reshape(1, -1))[0])
+
+                    if self.model1_needs_scaling:
+                        X1 = self.scaler1.transform(model1_features.reshape(1, -1))
                     else:
-                        # Linear model - needs scaling
-                        model1_scaled = self.scaler1.transform(model1_features.reshape(1, -1))
-                        model1_prediction = float(self.model1.predict(model1_scaled)[0])
-                    
-                    results["model1_score"] = float(model1_prediction)
+                        X1 = model1_features.reshape(1, -1)
+
+                    raw_pred = float(self.model1.predict(X1)[0])
+
+                    if self.model1_log_target:
+                        model1_prediction = float(np.expm1(max(raw_pred, 0)))
+                    else:
+                        model1_prediction = raw_pred
+
+                    model1_prediction = max(model1_prediction, 0.0)
+                    results["model1_score"] = model1_prediction
                     logger.info(f"Model 1 prediction: {results['model1_score']}")
                 except Exception as e:
                     logger.error(f"Model 1 prediction failed: {str(e)}")
@@ -770,18 +923,21 @@ class DenguePredictionService:
             if self.model2 and self.scaler2:
                 try:
                     logger.info(f"Model 2 features shape: {model2_features.shape}")
-                    logger.info(f"Model 2 features: {model2_features}")
-                    
-                    # Check if it's a tree-based model (like RandomForest)
-                    if hasattr(self.model2, 'feature_importances_'):
-                        # Tree-based model - no scaling needed
-                        model2_prediction = float(self.model2.predict(model2_features.reshape(1, -1))[0])
+
+                    if self.model2_needs_scaling:
+                        X2 = self.scaler2.transform(model2_features.reshape(1, -1))
                     else:
-                        # Linear model - needs scaling
-                        model2_scaled = self.scaler2.transform(model2_features.reshape(1, -1))
-                        model2_prediction = float(self.model2.predict(model2_scaled)[0])
-                    
-                    results["model2_score"] = float(model2_prediction)
+                        X2 = model2_features.reshape(1, -1)
+
+                    raw_pred = float(self.model2.predict(X2)[0])
+
+                    if self.model2_log_target:
+                        model2_prediction = float(np.expm1(max(raw_pred, 0)))
+                    else:
+                        model2_prediction = raw_pred
+
+                    model2_prediction = max(model2_prediction, 0.0)
+                    results["model2_score"] = model2_prediction
                     logger.info(f"Model 2 prediction: {results['model2_score']}")
                 except Exception as e:
                     logger.error(f"Model 2 prediction failed: {str(e)}")
@@ -1136,19 +1292,19 @@ def predict_weighted_50_50():
         
         # Predict with Model 1
         if prediction_service.model1 and prediction_service.scaler1:
-            if hasattr(prediction_service.model1, 'feature_importances_'):
-                model1_score = float(prediction_service.model1.predict(model1_features.reshape(1, -1))[0])
-            else:
-                model1_scaled = prediction_service.scaler1.transform(model1_features.reshape(1, -1))
-                model1_score = float(prediction_service.model1.predict(model1_scaled)[0])
+            X1 = (prediction_service.scaler1.transform(model1_features.reshape(1, -1))
+                  if prediction_service.model1_needs_scaling
+                  else model1_features.reshape(1, -1))
+            raw1 = float(prediction_service.model1.predict(X1)[0])
+            model1_score = max(float(np.expm1(max(raw1, 0))) if prediction_service.model1_log_target else raw1, 0.0)
         
         # Predict with Model 2
         if prediction_service.model2 and prediction_service.scaler2:
-            if hasattr(prediction_service.model2, 'feature_importances_'):
-                model2_score = float(prediction_service.model2.predict(model2_features.reshape(1, -1))[0])
-            else:
-                model2_scaled = prediction_service.scaler2.transform(model2_features.reshape(1, -1))
-                model2_score = float(prediction_service.model2.predict(model2_scaled)[0])
+            X2 = (prediction_service.scaler2.transform(model2_features.reshape(1, -1))
+                  if prediction_service.model2_needs_scaling
+                  else model2_features.reshape(1, -1))
+            raw2 = float(prediction_service.model2.predict(X2)[0])
+            model2_score = max(float(np.expm1(max(raw2, 0))) if prediction_service.model2_log_target else raw2, 0.0)
         
         if model1_score is None and model2_score is None:
             return jsonify({"error": "No valid predictions from any model"}), 500
@@ -1246,13 +1402,14 @@ def predict_model1():
         )
         
         # Make prediction with Model 1
-        if hasattr(prediction_service.model1, 'feature_importances_'):
-            # Tree-based model - no scaling needed
-            model1_prediction = float(prediction_service.model1.predict(model1_features.reshape(1, -1))[0])
-        else:
-            # Linear model - needs scaling
-            model1_scaled = prediction_service.scaler1.transform(model1_features.reshape(1, -1))
-            model1_prediction = float(prediction_service.model1.predict(model1_scaled)[0])
+        X1 = (prediction_service.scaler1.transform(model1_features.reshape(1, -1))
+              if prediction_service.model1_needs_scaling
+              else model1_features.reshape(1, -1))
+        raw_pred = float(prediction_service.model1.predict(X1)[0])
+        model1_prediction = max(
+            float(np.expm1(max(raw_pred, 0))) if prediction_service.model1_log_target else raw_pred,
+            0.0
+        )
         
         # Calculate historical features for response
         historical_features = prediction_service._calculate_historical_features(

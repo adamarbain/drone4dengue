@@ -40,5 +40,29 @@
     "temp_ewma_7d",
     "humidity_ewma_7d",
     "briere_thermal_curve"
+  ],
+  "model1_needs_scaling": false,
+  "model2_needs_scaling": false,
+  "model1_log_target": true,
+  "model2_log_target": true,
+  "training_date": "2026-03-13T07:25:37.704019",
+  "n_training_samples": 22534,
+  "states_in_training": [
+    "Johor",
+    "Kedah",
+    "Kelantan",
+    "Kuala Lumpur",
+    "Labuan",
+    "Melaka",
+    "Negeri Sembilan",
+    "Pahang",
+    "Perak",
+    "Pulau Pinang",
+    "Putrajaya",
+    "Sabah",
+    "Sarawak",
+    "Selangor",
+    "Terengganu",
+    "Unknown"
   ]
 }

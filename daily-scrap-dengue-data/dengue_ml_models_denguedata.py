@@ -134,6 +134,10 @@ class DengueMLModelsDengueData:
         self.model1_feature_names = []
         self.model2_feature_names = []
 
+        self.kmeans = None
+        self.model1_needs_scaling = False
+        self.model2_needs_scaling = False
+
     # ─────────────────────────────────────────────────────────────────
     # 1. LOAD & PREPROCESS
     # ─────────────────────────────────────────────────────────────────
@@ -260,8 +264,8 @@ class DengueMLModelsDengueData:
 
         # K-Means location clusters (10 clusters)
         coords = self.df[['centroid_x', 'centroid_y']]
-        kmeans = KMeans(n_clusters=10, random_state=42, n_init=10)
-        self.df['location_cluster'] = kmeans.fit_predict(coords)
+        self.kmeans = KMeans(n_clusters=10, random_state=42, n_init=10)
+        self.df['location_cluster'] = self.kmeans.fit_predict(coords)
 
         # DBSCAN density-based clusters (capture urban vs rural)
         dbscan = DBSCAN(eps=0.05, min_samples=20)
@@ -573,6 +577,7 @@ class DengueMLModelsDengueData:
         best = max(results, key=lambda k: results[k]['r2'])
         self.model1 = results[best]['model']
         self.model1_feature_names = basic_features + hist_feats
+        self.model1_needs_scaling = best not in tree_models
 
         print(f"\n★ Best Model 1: {best} — R² {results[best]['r2']:.4f}")
 
@@ -736,6 +741,7 @@ class DengueMLModelsDengueData:
 
         self.model2 = results[best_name]['model']
         self.model2_feature_names = model2_features
+        self.model2_needs_scaling = best_name not in tree_models
 
         print(f"\n★ Final Best Model 2: {best_name} — R² {best_r2:.4f}")
 
@@ -748,7 +754,9 @@ class DengueMLModelsDengueData:
     # 6. SAVE MODELS
     # ─────────────────────────────────────────────────────────────────
     def save_models(self):
-        """Save models, scalers, and feature names to server-ml/models/."""
+        """Save models, scalers, feature names, and auxiliary artifacts to server-ml/models/."""
+        from sklearn.neighbors import NearestNeighbors
+        from datetime import datetime as dt
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
         target_dir = os.path.join(script_dir, '..', 'server-ml', 'models')
@@ -772,14 +780,48 @@ class DengueMLModelsDengueData:
                                      'scaler2_weather_based_improved.pkl'))
             print(f"Model 2 saved → {target_dir}")
 
+        # ── Save KMeans clustering model ───────────────────────────────
+        if self.kmeans is not None:
+            joblib.dump(self.kmeans,
+                        os.path.join(target_dir, 'kmeans_model.pkl'))
+            print(f"KMeans model saved → {target_dir}")
+
+        # ── Save geo lookup (NN-based for state_encoded, density_cluster, bbox_area)
+        coords_arr = self.df[['centroid_x', 'centroid_y']].values
+        nn_geo = NearestNeighbors(n_neighbors=1, algorithm='ball_tree')
+        nn_geo.fit(coords_arr)
+
+        geo_lookup = {
+            'nn_model': nn_geo,
+            'state_encoded': self.df['state_encoded'].values,
+            'density_cluster': self.df['density_cluster'].values,
+            'bbox_area': self.df['bbox_area'].values if 'bbox_area' in self.df.columns else np.zeros(len(self.df)),
+        }
+        joblib.dump(geo_lookup, os.path.join(target_dir, 'geo_lookup.pkl'))
+        print(f"Geo lookup (NN) saved → {target_dir}")
+
+        # ── Save label encoders ────────────────────────────────────────
+        joblib.dump(self.label_encoders,
+                    os.path.join(target_dir, 'label_encoders.pkl'))
+        print(f"Label encoders saved → {target_dir}")
+
+        # ── Save feature names and model config ───────────────────────
         features = {
             'model1_features': self.model1_feature_names,
             'model2_features': self.model2_feature_names,
+            'model1_needs_scaling': self.model1_needs_scaling,
+            'model2_needs_scaling': self.model2_needs_scaling,
+            'model1_log_target': True,
+            'model2_log_target': True,
+            'training_date': dt.now().isoformat(),
+            'n_training_samples': len(self.df),
+            'states_in_training': (list(self.label_encoders['state'].classes_)
+                                   if 'state' in self.label_encoders else []),
         }
         feat_path = os.path.join(target_dir, 'model_features_improved.json')
         with open(feat_path, 'w') as f:
             json.dump(features, f, indent=2)
-        print(f"Feature names saved → {feat_path}")
+        print(f"Feature names & config saved → {feat_path}")
 
     # ─────────────────────────────────────────────────────────────────
     # 7. UTILITIES
