@@ -1,73 +1,52 @@
-# Drone4Dengue Project
+# Drone4Dengue
 
-## 📦 Project Overview
-Drone4Dengue is a hybrid system comprising a mobile app (DroneEye) and an admin dashboard designed to assist Malaysian public health authorities in dengue surveillance, prediction, and community awareness. It integrates drones, meteorological data, and machine learning for early intervention.
+Hybrid system for Malaysian public health dengue surveillance: a mobile app (**DroneEye**), an admin web dashboard, a Node.js API, Python ML services, and automation for data pipelines and geocoding. It combines drone imagery, meteorological data, and machine learning to support early awareness and operational decisions.
 
----
+## Modules and use cases
 
-## 🧩 Modules & Use Cases
-- [📄 Modules](./docs/modules.md)
-- [📄 Use Cases](./docs/use-cases.md)
+- [Modules](docs/modules.md)
+- [Use cases](docs/use-cases.md)
 
----
+## Tech stack
 
-## 🛠️ Tech Stack
+| Area | Technologies |
+|------|----------------|
+| Mobile | React Native, Expo (file-based routing via Expo Router) |
+| Admin web | Next.js 15, React 19, TypeScript, Tailwind CSS |
+| API | Node.js, Express, Prisma, PostgreSQL |
+| ML | Python (see `server-ml/`, `daily-scrap-dengue-data/`) |
+| Notifications | Expo push notifications (server-driven flows via API) |
+| Storage | Firebase Storage for drone imagery (see [Firebase Storage migration](docs/firebase-storage-migration.md)) |
 
-### 💻 Frontend
-- **Mobile App**: React Native with Expo
-- **Web Dashboard**: React.js with TypeScript
+Deployment targets in this project have included **Google Cloud Run**, **Render**, **Vercel**, and hosted PostgreSQL (e.g. Supabase/Railway), depending on environment.
 
-### 🧠 Backend
-- Node.js with Express
-- PostgreSQL + Prisma ORM
+## Repository layout
 
-### 📊 ML Model
-- Python + Flask (DengueTrendPredictor, DengueClimatePredictor)
+```
+drone4dengue/
+├── client-mobile/          # Expo app (DroneEye)
+├── client-admin/           # Next.js admin dashboard
+├── server-api/             # REST API (Express + Prisma)
+├── server-ml/              # ML inference / prediction service
+├── daily-scrap-dengue-data/  # Training and DB scripts used by CI
+├── reverse-geocoding/      # Bulk Nominatim reverse geocoding
+├── docs/                   # Specifications, diagrams, guides
+└── .github/workflows/      # CI/CD and scheduled jobs (see .github/workflows/README.md)
+```
 
-### 🔔 Notifications
-- Expo Push Notifications
-- Optional: SendGrid / Twilio
+## Documentation
 
-### ☁️ Deployment & Storage
-- Web & API: Vercel / Railway / Render
-- DB: Supabase / Railway PostgreSQL
-- ML Service: Render / PythonAnywhere
-- Image Storage: Firebase Storage (migrated from local filesystem)
+- [Setup guide](docs/setup-guide.md) — run API, admin, mobile, and ML locally
+- [API specification](docs/api-spec.md)
+- [UI navigation](docs/ui-navigation.md)
+- [Prediction model](docs/prediction-model.md)
+- [Three-model prediction flow](docs/three-model-prediction-flow.md)
+- [GitHub Actions setup](docs/github-actions-setup.md) — secrets and scheduled jobs
 
----
+## Getting started
 
-## 📁 Project Structure
-/drone4dengue<br>
-├── client-mobile/ # React Native Expo App<br>
-├── client-admin/ # React Web Dashboard<br>
-├── server-api/ # Node.js REST API<br>
-├── server-ml/ # Python ML model<br>
-└── docs/ # Design, diagrams, documentation<br>
+**Prerequisites:** Node.js 18+, Python 3.10+, PostgreSQL (or a hosted URL), and Expo tooling for mobile development.
 
+Follow **[docs/setup-guide.md](docs/setup-guide.md)** for step-by-step installation, environment variables, Prisma migrations, and local URLs.
 
----
-
-## 📚 Documentation
-
-- [📄 Use Case Descriptions](./docs/use-cases.md)
-- [📄 UI Navigation](./docs/ui-navigation.md)
-- [📄 API Specification](./docs/api-spec.md)
-- [📄 Prediction Model](./docs/prediction-model.md)
-- [📄 Firebase Storage Migration](./docs/firebase-storage-migration.md)
-- [📄 Three-Model Prediction Flow](./docs/three-model-prediction-flow.md)
-
-## ✅ Getting Started
-
-### 🔧 Prerequisites
-- Node.js + npm
-- Python 3.10+
-- PostgreSQL (or use Supabase)
-
-### 🔌 Setup Instructions
-- [📄 Setup Guide](./docs/setup-guide.md)
-
-
-
-
-
-
+Before publishing this repository publicly, add a **LICENSE** file, remove or redact any committed secrets and environment files, and confirm [GitHub Actions secrets](.github/workflows/README.md) are only stored in the repository settings, not in the codebase.

@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200" role="img" aria-labelledby="title desc">
+  <title id="title">Drone4Dengue Project Logo</title>
+  <desc id="desc">A custom logo for Drone4Dengue featuring a drone motif, dengue warning pin, and integrated project name text.</desc>
+
+  <defs>
+    <linearGradient id="bgGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E6F7F3"/>
+      <stop offset="55%" stop-color="#B9E9DD"/>
+      <stop offset="100%" stop-color="#7CD8C8"/>
+    </linearGradient>
+
+    <linearGradient id="badgeGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0A8F78"/>
+      <stop offset="100%" stop-color="#046D66"/>
+    </linearGradient>
+
+    <linearGradient id="alertGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF6B5B"/>
+      <stop offset="100%" stop-color="#D83A2E"/>
+    </linearGradient>
+
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#0B3B36" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <rect x="100" y="100" width="1000" height="1000" rx="220" fill="url(#bgGradient)"/>
+
+  <g filter="url(#softShadow)">
+    <circle cx="600" cy="600" r="380" fill="#F7FFFD"/>
+    <circle cx="600" cy="600" r="360" fill="none" stroke="#0D8C79" stroke-width="12"/>
+
+    <g>
+      <rect x="540" y="420" width="120" height="92" rx="26" fill="#0C6F63"/>
+      <rect x="520" y="512" width="160" height="24" rx="10" fill="#0C6F63"/>
+
+      <line x1="450" y1="460" x2="530" y2="460" stroke="#0C6F63" stroke-width="16" stroke-linecap="round"/>
+      <line x1="670" y1="460" x2="750" y2="460" stroke="#0C6F63" stroke-width="16" stroke-linecap="round"/>
+
+      <circle cx="425" cy="460" r="46" fill="none" stroke="#0C6F63" stroke-width="16"/>
+      <circle cx="775" cy="460" r="46" fill="none" stroke="#0C6F63" stroke-width="16"/>
+
+      <line x1="540" y1="436" x2="500" y2="392" stroke="#0C6F63" stroke-width="12" stroke-linecap="round"/>
+      <line x1="660" y1="436" x2="700" y2="392" stroke="#0C6F63" stroke-width="12" stroke-linecap="round"/>
+
+      <circle cx="500" cy="392" r="12" fill="#0C6F63"/>
+      <circle cx="700" cy="392" r="12" fill="#0C6F63"/>
+    </g>
+
+    <g transform="translate(0 18)">
+      <path d="M600 540 C680 540 748 600 748 678 C748 736 704 792 648 850 C628 870 612 888 600 902 C588 888 572 870 552 850 C496 792 452 736 452 678 C452 600 520 540 600 540 Z" fill="url(#alertGradient)"/>
+      <circle cx="600" cy="680" r="96" fill="#FFF4F2"/>
+
+      <ellipse cx="600" cy="680" rx="30" ry="18" fill="#1F1F1F"/>
+      <line x1="570" y1="680" x2="544" y2="666" stroke="#1F1F1F" stroke-width="7" stroke-linecap="round"/>
+      <line x1="570" y1="686" x2="542" y2="700" stroke="#1F1F1F" stroke-width="7" stroke-linecap="round"/>
+      <line x1="630" y1="680" x2="656" y2="666" stroke="#1F1F1F" stroke-width="7" stroke-linecap="round"/>
+      <line x1="630" y1="686" x2="658" y2="700" stroke="#1F1F1F" stroke-width="7" stroke-linecap="round"/>
+      <line x1="600" y1="662" x2="600" y2="640" stroke="#1F1F1F" stroke-width="7" stroke-linecap="round"/>
+      <line x1="588" y1="644" x2="612" y2="644" stroke="#1F1F1F" stroke-width="7" stroke-linecap="round"/>
+
+      <ellipse cx="566" cy="650" rx="24" ry="8" transform="rotate(-28 566 650)" fill="none" stroke="#1F1F1F" stroke-width="5"/>
+      <ellipse cx="634" cy="650" rx="24" ry="8" transform="rotate(28 634 650)" fill="none" stroke="#1F1F1F" stroke-width="5"/>
+    </g>
+
+    <g>
+      <rect x="280" y="860" width="640" height="124" rx="62" fill="url(#badgeGradient)"/>
+      <text x="600" y="938" text-anchor="middle" fill="#FFFFFF" font-size="62" font-family="Segoe UI, Arial, sans-serif" font-weight="700" letter-spacing="1.5">Drone4Dengue</text>
+    </g>
+  </g>
+</svg>

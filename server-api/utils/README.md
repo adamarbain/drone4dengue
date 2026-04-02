@@ -1,40 +1,43 @@
-# Server API Utilities
+# server-api utilities
 
-## Firebase Storage Utilities
+Shared helpers used by the Express API under `server-api/utils/`.
 
-The `firebase_storage_utils.js` module provides functions for managing images in Firebase Storage.
+## Modules
 
-### Usage
+| File | Role |
+|------|------|
+| `firebase_storage_utils.js` | Upload, download, and delete drone images in Firebase Storage (service account auth). |
+| `logger.js` | Winston-based structured logging (levels, transports). |
+| `sentry.js` | Optional Sentry (`@sentry/node`, profiling) when `SENTRY_DSN` is set. |
+| `errorResponse.js` | Consistent JSON error payloads and logging for controllers. |
+| `riskLevelUtils.js` | Map risk scores to `low` / `medium` / `high` using company threshold settings. |
+
+## Firebase Storage (`firebase_storage_utils.js`)
+
+Typical usage:
 
 ```javascript
 const { uploadImage, downloadImage, deleteImage } = require('./utils/firebase_storage_utils');
 
-// Upload an image
 const url = await uploadImage('/tmp/image.jpg', 'drone-images/abc123.jpg');
-
-// Download an image
 const buffer = await downloadImage('https://storage.googleapis.com/...');
-
-// Delete an image
 await deleteImage('drone-images/abc123.jpg');
 ```
 
-### Configuration
-
-Set these environment variables:
+Set these environment variables (see [Firebase Storage migration](../../docs/firebase-storage-migration.md)):
 
 ```env
 FIREBASE_PROJECT_ID=your-project-id
 FIREBASE_CLIENT_EMAIL=service-account@project.iam.gserviceaccount.com
 FIREBASE_STORAGE_BUCKET=project.appspot.com
-
-# Use one of the options below for credentials
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-# or
-FIREBASE_PRIVATE_KEY_BASE64=LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0t...
-# or
-FIREBASE_SERVICE_ACCOUNT_JSON='{"type":"service_account","project_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n..."}'
 ```
 
-See [Firebase Storage Migration Guide](../../docs/firebase-storage-migration.md) for setup instructions.
+Credentials (one of):
 
+- `FIREBASE_PRIVATE_KEY` — PEM string with `\n` newlines  
+- `FIREBASE_PRIVATE_KEY_BASE64` — base64-encoded key  
+- `FIREBASE_SERVICE_ACCOUNT_JSON` — full JSON string for the service account  
+
+## Sentry
+
+Set `SENTRY_DSN` in the API environment to enable error and performance data; initialization is handled in `sentry.js`.
