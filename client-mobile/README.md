@@ -1,54 +1,62 @@
-# DengueEye (client-mobile)
+# Mobile Client (`client-mobile`)
 
-React Native mobile app for the Drone4Dengue project, built with [Expo](https://expo.dev) and [Expo Router](https://docs.expo.dev/router/introduction/) (file-based routing under `app/`).
+Expo + React Native mobile app for Drone4Dengue. Routing is file-based through Expo Router (`app/`), and API access is configured through `EXPO_PUBLIC_*` variables.
 
 ## Prerequisites
 
 - Node.js 18+ and npm
-- For device builds: Android Studio / Xcode, or [EAS Build](https://docs.expo.dev/build/introduction/)
-- A running [server-api](../server-api/) instance (default local URL below)
+- `server-api` running locally (usually `http://localhost:4000`)
+- One of:
+  - Expo Go app on your phone, or
+  - Android emulator / iOS simulator, or
+  - Expo development build
 
-## Setup
+## 1) Install dependencies
 
-1. Install dependencies:
+```bash
+cd client-mobile
+npm install
+```
 
-   ```bash
-   cd client-mobile
-   npm install
-   ```
+## 2) Configure environment
 
-2. Environment variables — create `.env` in this directory:
+Create `.env` from `env.example` and set at least:
 
-   ```env
-   EXPO_PUBLIC_API_URL=http://localhost:4000
-   EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
-   ```
+```env
+EXPO_PUBLIC_API_URL=http://localhost:4000
+EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=your-google-web-client-id
+```
 
-   `EXPO_PUBLIC_API_URL` must match your API base URL (no trailing slash). Production values are often set via [EAS `eas.json`](https://docs.expo.dev/build-reference/variables/) profiles instead of committing `.env` files.
+Notes:
 
-3. **Google Maps API key** (maps in the app):
+- `EXPO_PUBLIC_API_URL` must point to your running backend.
+- For Android emulator, `localhost` from the emulator is not your PC. Use host mapping (for example `10.0.2.2`) when needed.
 
-   - [Google Cloud Console](https://console.cloud.google.com/) → enable **Maps SDK for Android** and **Maps SDK for iOS**
-   - Create an API key under APIs & Services → Credentials
-   - Restrict the key (HTTP referrers / app identifiers) for production
+## 3) Start development server
 
-4. Start the dev server:
+```bash
+npm run start
+```
 
-   ```bash
-   npx expo start
-   ```
+Then choose target from Expo CLI:
 
-   Use the Expo CLI menu to open an emulator/simulator, a [development build](https://docs.expo.dev/develop/development-builds/introduction/), or [Expo Go](https://expo.dev/go) (some native features may require a dev build).
+- `a` for Android
+- `i` for iOS (macOS only)
+- `w` for web
+- Scan QR for Expo Go
 
-## Scripts
+## Build and test commands
 
-| Command | Purpose |
-|---------|---------|
-| `npm run start` | Start Expo dev server (`expo start`) |
-| `npm run android` / `npm run ios` | Run on native projects (`expo run:android` / `expo run:ios`) |
-| `npm run web` | Web target (`expo start --web`) |
-| `npm run lint` | Lint (`expo lint`) |
+- `npm run start` - start Expo dev server
+- `npm run android` - run Android native project
+- `npm run ios` - run iOS native project
+- `npm run web` - run web target
+- `npm run lint` - lint checks
 
-## Project context
+## Local verification checklist
 
-This app talks to the Drone4Dengue backend over `EXPO_PUBLIC_*` variables. For full stack setup, see the [root README](../README.md) and [docs/setup-guide.md](../docs/setup-guide.md).
+1. Confirm auth screens can call backend successfully.
+2. Verify dashboard/risk pages load without API base URL errors.
+3. Test maps-related screens with valid `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY`.
+
