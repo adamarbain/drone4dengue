@@ -1,16 +1,13 @@
-"""
-conftest.py — Shared fixtures for UC5/UC6 Selenium tests
-=========================================================
-Project  : Drone4Dengue – Admin Web System
-Doc ref  : TDS-UC5-UC6 / TP-UC5-UC6
-Platform : Admin Web (http://localhost:3000)
-Runner   : pytest
-"""
 
 import os
 import time
+import platform
+from datetime import datetime
+from pathlib import Path
 import pytest
+from dotenv import load_dotenv
 from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -18,6 +15,15 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 # ─── Test Configuration ───────────────────────────────────────────────────────
+
+THIS_DIR = Path(__file__).resolve().parent
+REPO_ROOT = THIS_DIR.parent
+
+load_dotenv(REPO_ROOT / ".env", override=False)
+load_dotenv(THIS_DIR / ".env", override=True)
+
+DOWNLOAD_DIR = REPO_ROOT / "downloads"
+DOWNLOAD_DIR.mkdir(exist_ok=True)
 
 BASE_URL   = os.getenv("ADMIN_URL",  "http://localhost:3000")
 API_URL    = os.getenv("API_URL",    "http://localhost:4000")
@@ -76,6 +82,69 @@ def accept_alert(driver, timeout=8):
     alert.accept()
     return text
 
+def pytest_configure(config):
+    """Register custom pytest markers."""
+    config.addinivalue_line("markers", "uc10: UC-10 Generate Report tests")
+    config.addinivalue_line("markers", "uc4: UC-4 Edit Profile tests")
+    config.addinivalue_line("markers", "uc5: UC-5 Drone Management tests")
+    config.addinivalue_line("markers", "uc6: UC-6 Media Upload tests")
+    config.addinivalue_line("markers", "selenium: browser-based Selenium tests")
+    config.addinivalue_line("markers", "appium: mobile app Appium tests")
+
+def xpath_literal(value: str) -> str:
+    """Create XPath-safe text literal."""
+    if "'" not in value:
+        return f"'{value}'"
+
+    if '"' not in value:
+        return f'"{value}"'
+
+    parts = value.split("'")
+    return "concat(" + ', "\'", '.join(f"'{part}'" for part in parts) + ")"
+
+
+def visible_text(driver, text: str, timeout: int = DEFAULT_WAIT):
+    """Find visible element containing text."""
+    text_literal = xpath_literal(text)
+
+    xpath = (
+        f"//*[contains(normalize-space(.), {text_literal})]"
+    )
+
+    return WebDriverWait(driver, timeout).until(
+        EC.visibility_of_element_located((By.XPATH, xpath))
+    )
+
+
+def click_visible_text(driver, text: str, timeout: int = DEFAULT_WAIT):
+    """Click visible text element."""
+    element = visible_text(driver, text, timeout)
+
+    driver.execute_script(
+        "arguments[0].scrollIntoView({block: 'center'});",
+        element
+    )
+
+    time.sleep(0.2)
+
+    try:
+        element.click()
+    except WebDriverException:
+        driver.execute_script("arguments[0].click();", element)
+
+    return element
+
+
+def scroll_into_view(driver, element):
+    """Scroll element into view."""
+    driver.execute_script(
+        "arguments[0].scrollIntoView({block: 'center'});",
+        element
+    )
+
+    time.sleep(0.2)
+
+    return element
 
 def dismiss_any_dialog(driver, timeout=6):
     """
@@ -179,6 +248,13 @@ def driver():
     if headless:
         chrome_options.add_argument("--headless=new")
 
+    prefs = {
+        "download.default_directory": str(DOWNLOAD_DIR),
+        "download.prompt_for_download": False,
+    }
+
+    chrome_options.add_experimental_option("prefs", prefs)
+
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-gpu")
@@ -199,7 +275,8 @@ def driver():
     # yield _driver
 
     # IMPORTANT
-    chrome_options.binary_location = "/usr/bin/google-chrome"
+    if platform.system() == "Linux":
+        chrome_options.binary_location = "/usr/bin/google-chrome"
 
     try:
         from webdriver_manager.chrome import ChromeDriverManager
@@ -207,10 +284,13 @@ def driver():
     except Exception:
         service = Service()
 
-    _driver = webdriver.Chrome(
-        service=service,
-        options=chrome_options
-    )
+    try:
+        _driver = webdriver.Chrome(
+            service=service,
+            options=chrome_options
+        )
+    except WebDriverException as exc:
+        pytest.fail(f"Could not start Chrome WebDriver: {exc}")
 
     _driver.implicitly_wait(5)
 
@@ -251,6 +331,16 @@ def logged_in(driver):
     """Ensure the admin is logged in before any test runs."""
     do_login(driver)
 
+@pytest.fixture()
+def report_generation_page(driver):
+    """Open Report Generation page and wait until the form is loaded."""
+    driver.get(f"{BASE_URL}/reports")
+    wait = WebDriverWait(driver, 20)
+    wait.until(EC.presence_of_element_located(
+        (By.XPATH, "//h1[contains(text(), 'Report Generation')]")
+    ))
+    return driver
+
 
 # ─── Drone Management Page Navigation ────────────────────────────────────────
 
@@ -270,3 +360,36 @@ def drone_page(driver):
     """Navigate to Drone Management before each test that needs it."""
     go_to_drone_management(driver)
     return driver
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Take screenshot on test failure."""
+    outcome = yield
+    report = outcome.get_result()
+
+    if report.when != "call" or not report.failed:
+        return
+
+    browser = (
+        item.funcargs.get("drone_page")
+        or item.funcargs.get("driver")
+    )
+
+    if not browser:
+        return
+
+    screenshot_dir = THIS_DIR / "screenshots"
+    screenshot_dir.mkdir(exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    path = screenshot_dir / f"{item.name}_{timestamp}.png"
+
+    browser.save_screenshot(str(path))
+
+    # Attach screenshot to pytest-html report
+    if item.config.pluginmanager.hasplugin("html"):
+        from pytest_html import extras
+
+        report.extras = getattr(report, "extras", [])
+        report.extras.append(extras.image(str(path)))

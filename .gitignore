@@ -5,7 +5,7 @@
 
 # environment files
 .env
-.env.*
+
 
 # node
 node_modules/
