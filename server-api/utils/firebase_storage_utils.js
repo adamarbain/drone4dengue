@@ -330,7 +330,7 @@ function resolveFirebaseCredentialFields() {
         storageBucket:
           process.env.FIREBASE_STORAGE_BUCKET ||
           parsed.storageBucket || // non-standard but allow override
-          parsed.project_id ? `${parsed.project_id}.appspot.com` : undefined
+          (parsed.project_id ? `${parsed.project_id}.appspot.com` : undefined)
       };
     }
     // If parsed is undefined, fall through to use individual vars below

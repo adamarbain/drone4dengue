@@ -2,3 +2,13 @@
 /scripts
 /docs
 /daily-scrap-dengue-data
+/test
+# env
+.env
+
+# python
+__pycache__/
+*.pyc
+
+# android
+local.properties

@@ -36,7 +36,7 @@ exports.getCompanyById = async (req, res) => {
       return sendForbiddenError(res, 'You can only view your own company');
     }
     
-    const company = await prisma.company.findUnique({
+    const company = await prisma.company.findFirst({
       where: { 
         id: id,
         isActive: true 
