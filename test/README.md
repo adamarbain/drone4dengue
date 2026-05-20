@@ -4,12 +4,6 @@
 
 Automated Selenium WebDriver tests for **UC5** (Manage Drone and Location) and **UC6** (Manage Images Captured by Drone) on the **Admin Web** (`http://localhost:3000`).
 
-| Document | Reference |
-|---|---|
-| Test Design Specification | TDS-UC5-UC6 v2.0 |
-| Test Case Specification | TCS-UC5-UC6 v2.0 |
-| Test Procedure | TP-UC5-UC6 v2.0 |
-
 ---
 
 ## Directory Structure
