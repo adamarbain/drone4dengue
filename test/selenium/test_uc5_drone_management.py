@@ -146,6 +146,172 @@ def _get_first_location_select(driver):
     return selects[0] if selects else None
 
 
+def _find_drone_row(driver, drone_name):
+    """Find the table row for a drone by name."""
+    return driver.find_elements(By.XPATH,
+        f"//tr[contains(.,'{drone_name}')]")
+
+
+def _create_drone(driver, name=DRONE_NAME, model=DRONE_MODEL,
+                  serial=DRONE_SERIAL, status="Operational",
+                  select_location=True):
+    """Create a drone via the Add Drone modal and verify it appears."""
+    _open_add_drone_modal(driver)
+    _fill_add_drone_form(driver, name=name, model=model, serial=serial,
+                         status=status, select_location=select_location)
+    _click_submit_in_add_modal(driver)
+    dismiss_any_dialog(driver, timeout=8)
+    time.sleep(2)
+    go_to_drone_management(driver)
+    assert name in driver.page_source, \
+        f"Drone '{name}' not found in list after creation"
+
+
+def _edit_drone_status(driver, drone_name, new_status, expect_success=True):
+    """Open edit modal for a drone, change status, and save."""
+    rows = _find_drone_row(driver, drone_name)
+    if not rows:
+        pytest.skip(f"'{drone_name}' not found — run add step first")
+
+    edit_btn = rows[0].find_element(By.XPATH,
+        ".//button[@title='Edit Drone']")
+    edit_btn.click()
+    time.sleep(1)
+
+    assert "Edit Drone" in driver.page_source, "Edit modal should open"
+
+    status_selects = driver.find_elements(By.XPATH,
+        "//select[.//option[contains(.,'Operational')]]")
+    assert status_selects, "Status select not found in Edit modal"
+    Select(status_selects[0]).select_by_visible_text(new_status)
+
+    save_btn = wait_for_clickable(driver, By.XPATH,
+        "//button[contains(.,'Save Changes')]")
+    save_btn.click()
+
+    if expect_success:
+        dismiss_any_dialog(driver, timeout=8)
+        time.sleep(2)
+        go_to_drone_management(driver)
+    else:
+        time.sleep(2)
+
+
+def _delete_drone(driver, drone_name):
+    """Delete a drone by name and confirm removal."""
+    rows = _find_drone_row(driver, drone_name)
+    if not rows:
+        pytest.skip(f"'{drone_name}' not found — cannot delete")
+
+    delete_btn = rows[0].find_element(By.XPATH,
+        ".//button[@title='Delete Drone']")
+    delete_btn.click()
+    time.sleep(1)
+
+    assert "Delete Drone" in driver.page_source, \
+        "Confirmation dialog did not appear"
+
+    dismiss_confirm_and_success_dialog(driver, timeout=8, confirm_text="Confirm")
+    time.sleep(1)
+    go_to_drone_management(driver)
+    assert drone_name not in driver.page_source, \
+        f"Drone '{drone_name}' should be removed after deletion"
+
+
+def _delete_drone_no_assert(driver, drone_name):
+    """Delete a drone without asserting removal (for cleanup)."""
+    rows = _find_drone_row(driver, drone_name)
+    if rows:
+        del_btn = rows[0].find_elements(By.XPATH,
+            ".//button[@title='Delete Drone']")
+        if del_btn:
+            del_btn[0].click()
+            time.sleep(0.5)
+            dismiss_confirm_and_success_dialog(driver, timeout=8, confirm_text="Confirm")
+            time.sleep(1)
+
+
+def _override_gps_denied(driver):
+    """Override navigator.geolocation to simulate GPS denial."""
+    driver.execute_script("""
+        window.__gpsOverridden = true;
+        const _origGeo = navigator.geolocation;
+        Object.defineProperty(navigator, 'geolocation', {
+            configurable: true,
+            get: function() {
+                return {
+                    getCurrentPosition: function(success, error) {
+                        if (error) {
+                            error({
+                                code: 1,
+                                message: 'User denied Geolocation'
+                            });
+                        }
+                    },
+                    watchPosition: function() { return 0; },
+                    clearWatch: function() {}
+                };
+            }
+        });
+    """)
+
+
+def _restore_gps(driver):
+    """Restore original geolocation after GPS override."""
+    driver.execute_script("if (window.__gpsOverridden) { delete window.__gpsOverridden; }")
+
+
+def _override_fetch_500(driver):
+    """Override window.fetch to return HTTP 500 for PUT /drones/:id."""
+    driver.execute_script(r"""
+        window.__origFetch = window.fetch;
+        window.fetch = function(url, opts) {
+            var isDroneUpdate = false;
+            if (typeof url === 'string' && /\/drones\/[^/?]/.test(url)) {
+                var method = (opts && opts.method) || 'GET';
+                if (method === 'PUT') {
+                    isDroneUpdate = true;
+                }
+            }
+            if (isDroneUpdate) {
+                return Promise.resolve(
+                    new Response(
+                        JSON.stringify({ error: 'Database update failed' }),
+                        {
+                            status: 500,
+                            statusText: 'Internal Server Error',
+                            headers: { 'Content-Type': 'application/json' }
+                        }
+                    )
+                );
+            }
+            return window.__origFetch.apply(this, arguments);
+        };
+    """)
+
+
+def _restore_fetch(driver):
+    """Restore original window.fetch after 500 override."""
+    driver.execute_script("""
+        if (window.__origFetch) {
+            window.fetch = window.__origFetch;
+            delete window.__origFetch;
+        }
+    """)
+
+
+def _close_all_modals(driver):
+    """Close all open modals via their X buttons."""
+    close_btns = driver.find_elements(By.XPATH,
+        "//div[contains(@class,'fixed')]//button[.//*[name()='svg']]")
+    for btn in close_btns:
+        try:
+            btn.click()
+            time.sleep(0.3)
+        except Exception:
+            pass
+
+
 # ═════════════════════════════════════════════════════════════════════════════
 # TC-05-001  Verify admin login, access drone module, and view drone list
 # Covers: UC5-COV-01, UC5-COV-02
@@ -214,79 +380,19 @@ class TestTC05002AddEditDeleteDrone:
 
     def test_add_drone_creates_entry(self, driver, drone_page):
         """Steps 1-4: Add a new drone and verify it appears in the list."""
-        _open_add_drone_modal(driver)
-        _fill_add_drone_form(driver,
+        _create_drone(driver,
             name=DRONE_NAME, model=DRONE_MODEL,
             serial=DRONE_SERIAL, status="Operational")
-        _click_submit_in_add_modal(driver)
-
-        dismiss_any_dialog(driver, timeout=8)
-        time.sleep(2)
-
-        go_to_drone_management(driver)
-        assert DRONE_NAME in driver.page_source, \
-            f"Drone '{DRONE_NAME}' not found in list after creation"
 
     def test_edit_drone_updates_status(self, driver, drone_page):
-        """Steps 5-8: Edit drone status and verify update is reflected.
-
-        NOTE: The Edit modal (page.tsx:1317-1429) only has Status and
-        Operational Area fields — name/model/serial are NOT editable.
-        """
-        rows = driver.find_elements(By.XPATH,
-            f"//tr[contains(.,'{DRONE_NAME}')]")
-        if not rows:
-            pytest.skip(f"'{DRONE_NAME}' not found — run TC-05-001 add step first")
-
-        edit_btn = rows[0].find_element(By.XPATH,
-            ".//button[@title='Edit Drone']")
-        edit_btn.click()
-        time.sleep(1)
-
-        assert "Edit Drone" in driver.page_source, "Edit modal should open"
-
-        # Change status to Maintenance
-        status_selects = driver.find_elements(By.XPATH,
-            "//select[.//option[contains(.,'Operational')]]")
-        assert status_selects, "Status select not found in Edit modal"
-        Select(status_selects[0]).select_by_visible_text("Maintenance")
-
-        save_btn = wait_for_clickable(driver, By.XPATH,
-            "//button[contains(.,'Save Changes')]")
-        save_btn.click()
-
-        dismiss_any_dialog(driver, timeout=8)
-        time.sleep(2)
-
-        go_to_drone_management(driver)
+        """Steps 5-8: Edit drone status and verify update is reflected."""
+        _edit_drone_status(driver, DRONE_NAME, "Maintenance")
         assert "Maintenance" in driver.page_source, \
             "Status should be updated to Maintenance"
 
     def test_delete_drone_removes_entry(self, driver, drone_page):
-        """Steps 9-11: Delete the test drone and verify removal.
-
-        Uses React ConfirmDialog (confirmText='Confirm') → SuccessDialog
-        ('Great!' button), NOT native browser alert.
-        """
-        rows = driver.find_elements(By.XPATH,
-            f"//tr[contains(.,'{DRONE_NAME}')]")
-        if not rows:
-            pytest.skip("Test drone not found — run add step first")
-
-        delete_btn = rows[0].find_element(By.XPATH,
-            ".//button[@title='Delete Drone']")
-        delete_btn.click()
-        time.sleep(1)
-
-        assert "Delete Drone" in driver.page_source, \
-            "Confirmation dialog did not appear"
-
-        dismiss_confirm_and_success_dialog(driver, timeout=8,confirm_text="Confirm")
-        time.sleep(1)
-
-        go_to_drone_management(driver)
-        assert DRONE_NAME not in driver.page_source, \
-            "Drone should be removed after deletion"
+        """Steps 9-11: Delete the test drone and verify removal."""
+        _delete_drone(driver, DRONE_NAME)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -306,24 +412,16 @@ class TestTC05003MapAssignmentAndPersistence:
 
     def test_assign_location_and_persist(self, driver, drone_page):
         """Steps 1-7: Create drone, assign location via dropdown, refresh, verify."""
-        # Step 1: Create a test drone
-        _open_add_drone_modal(driver)
-        _fill_add_drone_form(driver,
-            name="TC5003 Location Test",
-            model="DJI Test",
-            serial="SN-TC5003-LOC",
-            status="Operational",
-            select_location=False)
-        _click_submit_in_add_modal(driver)
-        dismiss_any_dialog(driver, timeout=8)
-        time.sleep(2)
+        DRONE_TC_NAME = "TC5003 Location Test"
 
-        go_to_drone_management(driver)
-        assert "TC5003 Location Test" in driver.page_source
+        # Step 1: Create a test drone
+        _create_drone(driver,
+            name=DRONE_TC_NAME, model="DJI Test",
+            serial="SN-TC5003-LOC", status="Operational",
+            select_location=False)
 
         # Step 2: Open Edit modal
-        rows = driver.find_elements(By.XPATH,
-            "//tr[contains(.,'TC5003 Location Test')]")
+        rows = _find_drone_row(driver, DRONE_TC_NAME)
         assert rows, "Test drone row not found"
         edit_btn = rows[0].find_element(By.XPATH,
             ".//button[@title='Edit Drone']")
@@ -336,14 +434,12 @@ class TestTC05003MapAssignmentAndPersistence:
             sel = Select(loc_select)
             opts = [o for o in sel.options if o.get_attribute("value")]
             if len(opts) > 1:
-                # Select a different location (second option)
                 opts[1].click()
                 driver.execute_script(
                     "arguments[0].dispatchEvent(new Event('change', {bubbles: true}));",
                     loc_select)
                 time.sleep(0.5)
             elif len(opts) == 1:
-                # Only one location available — select it (change from empty)
                 opts[0].click()
                 driver.execute_script(
                     "arguments[0].dispatchEvent(new Event('change', {bubbles: true}));",
@@ -368,20 +464,11 @@ class TestTC05003MapAssignmentAndPersistence:
             (By.XPATH, "//*[contains(text(),'Drone Management')]")), timeout=15)
 
         # Step 7: Verify drone still present (persistence confirmed)
-        assert "TC5003 Location Test" in driver.page_source, \
+        assert DRONE_TC_NAME in driver.page_source, \
             "Drone should persist after page refresh"
 
         # Cleanup: delete the test drone
-        rows = driver.find_elements(By.XPATH,
-            "//tr[contains(.,'TC5003 Location Test')]")
-        if rows:
-            del_btn = rows[0].find_elements(By.XPATH,
-                ".//button[@title='Delete Drone']")
-            if del_btn:
-                del_btn[0].click()
-                time.sleep(0.5)
-                dismiss_confirm_and_success_dialog(driver, timeout=8,confirm_text="Confirm")
-                time.sleep(1)
+        _delete_drone_no_assert(driver, DRONE_TC_NAME)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -401,27 +488,7 @@ class TestTC05004ExceptionHandling:
         go_to_drone_management(driver)
 
         # Step 1: Override navigator.geolocation to fire error callback
-        driver.execute_script("""
-            window.__gpsOverridden = true;
-            const _origGeo = navigator.geolocation;
-            Object.defineProperty(navigator, 'geolocation', {
-                configurable: true,
-                get: function() {
-                    return {
-                        getCurrentPosition: function(success, error) {
-                            if (error) {
-                                error({
-                                    code: 1,
-                                    message: 'User denied Geolocation'
-                                });
-                            }
-                        },
-                        watchPosition: function() { return 0; },
-                        clearWatch: function() {}
-                    };
-                }
-            });
-        """)
+        _override_gps_denied(driver)
 
         # Step 2: Open Add Drone modal
         add_btn = wait_for_clickable(driver, By.XPATH,
@@ -435,9 +502,8 @@ class TestTC05004ExceptionHandling:
             "//label[contains(.,'Operational Area')]/following::button[1]"
             )
         if not add_location_btns:
-            # Fallback: verify modal is still open (no crash)
             assert "Add New Drone" in driver.page_source
-            driver.execute_script("if (window.__gpsOverridden) { delete window.__gpsOverridden; }")
+            _restore_gps(driver)
             _close_open_modal(driver)
             pytest.skip("'Add New Location' button not found; verified no GPS crash")
 
@@ -456,23 +522,11 @@ class TestTC05004ExceptionHandling:
             "Location/map section should still be visible after GPS denial"
 
         # Restore geolocation and close modals
-        driver.execute_script("if (window.__gpsOverridden) { delete window.__gpsOverridden; }")
-        close_btns = driver.find_elements(By.XPATH,
-            "//div[contains(@class,'fixed')]//button[.//*[name()='svg']]")
-        for btn in close_btns:
-            try:
-                btn.click()
-                time.sleep(0.3)
-            except Exception:
-                pass
+        _restore_gps(driver)
+        _close_all_modals(driver)
 
     def test_db_update_failure_shows_error(self, driver, drone_page):
-        """Steps 5-7: Simulate DB failure via fetch monkey-patch; verify error alert.
-
-        Overrides window.fetch to return HTTP 500 for PUT requests to
-        /drones/:id.  The app catches the error and calls
-        alert('Failed to update drone: ...').
-        """
+        """Steps 5-7: Simulate DB failure via fetch monkey-patch; verify error alert."""
         go_to_drone_management(driver)
 
         # Need at least one drone to edit
@@ -482,31 +536,7 @@ class TestTC05004ExceptionHandling:
             pytest.skip("No drones available to edit for TC-05-004")
 
         # Monkey-patch window.fetch to return 500 for PUT /drones/:id
-        driver.execute_script("""
-            window.__origFetch = window.fetch;
-            window.fetch = function(url, opts) {
-                var isDroneUpdate = false;
-                if (typeof url === 'string' && /\/drones\/[^/?]/.test(url)) {
-                    var method = (opts && opts.method) || 'GET';
-                    if (method === 'PUT') {
-                        isDroneUpdate = true;
-                    }
-                }
-                if (isDroneUpdate) {
-                    return Promise.resolve(
-                        new Response(
-                            JSON.stringify({ error: 'Database update failed' }),
-                            {
-                                status: 500,
-                                statusText: 'Internal Server Error',
-                                headers: { 'Content-Type': 'application/json' }
-                            }
-                        )
-                    );
-                }
-                return window.__origFetch.apply(this, arguments);
-            };
-        """)
+        _override_fetch_500(driver)
 
         # Open edit modal
         edit_btns[0].click()
@@ -530,16 +560,10 @@ class TestTC05004ExceptionHandling:
             assert "failed" in msg.lower() or "error" in msg.lower(), \
                 f"Expected failure alert, got: '{msg}'"
         except TimeoutException:
-            # If no alert appeared, check that the page is still functional
             pass
 
         # Restore original fetch
-        driver.execute_script("""
-            if (window.__origFetch) {
-                window.fetch = window.__origFetch;
-                delete window.__origFetch;
-            }
-        """)
+        _restore_fetch(driver)
 
         # Verify page is still operational
         go_to_drone_management(driver)

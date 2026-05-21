@@ -49,30 +49,41 @@ TEST_VIDEO_PATH = os.path.join(ASSETS_DIR, "test_video.mp4")
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
-def _select_first_drone_row(driver):
-    """Click the first non-loading drone row to trigger gallery load."""
+def _select_drone_row(driver, index=0):
+    """Click a drone row by index to trigger gallery load."""
     rows = driver.find_elements(By.XPATH,
         "//table//tbody//tr[not(contains(.,'No drones') or contains(.,'Loading'))]")
-    if not rows:
+    if not rows or index >= len(rows):
         return False
-    rows[0].click()
+    rows[index].click()
     time.sleep(2)
     return True
 
-def _select_second_drone_row(driver):
-    """Click the second non-loading drone row to trigger gallery load."""
-    rows = driver.find_elements(By.XPATH,
-        "//table//tbody//tr[not(contains(.,'No drones') or contains(.,'Loading'))]"
-    )
-    if not rows:
-        return False
-    rows[1].click()
-    time.sleep(2)
-    return True
+
+def _get_image_cards(driver):
+    """Return all image card elements in the gallery."""
+    return driver.find_elements(By.XPATH,
+        "//div[contains(@class,'group') and .//img]")
+
+
+def _hover_image_card(driver, card):
+    """Scroll card into view and dispatch mouseover event."""
+    driver.execute_script("arguments[0].scrollIntoView(true);", card)
+    driver.execute_script(
+        "arguments[0].dispatchEvent(new MouseEvent('mouseover',{bubbles:true}));",
+        card)
+    time.sleep(0.5)
+
+
+def _get_overlay_buttons(card):
+    """Return overlay buttons from an image card."""
+    return card.find_elements(By.XPATH,
+        ".//div[contains(@class,'absolute inset-0')]//button")
 
 
 def _select_drone_by_dropdown(driver, visible_text=None):
     """Select a drone from the 'Drone Images' dropdown."""
+    from selenium.webdriver.support.ui import Select
     selects = driver.find_elements(By.XPATH,
         "//select[ancestor::div[contains(.,'Drone Images')]]")
     if not selects:
@@ -82,11 +93,8 @@ def _select_drone_by_dropdown(driver, visible_text=None):
         return False
     sel_el = selects[0]
     if visible_text:
-        from selenium.webdriver.support.ui import Select
         Select(sel_el).select_by_visible_text(visible_text)
     else:
-        # Select first non-empty option
-        from selenium.webdriver.support.ui import Select
         sel = Select(sel_el)
         opts = [o for o in sel.options if o.get_attribute("value")]
         if opts:
@@ -117,6 +125,134 @@ def _close_modal(driver, timeout=5):
         time.sleep(0.5)
     except TimeoutException:
         pass
+
+
+def _upload_file_to_modal(driver, file_path):
+    """Send a file to the file input in the Add Images modal."""
+    file_inputs = driver.find_elements(By.XPATH, "//input[@id='media-upload']")
+    if not file_inputs:
+        file_inputs = driver.find_elements(By.XPATH, "//input[@type='file']")
+    if not file_inputs:
+        _close_modal(driver)
+        pytest.skip("File <input> not found in modal")
+    file_inputs[0].send_keys(file_path)
+    time.sleep(1)
+    return True
+
+
+def _click_modal_button(driver, button_text):
+    """Click a button in the modal by its text content."""
+    btns = driver.find_elements(By.XPATH,
+        f"//button[contains(.,'{button_text}')]")
+    if btns:
+        btns[0].click()
+        time.sleep(4)
+        return True
+    return False
+
+
+def _find_and_click_any(driver, selectors):
+    """Try multiple XPath selectors; click the first match found."""
+    for sel in selectors:
+        btns = driver.find_elements(By.XPATH, sel)
+        if btns:
+            try:
+                btns[0].click()
+                time.sleep(0.5)
+                return True
+            except Exception:
+                pass
+    return False
+
+
+def _override_fetch_500_for_images(driver, var_name="__origFetch"):
+    """Override window.fetch to return HTTP 500 for /images endpoints."""
+    driver.execute_script(r"""
+        window.{var_name} = window.fetch;
+        window.fetch = function(url, opts) {{
+            if (typeof url === 'string' && url.includes('/images')) {{
+                return Promise.resolve(
+                    new Response(
+                        JSON.stringify({{ error: 'Internal Server Error' }}),
+                        {{
+                            status: 500,
+                            statusText: 'Internal Server Error',
+                            headers: {{ 'Content-Type': 'application/json' }}
+                        }}
+                    )
+                );
+            }}
+            return window.{var_name}.apply(this, arguments);
+        }};
+    """.format(var_name=var_name))
+
+
+def _restore_fetch(driver, var_name="__origFetch"):
+    """Restore original window.fetch after override."""
+    driver.execute_script("""
+        if (window.{var_name}) {{
+            window.fetch = window.{var_name};
+            delete window.{var_name};
+        }}
+    """.format(var_name=var_name))
+
+
+def _download_first_image(driver):
+    """Download the first image from the gallery and verify it.
+
+    Returns the response object for further assertions if needed.
+    """
+    cards = _get_image_cards(driver)
+    if not cards:
+        pytest.skip("No images in gallery — upload an image first")
+
+    img_el = cards[0].find_element(By.XPATH, ".//img")
+    img_src = img_el.get_attribute("src") or ""
+    assert img_src, "First image card has no <img src> attribute"
+
+    if img_src.startswith("/"):
+        origin = driver.execute_script("return window.location.origin;")
+        img_src = origin + img_src
+
+    assert img_src.startswith("http"), \
+        f"Cannot download from non-HTTP src: '{img_src}'"
+
+    session = requests.Session()
+    for cookie in driver.get_cookies():
+        session.cookies.set(
+            cookie["name"],
+            cookie["value"],
+            domain=cookie.get("domain"),
+        )
+
+    os.makedirs(ASSETS_DIR, exist_ok=True)
+    tmp_path = os.path.join(ASSETS_DIR, "downloaded_test_image.tmp")
+    try:
+        response = session.get(img_src, stream=True, timeout=15)
+        assert response.status_code == 200, (
+            f"Download request returned HTTP {response.status_code} "
+            f"for URL: {img_src}"
+        )
+
+        with open(tmp_path, "wb") as fh:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    fh.write(chunk)
+
+        file_size = os.path.getsize(tmp_path)
+        assert file_size > 0, \
+            f"Downloaded file is 0 bytes for URL: {img_src}"
+
+        content_type = response.headers.get("Content-Type", "")
+        assert any(t in content_type.lower() for t in
+                   ["image", "octet-stream", "jpeg", "png", "webp"]), (
+            f"Response Content-Type does not look like an image: "
+            f"'{content_type}' (URL: {img_src})"
+        )
+        return response
+    finally:
+        if os.path.isfile(tmp_path):
+            os.remove(tmp_path)
 
 
 def _ensure_pdf_exists():
@@ -151,25 +287,19 @@ class TestTC06001ImageDisplayAndDetails:
 
     def test_gallery_renders_after_selecting_drone(self, driver, drone_page):
         """Step 2 – Selecting a drone renders the gallery without crash."""
-        _select_first_drone_row(driver)
+        _select_drone_row(driver)
         src = driver.page_source
         assert "Drone Images" in src
 
     def test_image_cards_show_metadata(self, driver, drone_page):
-        """Step 3 – If images exist, verify metadata is displayed.
-
-        Image cards should show: filename, date badge, sourceType
-        ('Video Frame' or 'Image'), and optionally company location.
-        """
-        _select_first_drone_row(driver)
+        """Step 3 – If images exist, verify metadata is displayed."""
+        _select_drone_row(driver)
         time.sleep(2)
 
-        image_cards = driver.find_elements(By.XPATH,
-            "//div[contains(@class,'group') and .//img]")
+        image_cards = _get_image_cards(driver)
         if not image_cards:
             pytest.skip("Selected drone has no images — metadata not testable")
 
-        # At least one card should have visible metadata
         src = driver.page_source
         has_metadata = (
             ".jpg" in src.lower()
@@ -201,29 +331,14 @@ class TestTC06002ImageManipulation:
         if not _open_add_images_modal(driver):
             pytest.skip("No 'Add Images' button — no drones in DB")
 
-        # Select file via the hidden input (id="media-upload")
-        file_inputs = driver.find_elements(By.XPATH, "//input[@id='media-upload']")
-        if not file_inputs:
-            file_inputs = driver.find_elements(By.XPATH, "//input[@type='file']")
-        if not file_inputs:
-            _close_modal(driver)
-            pytest.skip("File <input> not found in modal")
+        _upload_file_to_modal(driver, TEST_IMAGE)
 
-        file_inputs[0].send_keys(TEST_IMAGE)
-        time.sleep(1)
-
-        # Verify filename appears in upload area
         file_name = os.path.basename(TEST_IMAGE)
         src = driver.page_source
         assert (file_name in src or "image" in src.lower()), \
             "File not reflected in upload area after selection"
 
-        # Click "Upload Image" button (green button for image files)
-        upload_btns = driver.find_elements(By.XPATH,
-            "//button[contains(.,'Upload Image')]")
-        if upload_btns:
-            upload_btns[0].click()
-            time.sleep(4)
+        if _click_modal_button(driver, "Upload Image"):
             dismiss_any_dialog(driver, timeout=8)
 
         _close_modal(driver)
@@ -235,21 +350,13 @@ class TestTC06002ImageManipulation:
         if not _open_add_images_modal(driver):
             pytest.skip("No drones available")
 
-        file_inputs = driver.find_elements(By.XPATH, "//input[@type='file']")
-        if not file_inputs:
-            _close_modal(driver)
-            pytest.skip("File input not found")
+        _upload_file_to_modal(driver, TEST_VIDEO_PATH)
 
-        file_inputs[0].send_keys(TEST_VIDEO_PATH)
-        time.sleep(2)
-
-        # Verify video filename reflected in modal
         src = driver.page_source
         assert ("mp4" in src.lower() or "video" in src.lower()
                 or "test_video" in src), \
             "Video file not reflected in modal after selection"
 
-        # Verify "Process Video" button exists
         process_btns = driver.find_elements(By.XPATH,
             "//button[contains(.,'Process Video')]")
         assert process_btns, "Process Video button not found"
@@ -257,50 +364,36 @@ class TestTC06002ImageManipulation:
 
     def test_reject_unsupported_file(self, driver, drone_page):
         """Verify unsupported file triggers alert"""
-
         _ensure_pdf_exists()
-
         assert _open_add_images_modal(driver), "No drones available"
-
-        driver.find_element(By.XPATH, "//input[@type='file']").send_keys(TEST_PDF_PATH)
+        _upload_file_to_modal(driver, TEST_PDF_PATH)
 
         msg = accept_alert(driver, timeout=6)
-
         assert msg is not None, "Expected alert but none appeared"
         assert "upload an image or video" in msg.lower()
 
     def test_view_image_lightbox(self, driver, drone_page):
         """Steps 8-9: Click eye icon to enlarge image, then close lightbox."""
-        _select_first_drone_row(driver)
+        _select_drone_row(driver)
         time.sleep(2)
 
-        image_cards = driver.find_elements(By.XPATH,
-            "//div[contains(@class,'group') and .//img]")
+        image_cards = _get_image_cards(driver)
         if not image_cards:
             pytest.skip("No images in gallery — run TC-06-002 upload first")
 
-        # Hover over first card to reveal overlay buttons
-        driver.execute_script("arguments[0].scrollIntoView(true);", image_cards[0])
-        driver.execute_script(
-            "arguments[0].dispatchEvent(new MouseEvent('mouseover',{bubbles:true}));",
-            image_cards[0])
-        time.sleep(0.5)
+        _hover_image_card(driver, image_cards[0])
 
-        # Click eye icon (first button in overlay)
-        overlay_btns = image_cards[0].find_elements(By.XPATH,
-            ".//div[contains(@class,'absolute inset-0')]//button")
+        overlay_btns = _get_overlay_buttons(image_cards[0])
         if not overlay_btns:
             pytest.skip("Overlay buttons not accessible in headless mode")
 
-        overlay_btns[0].click()  # eye / view button
+        overlay_btns[0].click()
         time.sleep(1)
 
-        # Verify lightbox overlay appears (fixed inset-0 with dark bg)
         overlays = driver.find_elements(By.XPATH,
             "//div[contains(@class,'fixed') and contains(@class,'bg-black/90')]")
         assert overlays, "Lightbox overlay did not appear"
 
-        # Close lightbox via X button
         _close_modal(driver)
         time.sleep(0.5)
 
@@ -309,114 +402,27 @@ class TestTC06002ImageManipulation:
         assert not overlays_after, "Lightbox did not close"
 
     def test_download_image(self, driver, drone_page):
-        """Steps 12-14: Actually download an image file and verify it has content.
-
-        Strategy:
-          1. Select the first drone and load its gallery.
-          2. Read the <img src> URL of the first image card.
-          3. Copy the browser's active session cookies into a requests.Session
-             so that any auth cookies / JWT tokens are forwarded.
-          4. HTTP GET the image URL (streaming) and save to a temp file.
-          5. Assert the file exists and is non-zero bytes.
-          6. Assert the response Content-Type is an image MIME type.
-          7. Delete the temp file (cleanup).
-
-        Covers UC6-COV-04 (download/enlarge image).
-        """
-        _select_first_drone_row(driver)
+        """Steps 12-14: Download an image file and verify it has content."""
+        _select_drone_row(driver)
         time.sleep(2)
-
-        image_cards = driver.find_elements(By.XPATH,
-            "//div[contains(@class,'group') and .//img]")
-        if not image_cards:
-            pytest.skip("No images in gallery — upload an image first")
-
-        # ── Step 2: read image URL ────────────────────────────────────────────
-        img_el = image_cards[0].find_element(By.XPATH, ".//img")
-        img_src = img_el.get_attribute("src") or ""
-        assert img_src, "First image card has no <img src> attribute"
-
-        # Resolve relative URLs using the browser's current origin
-        if img_src.startswith("/"):
-            origin = driver.execute_script("return window.location.origin;")
-            img_src = origin + img_src
-
-        assert img_src.startswith("http"), \
-            f"Cannot download from non-HTTP src: '{img_src}'"
-
-        # ── Step 3: clone browser cookies into requests.Session ──────────────
-        session = requests.Session()
-        for cookie in driver.get_cookies():
-            session.cookies.set(
-                cookie["name"],
-                cookie["value"],
-                domain=cookie.get("domain"),
-            )
-
-        # ── Step 4: stream-download to a temp file in ASSETS_DIR ─────────────
-        os.makedirs(ASSETS_DIR, exist_ok=True)
-        tmp_path = os.path.join(ASSETS_DIR, "downloaded_test_image.tmp")
-        try:
-            response = session.get(img_src, stream=True, timeout=15)
-            assert response.status_code == 200, (
-                f"Download request returned HTTP {response.status_code} "
-                f"for URL: {img_src}"
-            )
-
-            with open(tmp_path, "wb") as fh:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        fh.write(chunk)
-
-            # ── Step 5: file must exist and be non-empty ──────────────────────
-            file_size = os.path.getsize(tmp_path)
-            assert file_size > 0, \
-                f"Downloaded file is 0 bytes for URL: {img_src}"
-
-            # ── Step 6: Content-Type must look like an image ──────────────────
-            content_type = response.headers.get("Content-Type", "")
-            assert any(t in content_type.lower() for t in
-                       ["image", "octet-stream", "jpeg", "png", "webp"]), (
-                f"Response Content-Type does not look like an image: "
-                f"'{content_type}' (URL: {img_src})"
-            )
-
-        finally:
-            # ── Step 7: cleanup temp file ─────────────────────────────────────
-            if os.path.isfile(tmp_path):
-                os.remove(tmp_path)
+        _download_first_image(driver)
 
     def test_edit_metadata(self, driver, drone_page):
-        """Steps 15-17: Attempt to edit image metadata/notes; assert not implemented (xfail).
-
-        UC6-COV-05 requires updating notes/metadata on an image.
-        Actively tries to find:
-          - An 'Edit' button on an image card or in the detail view
-          - An inline input / textarea for notes or description
-        The feature is not yet present in the current build, so the test
-        reports xfail.  If the UI is added in future, the xfail call will
-        be replaced with assertions that verify the edit flow works.
-        """
-        _select_first_drone_row(driver)
+        """Steps 15-17: Attempt to edit image metadata/notes; assert not implemented (xfail)."""
+        _select_drone_row(driver)
         time.sleep(2)
 
-        image_cards = driver.find_elements(By.XPATH,
-            "//div[contains(@class,'group') and .//img]")
+        image_cards = _get_image_cards(driver)
         if not image_cards:
             pytest.skip("No images in gallery — upload an image first")
 
-        # ── Step 2: hover first card and look for an edit trigger ────────────
-        driver.execute_script("arguments[0].scrollIntoView(true);", image_cards[0])
-        driver.execute_script(
-            "arguments[0].dispatchEvent(new MouseEvent('mouseover',{bubbles:true}));",
-            image_cards[0])
-        time.sleep(0.5)
+        _hover_image_card(driver, image_cards[0])
 
         edit_selectors = [
             ".//button[contains(.,'Edit')]",
             ".//button[contains(.,'Notes')]",
             ".//button[contains(.,'Metadata')]",
-            ".//div[contains(@class,'absolute inset-0')]//button[2]",  # middle overlay btn
+            ".//div[contains(@class,'absolute inset-0')]//button[2]",
         ]
 
         edit_clicked = False
@@ -431,7 +437,6 @@ class TestTC06002ImageManipulation:
                     pass
                 break
 
-        # ── Step 3: if an edit trigger was found, look for input/textarea ─────
         edit_ui_found = False
         if edit_clicked:
             textarea_selectors = [
@@ -447,13 +452,11 @@ class TestTC06002ImageManipulation:
                     edit_ui_found = True
                     break
 
-        # ── Step 4: assert feature is missing ────────────────────────────────
         assert not edit_ui_found, (
             "Edit metadata UI (textarea/input) found — feature UC6-COV-05 is "
             "now implemented. Update this test to verify the full edit flow."
         )
 
-        # Report as xfail so the result is clearly documented in the report
         pytest.xfail(
             "Edit metadata attempt failed as expected: no edit/notes UI found "
             "on image cards. Feature UC6-COV-05 is not yet implemented in the "
@@ -462,31 +465,22 @@ class TestTC06002ImageManipulation:
 
     def test_delete_image(self, driver, drone_page):
         """Steps 10-11: Delete an image with confirmation dialog."""
-        _select_first_drone_row(driver)
+        _select_drone_row(driver)
         time.sleep(2)
 
-        image_cards = driver.find_elements(By.XPATH,
-            "//div[contains(@class,'group') and .//img]")
+        image_cards = _get_image_cards(driver)
         if not image_cards:
             pytest.skip("No images to delete — run TC-06-002 upload first")
 
         initial_count = len(image_cards)
 
-        # Hover over first card
-        driver.execute_script("arguments[0].scrollIntoView(true);", image_cards[0])
-        driver.execute_script(
-            "arguments[0].dispatchEvent(new MouseEvent('mouseover',{bubbles:true}));",
-            image_cards[0])
-        time.sleep(0.6)
+        _hover_image_card(driver, image_cards[0])
 
-        # Click trash icon (last button in overlay)
-        overlay_btns = image_cards[0].find_elements(By.XPATH,
-            ".//div[contains(@class,'absolute inset-0')]//button")
+        overlay_btns = _get_overlay_buttons(image_cards[0])
         if not overlay_btns:
             pytest.skip("Delete button inaccessible in headless mode")
         overlay_btns[-1].click()
 
-        # Verify ConfirmDialog appears
         modal_title_xpath = "//h2[contains(text(),'Delete Image')]"
         try:
             wait_for_visible(driver, By.XPATH, modal_title_xpath, timeout=5)
@@ -498,17 +492,14 @@ class TestTC06002ImageManipulation:
         assert "cannot be undone" in driver.page_source.lower(), \
             "Warning text missing from dialog"
 
-        # Confirm deletion (confirmText='Delete' for image delete)
         dismiss_confirm_and_success_dialog(
             driver, timeout=10, confirm_text="Delete")
         time.sleep(1)
 
-        # Re-select drone and verify gallery shrank
         go_to_drone_management(driver)
-        _select_first_drone_row(driver)
+        _select_drone_row(driver)
         time.sleep(2)
-        new_cards = driver.find_elements(By.XPATH,
-            "//div[contains(@class,'group') and .//img]")
+        new_cards = _get_image_cards(driver)
         assert (len(new_cards) < initial_count or len(new_cards) == 0), \
             "Gallery count should decrease after deletion"
 
@@ -527,26 +518,21 @@ class TestTC06003RefreshAndUploadingStatus:
 
     def test_gallery_persists_after_refresh(self, driver, drone_page):
         """Steps 1-3: Refresh page, verify images still load."""
-        _select_first_drone_row(driver)
+        _select_drone_row(driver)
         time.sleep(2)
 
-        # Capture image count before refresh
-        before_cards = driver.find_elements(By.XPATH,
-            "//div[contains(@class,'group') and .//img]")
+        before_cards = _get_image_cards(driver)
         before_count = len(before_cards)
 
-        # Refresh page
         driver.refresh()
         time.sleep(3)
         wait_for(driver, EC.presence_of_element_located(
             (By.XPATH, "//*[contains(text(),'Drone Management')]")), timeout=15)
 
-        # Select drone again
-        _select_first_drone_row(driver)
+        _select_drone_row(driver)
         time.sleep(2)
 
-        after_cards = driver.find_elements(By.XPATH,
-            "//div[contains(@class,'group') and .//img]")
+        after_cards = _get_image_cards(driver)
         after_count = len(after_cards)
 
         assert after_count == before_count, \
@@ -559,25 +545,12 @@ class TestTC06003RefreshAndUploadingStatus:
         if not _open_add_images_modal(driver):
             pytest.skip("No drones available")
 
-        file_inputs = driver.find_elements(By.XPATH, "//input[@type='file']")
-        if not file_inputs:
-            _close_modal(driver)
-            pytest.skip("File input not found")
+        _upload_file_to_modal(driver, TEST_VIDEO_PATH)
 
-        file_inputs[0].send_keys(TEST_VIDEO_PATH)
-        time.sleep(2)
-
-        # Click "Process Video" button
-        process_btns = driver.find_elements(By.XPATH,
-            "//button[contains(.,'Process Video')]")
-        if not process_btns:
+        if not _click_modal_button(driver, "Process Video"):
             _close_modal(driver)
             pytest.skip("Process Video button not found")
 
-        process_btns[0].click()
-        time.sleep(1)
-
-        # Verify processing UI is shown (progress bar or extracting text)
         src = driver.page_source
         processing_visible = (
             "Extracting frames" in src
@@ -603,25 +576,19 @@ class TestTC06004NoImagesScenario:
 
     def test_empty_gallery_message(self, driver, drone_page):
         """Steps 1-5: Select drone with no images, verify empty state."""
-        _select_second_drone_row(driver)
+        _select_drone_row(driver, index=1)
         time.sleep(2)
 
         src = driver.page_source
-
-        # Check if drone has images
-        image_cards = driver.find_elements(By.XPATH,
-            "//div[contains(@class,'group') and .//img]")
+        image_cards = _get_image_cards(driver)
 
         if image_cards:
             pytest.skip("Selected drone has images — empty state not testable")
 
-        # Verify empty state elements
         assert "No Images Available" in src, \
             "'No Images Available' heading not shown"
         assert "No drone images have been uploaded yet" in src, \
             "Helper text not shown in empty state"
-
-        # Verify camera icon is present (FiCamera, size=48)
         assert "text-gray-400" in src, \
             "Camera icon styling not found in empty state"
 
@@ -639,25 +606,10 @@ class TestTC06005BulkDeleteAndServerError:
     """
 
     def test_bulk_delete_attempt_fails(self, driver, drone_page):
-        """Steps 1-5: Attempt the full bulk-delete workflow; assert it fails (not implemented).
-
-        Actively tries to:
-          1. Load the image gallery for the first drone.
-          2. Find and click image-level checkboxes to select multiple images.
-          3. Find and click a Bulk Delete / Delete Selected button.
-        Every step is expected to fail because the feature is not yet in the UI.
-        The test reports xfail (expected failure) with a clear reason so the
-        pytest-html report documents the missing feature explicitly.
-
-        If the feature is added in a future build, steps 2-3 will succeed,
-        the pytest.xfail calls will be skipped, and the FINAL assert block
-        will be reached – at that point the developer must update this test
-        to verify the full confirmation + deletion flow.
-        """
-        _select_first_drone_row(driver)
+        """Steps 1-5: Attempt the full bulk-delete workflow; assert it fails (not implemented)."""
+        _select_drone_row(driver)
         time.sleep(2)
 
-        # ── Step 2: Attempt to find and click image-level checkboxes ─────────
         checkbox_selectors = [
             "//div[contains(@class,'group')]//input[@type='checkbox']",
             "//input[@type='checkbox'][ancestor::div[contains(@class,'group')]]",
@@ -668,7 +620,7 @@ class TestTC06005BulkDeleteAndServerError:
         for sel in checkbox_selectors:
             checkboxes = driver.find_elements(By.XPATH, sel)
             if checkboxes:
-                for cb in checkboxes[:2]:          # try to select up to 2 images
+                for cb in checkboxes[:2]:
                     try:
                         driver.execute_script("arguments[0].click();", cb)
                         time.sleep(0.3)
@@ -678,7 +630,6 @@ class TestTC06005BulkDeleteAndServerError:
                 if selected_count:
                     break
 
-        # ── Step 3: Attempt to find and click a Bulk Delete button ───────────
         bulk_delete_selectors = [
             "//button[contains(.,'Bulk Delete')]",
             "//button[contains(.,'Delete Selected')]",
@@ -697,18 +648,15 @@ class TestTC06005BulkDeleteAndServerError:
                     pass
                 break
 
-        # ── Step 4: Assert bulk delete was NOT completed (feature missing) ───
         assert not bulk_delete_clicked, (
             "Bulk Delete button found and clicked – feature is now implemented. "
             "Update this test to verify the full confirmation + deletion flow."
         )
 
-        # ── Step 5: Page must remain functional after the failed attempt ─────
         src = driver.page_source
         assert "Drone Images" in src, \
             "Drone Images section must remain visible after failed bulk delete attempt"
 
-        # Report as xfail so pytest-html clearly shows the feature is missing
         if selected_count == 0:
             pytest.xfail(
                 "Bulk delete attempt failed as expected: no image checkboxes found "
@@ -725,39 +673,18 @@ class TestTC06005BulkDeleteAndServerError:
         """Steps 4-6: Simulate 500 on image fetch; verify page doesn't crash."""
         go_to_drone_management(driver)
 
-        # Monkey-patch window.fetch to return 500 for /images endpoints
-        driver.execute_script("""
-            window.__origFetch = window.fetch;
-            window.fetch = function(url, opts) {
-                if (typeof url === 'string' && url.includes('/images')) {
-                    return Promise.resolve(
-                        new Response(
-                            JSON.stringify({ error: 'Internal Server Error' }),
-                            {
-                                status: 500,
-                                statusText: 'Internal Server Error',
-                                headers: { 'Content-Type': 'application/json' }
-                            }
-                        )
-                    );
-                }
-                return window.__origFetch.apply(this, arguments);
-            };
-        """)
+        _override_fetch_500_for_images(driver)
 
-        # Select a drone to trigger the intercepted image fetch
-        _select_first_drone_row(driver)
+        _select_drone_row(driver)
         time.sleep(3)
 
         src = driver.page_source
 
-        # Page should NOT crash
         assert "Drone Management" in src, \
             "Page should remain functional after a server error"
         assert "Drone Images" in src, \
             "Drone Images section should still render even after server error"
 
-        # Check for any user-facing error indicator
         error_indicators = [
             "Server error",
             "error",
@@ -774,44 +701,18 @@ class TestTC06005BulkDeleteAndServerError:
             "or an appropriate empty state."
         )
 
-        # Restore original fetch
-        driver.execute_script("""
-            if (window.__origFetch) {
-                window.fetch = window.__origFetch;
-                delete window.__origFetch;
-            }
-        """)
+        _restore_fetch(driver)
 
     def test_page_recovers_after_error(self, driver, drone_page):
         """Step 7: After restoring normal fetch, page works normally."""
         go_to_drone_management(driver)
 
-        # Inject error fetch
-        driver.execute_script("""
-            window.__origFetch2 = window.fetch;
-            window.fetch = function(url, opts) {
-                if (typeof url === 'string' && url.includes('/images')) {
-                    return Promise.resolve(
-                        new Response(
-                            JSON.stringify({ error: 'Internal Server Error' }),
-                            { status: 500, statusText: 'Internal Server Error' }
-                        )
-                    );
-                }
-                return window.__origFetch2.apply(this, arguments);
-            };
-        """)
+        _override_fetch_500_for_images(driver, var_name="__origFetch2")
 
-        _select_first_drone_row(driver)
+        _select_drone_row(driver)
         time.sleep(2)
 
-        # Restore fetch, navigate away and back
-        driver.execute_script("""
-            if (window.__origFetch2) {
-                window.fetch = window.__origFetch2;
-                delete window.__origFetch2;
-            }
-        """)
+        _restore_fetch(driver, var_name="__origFetch2")
 
         go_to_drone_management(driver)
         assert "Drone Management" in driver.page_source, \
